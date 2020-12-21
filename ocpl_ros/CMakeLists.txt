@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   ocpl_sampling
   ocpl_graph
   ocpl_tsr
+  ocpl_planning
 )
 
 find_package(Eigen3 REQUIRED)

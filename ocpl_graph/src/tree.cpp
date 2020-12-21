@@ -2,6 +2,7 @@
 
 #include <queue>
 #include <algorithm>  // std::find
+// #include <iostream>
 
 namespace ocpl
 {
@@ -21,6 +22,27 @@ struct compareNodesFunction
 };
 
 std::vector<NodePtr> _extract_path(const Tree& tree, NodePtr goal)
+{
+    std::vector<NodePtr> path;
+    path.push_back(goal);
+    NodePtr node = goal;
+    while (true)
+    {
+        if (node->parent == nullptr)
+        {
+            break;
+        }
+        else
+        {
+            node = node->parent;
+            path.insert(path.begin(), node);
+        }
+    }
+
+    return path;
+}
+
+std::vector<NodePtr> _extract_path(NodePtr goal)
 {
     std::vector<NodePtr> path;
     path.push_back(goal);
@@ -143,6 +165,77 @@ std::vector<NodePtr> shortest_path(Tree& tree, std::vector<NodePtr> start_nodes,
     }
 
     return _extract_path(tree, current_node);
+}
+
+std::vector<NodePtr> shortest_path(const std::vector<std::vector<NodePtr>>& nodes,
+                                   std::function<double(const NodePtr, const NodePtr)> cost_function)
+{
+    std::priority_queue<NodePtr, std::vector<NodePtr>, compareNodesFunction> Q;
+
+    const std::vector<NodePtr>& start_nodes = nodes.front();
+    const std::vector<NodePtr>& goal_nodes = nodes.back();
+
+    // we also keep track of how many goal nodes we have yet to reach
+    std::size_t goal_nodes_to_reach{ goal_nodes.size() };
+
+    // give the nodes correct waypoint indices to do fast nearest neighbor search
+    for (std::size_t index{ 0 }; index < nodes.size(); ++index)
+    {
+        for (auto& n : nodes[index])
+            n->waypoint_index = index;
+    }
+
+    for (auto start_node : start_nodes)
+    {
+        start_node->dist = start_node->cost;
+        Q.push(start_node);
+    }
+    NodePtr current_node{ nullptr };
+
+    while (!Q.empty())
+    {
+        //    current_node = Q.front();
+        current_node = Q.top();
+        Q.pop();
+
+        // std::cout << "graph search: (" << current_node->waypoint_index << " ) " << (*current_node) << "\n";
+        // std::cout << "graph search: gntr " << goal_nodes_to_reach << "\n";
+
+        // is the current node a goal node?
+        if (std::find(goal_nodes.begin(), goal_nodes.end(), current_node) != goal_nodes.end())
+        {
+            // keep going until all nodes are expanded!
+            if (goal_nodes_to_reach > 0)
+            {
+                goal_nodes_to_reach--;
+                continue;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        const std::vector<NodePtr>& neighbors = nodes.at(current_node->waypoint_index + 1);
+
+        for (auto nb : neighbors)
+        {
+            double new_dist = current_node->dist + cost_function(current_node, nb) + nb->cost;
+            if (new_dist < nb->dist)
+            {
+                nb->dist = new_dist;
+                nb->parent = current_node;
+            }
+
+            if (!nb->visited)
+            {
+                Q.push(nb);
+                nb->visited = true;
+            }
+        }
+    }
+
+    return _extract_path(current_node);
 }
 
 std::ostream& operator<<(std::ostream& os, const Node& node)
