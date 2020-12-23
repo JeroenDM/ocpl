@@ -66,9 +66,9 @@ int main(int argc, char** argv)
     }
 
     auto sampler = std::make_shared<GridSampler>();
-    sampler->addDimension(-1.5, 1.5, 7);
-    sampler->addDimension(-1.5, 1.5, 7);
-    sampler->addDimension(-1.5, 1.5, 7);
+    sampler->addDimension(-1.5, 1.5, 6);
+    sampler->addDimension(-1.5, 1.5, 6);
+    sampler->addDimension(-1.5, 1.5, 6);
 
     // for (auto q_red : sampler->getSamples())
     // {
@@ -84,16 +84,17 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Create task
     //////////////////////////////////
+    const double small_passage_width {0.5};
     Transform tf1 = Transform::Identity();
-    tf1.translation() << 4.0, -1.5, tf_start.translation().z();
-    TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -1, 1 } };
+    tf1.translation() << 4.0, small_passage_width / 2, tf_start.translation().z();
+    TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
     std::vector<TSR> regions;
 
     Transform tf = tf1;
-    for (int i{ 0 }; i < 15; ++i)
+    for (int i{ 0 }; i < 5; ++i)
     {
-        tf.translation() += 0.1 * Eigen::Vector3d::UnitY();
-        regions.push_back({ tf, bounds, std::make_shared<GridSampler>(), { 1, 1, 1, 1, 1, 10 } });
+        tf.translation() += 0.2 * Eigen::Vector3d::UnitX();
+        regions.push_back({ tf, bounds, std::make_shared<GridSampler>(), { 1, 1, 1, 1, 1, 30 } });
     }
 
     for (auto tsr : regions)
