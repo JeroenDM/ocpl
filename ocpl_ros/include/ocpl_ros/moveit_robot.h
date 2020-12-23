@@ -44,6 +44,7 @@ class MoveItRobot
     bool check_collisions_ = true;
 
     std::string tcp_frame_;
+    std::size_t ndof_;
 
   public:
     MoveItRobot(const std::string& tcp_frame = "tool0");
@@ -51,7 +52,26 @@ class MoveItRobot
 
     const Transform& fk(const JointPositions& q) const;
     const Transform& fk(const JointPositions& q, const std::string& frame) const;
+
+    /** \brief Inverse kinematics
+     *
+     * This function should be overriden with a robot specific implementation of analytical inverse kinematics.
+     * The default class uses MoveIts default inverse kinematics plugin (which could have analytical inverse kinematics.
+     *
+     * (TODO) Return multiple solutions from MoveIts IK plugin.
+     *
+     * **/
     virtual IKSolution ik(const Transform& tf);
+
+    /** \brief Redundant inverse kinematics
+     *
+     * The robot's joints are divided in two groups. The first k joints are called "redundant joints",
+     * and the last 3 / 6 joints are called "base joints".
+     * Given as input positions for the redundant joints, an analytical inverse kinematics solver can calculate
+     * the base joints for the given end-effector pose.
+     *
+     * **/
+    virtual IKSolution ik(const Transform& tf, const std::vector<double>& q_redundant);
     Eigen::MatrixXd jacobian(const JointPositions& q);
 
     const Transform& getLinkFixedRelativeTransform(const std::string& name) const;

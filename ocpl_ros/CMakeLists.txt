@@ -64,3 +64,14 @@ target_link_libraries(${PROJECT_NAME}_demo
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
 )
+
+add_executable(${PROJECT_NAME}_demo_redundant
+  src/demo_redundant.cpp
+)
+set_target_properties(${PROJECT_NAME}_demo_redundant
+  PROPERTIES OUTPUT_NAME demo_redundant PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_demo_redundant
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)

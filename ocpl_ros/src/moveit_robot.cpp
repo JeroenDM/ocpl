@@ -28,6 +28,14 @@ MoveItRobot::MoveItRobot(const std::string& tcp_frame) : tcp_frame_(tcp_frame)
     planning_scene_.reset(new planning_scene::PlanningScene(kinematic_model_));
     planning_scene_monitor_.reset(new planning_scene_monitor::PlanningSceneMonitor("robot_description"));
     updatePlanningScene();
+
+    ndof_ = joint_model_group_->getVariableCount();
+
+    // debug info
+    ROS_DEBUG_STREAM("Number of DOFS: " << ndof_);
+    auto joint_names = joint_model_group_->getActiveJointModelNames();
+    for (const std::string& name : joint_names)
+        ROS_DEBUG_STREAM("Joint name: " << name);
 }
 
 const Transform& MoveItRobot::getLinkFixedRelativeTransform(const std::string& frame) const
@@ -50,6 +58,34 @@ const Transform& MoveItRobot::fk(const std::vector<double>& q, const std::string
 IKSolution MoveItRobot::ik(const Transform& tf)
 {
     double timeout = 0.1;
+    kinematic_state_->setToDefaultValues(); // use a deterministic state to initialize IK solver
+    bool found_ik = kinematic_state_->setFromIK(joint_model_group_, tf, timeout);
+    IKSolution sol;
+    if (found_ik)
+    {
+        std::vector<double> joint_values;
+        kinematic_state_->copyJointGroupPositions(joint_model_group_, joint_values);
+        sol.push_back(joint_values);
+    }
+    else
+    {
+        ROS_INFO_STREAM("Failed to find ik solution.");
+    }
+    return sol;
+}
+
+IKSolution MoveItRobot::ik(const Transform& tf, const std::vector<double>& q_redundant)
+{
+    double timeout = 0.1;
+    kinematic_state_->setToDefaultValues(); // use a deterministic state to initialize IK solver
+    
+    // fill out the redundant joint values that where provided as an extra argument
+    static const std::vector<std::string> joint_names = joint_model_group_->getActiveJointModelNames();
+    for (std::size_t i{0}; i < q_redundant.size(); ++i)
+    {
+        kinematic_state_->setJointPositions(joint_names[i], {q_redundant[i]});
+    }
+
     bool found_ik = kinematic_state_->setFromIK(joint_model_group_, tf, timeout);
     IKSolution sol;
     if (found_ik)
