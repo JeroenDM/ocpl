@@ -52,10 +52,6 @@ IKSolution PlanarRobot6R::ik(const Transform& tf, const std::vector<double>& q_f
     Eigen::Vector3d pos = tf_local.translation();
     Eigen::Vector3d rot = tf_local.rotation().eulerAngles(0, 1, 2);
 
-    std::vector<double> link_length{ 1.0, 1.0, 1.0 };
-
-    ROS_INFO_STREAM("IK solver: " << pos[0] << " " << pos[1] << " " << rot[2]);
-
     auto solution = planar_3r_ik(pos[0], pos[1], rot[2], analytical_ik_link_length_);
 
     // add fixed joint values to all solutions

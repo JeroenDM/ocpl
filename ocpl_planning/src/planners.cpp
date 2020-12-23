@@ -2,6 +2,8 @@
 
 #include <ocpl_graph/tree.h>
 
+#include <iostream>
+
 namespace ocpl
 {
 std::vector<JointPositions> sampleTSR(const TSR& tsr, std::function<bool(const JointPositions&)> is_valid,
@@ -29,7 +31,10 @@ std::vector<JointPositions> findPath(const std::vector<TSR>& tsrs,
     std::vector<std::vector<JointPositions>> graph_data;
     for (auto tsr : tsrs)
     {
-        graph_data.push_back(sampleTSR(tsr, is_valid, generic_inverse_kinematics));
+        std::cout << "ocpl_planner: processing path point " << tsr.getNominalPose().translation().transpose() << "\n";
+        auto solutions = sampleTSR(tsr, is_valid, generic_inverse_kinematics);
+        std::cout << "ocpl_planner: found " << solutions.size() << std::endl;
+        graph_data.push_back(solutions);
     }
 
     std::vector<std::vector<NodePtr>> nodes;
@@ -46,6 +51,7 @@ std::vector<JointPositions> findPath(const std::vector<TSR>& tsrs,
     for (NodePtr n : path_nodes)
     {
         path.push_back(n->data);
+        std::cout << "Node: " << (*n) << " dist: " << n->dist << "\n";
     }
     return path;
 }
