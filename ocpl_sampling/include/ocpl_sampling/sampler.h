@@ -31,4 +31,16 @@ class Sampler
 };
 
 typedef std::shared_ptr<Sampler> SamplerPtr;
+
+/** \brief Different type of incremental samplers.
+ * 
+ * OCPL implements different types of incremental samplers.
+ * For example deterministic halton sampling.
+ * **/
+enum class SamplerType
+{
+    RANDOM,
+    HALTON
+};
+
 }  // namespace ocpl

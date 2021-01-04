@@ -6,20 +6,13 @@
 #include <ocpl_ros/moveit_robot_examples.h>
 #include <ocpl_ros/rviz.h>
 #include <ocpl_sampling/grid_sampler.h>
+#include <ocpl_sampling/halton_sampler.h>
+#include <ocpl_sampling/random_sampler.h>
 #include <ocpl_tsr/task_space_regions.h>
 #include <ocpl_planning/planners.h>
+#include <ocpl_planning/factories.h>
 
 using namespace ocpl;
-
-void configureSampler(const TSR& tsr, std::shared_ptr<GridSampler>& sampler, const std::vector<int>& num_samples)
-{
-    sampler->addDimension(tsr.bounds.x.lower, tsr.bounds.x.upper, num_samples[0]);
-    sampler->addDimension(tsr.bounds.y.lower, tsr.bounds.y.upper, num_samples[1]);
-    sampler->addDimension(tsr.bounds.z.lower, tsr.bounds.z.upper, num_samples[2]);
-    sampler->addDimension(tsr.bounds.rx.lower, tsr.bounds.rx.upper, num_samples[3]);
-    sampler->addDimension(tsr.bounds.ry.lower, tsr.bounds.ry.upper, num_samples[4]);
-    sampler->addDimension(tsr.bounds.rz.lower, tsr.bounds.rz.upper, num_samples[5]);
-}
 
 double L2NormDiff(NodePtr n1, NodePtr n2)
 {
@@ -73,14 +66,26 @@ int main(int argc, char** argv)
     // Describe problem
     //////////////////////////////////
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
+    // auto f_generic_inverse_kinematics = [&robot](const TSR& tsr) {
+    //     static SamplerPtr sampler = createGridSampler(tsr, { 1, 1, 1, 1, 1, 10 });
+    //     IKSolution result;
+    //     for (auto sample : sampler->getSamples(10))
+    //     {
+    //         for (auto q : robot.ik(tsr.valuesToPose(sample)))
+    //         {
+    //             result.push_back(q);
+    //         }
+    //     }
+    //     return result;
+    // };
+
+    // using a different sampler
+    // -------------------------
     auto f_generic_inverse_kinematics = [&robot](const TSR& tsr) {
-        static auto sampler = std::make_shared<GridSampler>();
-        if (sampler->getNumDimensions() == 0)
-        {
-            configureSampler(tsr, sampler, { 1, 1, 1, 1, 1, 10 });
-        }
+        static SamplerPtr sampler = createIncrementalSampler(tsr, SamplerType::HALTON);
+
         IKSolution result;
-        for (auto sample : sampler->getSamples())
+        for (auto sample : sampler->getSamples(10))
         {
             for (auto q : robot.ik(tsr.valuesToPose(sample)))
             {
