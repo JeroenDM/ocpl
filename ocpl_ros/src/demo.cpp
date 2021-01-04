@@ -14,7 +14,6 @@ using namespace ocpl;
 double L2NormDiff(NodePtr n1, NodePtr n2)
 {
     double cost{};
-    int s = n1->data.size();
     for (int i = 0; i < n1->data.size(); ++i)
     {
         cost += std::sqrt((n1->data[i] - n2->data[i]) * (n1->data[i] - n2->data[i]));

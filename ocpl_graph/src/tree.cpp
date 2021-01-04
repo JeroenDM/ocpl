@@ -1,7 +1,7 @@
 #include <ocpl_graph/tree.h>
 
 #include <queue>
-#include <algorithm>  // std::find
+#include <algorithm>  // std::find, std::min_element
 // #include <iostream>
 
 namespace ocpl
@@ -167,7 +167,7 @@ std::vector<NodePtr> shortest_path(Tree& tree, std::vector<NodePtr> start_nodes,
     return _extract_path(tree, current_node);
 }
 
-std::vector<NodePtr> shortest_path(const std::vector<std::vector<NodePtr>>& nodes,
+std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& nodes,
                                    std::function<double(const NodePtr, const NodePtr)> cost_function)
 {
     std::priority_queue<NodePtr, std::vector<NodePtr>, compareNodesFunction> Q;
@@ -240,7 +240,11 @@ std::vector<NodePtr> shortest_path(const std::vector<std::vector<NodePtr>>& node
         }
     }
 
-    return _extract_path(current_node);
+    // find the goal node with the smallest distance
+    auto n_goal = *std::min_element(goal_nodes.begin(), goal_nodes.end(),
+                                    [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
+
+    return _extract_path(n_goal);
 }
 
 std::ostream& operator<<(std::ostream& os, const Node& node)

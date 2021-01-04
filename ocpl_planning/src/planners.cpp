@@ -50,7 +50,7 @@ std::vector<JointPositions> findPath(const std::vector<TSR>& tsrs,
     }
 
     // Find the shortest path in this structured array of nodes
-    auto path_nodes = shortest_path(nodes, cost_function);
+    auto path_nodes = shortest_path_dag(nodes, cost_function);
     std::vector<JointPositions> path;
     for (NodePtr n : path_nodes)
     {
