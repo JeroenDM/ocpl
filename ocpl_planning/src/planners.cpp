@@ -28,6 +28,7 @@ std::vector<JointPositions> findPath(const std::vector<TSR>& tsrs,
                                      std::function<bool(const JointPositions&)> is_valid,
                                      std::function<IKSolution(const Transform&)> generic_inverse_kinematics)
 {
+    // calculate joint positions for all path points in Cartesian space
     std::vector<std::vector<JointPositions>> graph_data;
     for (auto tsr : tsrs)
     {
@@ -37,6 +38,7 @@ std::vector<JointPositions> findPath(const std::vector<TSR>& tsrs,
         graph_data.push_back(solutions);
     }
 
+    // Convert the end-effector poses to Nodes, so we can search for the shortest path
     std::vector<std::vector<NodePtr>> nodes;
     nodes.resize(tsrs.size());
     for (std::size_t pt = 0; pt < graph_data.size(); pt++)
@@ -46,6 +48,8 @@ std::vector<JointPositions> findPath(const std::vector<TSR>& tsrs,
             nodes[pt].push_back(std::make_shared<Node>(q, state_cost(tsrs[pt], q)));
         }
     }
+
+    // Find the shortest path in this structured array of nodes
     auto path_nodes = shortest_path(nodes, cost_function);
     std::vector<JointPositions> path;
     for (NodePtr n : path_nodes)

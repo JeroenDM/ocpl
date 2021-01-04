@@ -175,23 +175,26 @@ std::vector<NodePtr> shortest_path(const std::vector<std::vector<NodePtr>>& node
     const std::vector<NodePtr>& start_nodes = nodes.front();
     const std::vector<NodePtr>& goal_nodes = nodes.back();
 
-    // we also keep track of how many goal nodes we have yet to reach
+    // We keep track of how many goal nodes we have yet to reach.
     std::size_t goal_nodes_to_reach{ goal_nodes.size() };
 
-    // give the nodes correct waypoint indices to do fast nearest neighbor search
+    // Give the nodes correct waypoint indices to do fast nearest neighbor search.
     for (std::size_t index{ 0 }; index < nodes.size(); ++index)
     {
         for (auto& n : nodes[index])
             n->waypoint_index = index;
     }
 
+    // Add the starting nodes to the queue.
     for (auto start_node : start_nodes)
     {
         start_node->dist = start_node->cost;
+        start_node->visited = true;
         Q.push(start_node);
     }
-    NodePtr current_node{ nullptr };
 
+    // The actual graph search loop
+    NodePtr current_node{ nullptr };
     while (!Q.empty())
     {
         //    current_node = Q.front();
@@ -202,7 +205,8 @@ std::vector<NodePtr> shortest_path(const std::vector<std::vector<NodePtr>>& node
         // std::cout << "graph search: gntr " << goal_nodes_to_reach << "\n";
 
         // is the current node a goal node?
-        if (std::find(goal_nodes.begin(), goal_nodes.end(), current_node) != goal_nodes.end())
+        // if (std::find(goal_nodes.begin(), goal_nodes.end(), current_node) != goal_nodes.end())
+        if (current_node->waypoint_index == (nodes.size() - 1))
         {
             // keep going until all nodes are expanded!
             if (goal_nodes_to_reach > 0)
@@ -212,6 +216,7 @@ std::vector<NodePtr> shortest_path(const std::vector<std::vector<NodePtr>>& node
             }
             else
             {
+                // std::cout << "Found the last goal!\n";
                 break;
             }
         }

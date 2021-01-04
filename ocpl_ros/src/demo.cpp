@@ -56,6 +56,8 @@ int main(int argc, char** argv)
         tf.translation().x() = 2.6;
         tf.translation().y() = static_cast<double>(i) / 10 - 0.5;
         regions.push_back({ tf, bounds, std::make_shared<GridSampler>(), { 1, 1, 1, 1, 1, 10 } });
+        rviz.plotPose(tf);
+        ros::Duration(0.05).sleep();
     }
 
     //////////////////////////////////
@@ -64,7 +66,7 @@ int main(int argc, char** argv)
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
     auto f_generic_inverse_kinematics = [&robot](const Transform& tf) { return robot.ik(tf); };
 
-    // appart from edge costs, the graph also used node costs
+    // // appart from edge costs, the graph also used node costs
     double state_weight{ 1.0 };
     auto f_state_cost = [&robot, state_weight](const TSR& tsr, const JointPositions& q) {
         double z0 = tsr.getNominalPose().rotation().eulerAngles(0, 1, 2).z();
@@ -72,10 +74,11 @@ int main(int argc, char** argv)
         return state_weight * (z0 - z1) * (z0 - z1);
         // return std::abs(z1 - 0.3);
     };
+    // auto f_state_cost = [](const TSR& /* tsr */, const JointPositions& /* q */) { return 0.0; };
 
-    //////////////////////////////////
-    // Solve problem
-    //////////////////////////////////
+    // //////////////////////////////////
+    // // Solve problem
+    // //////////////////////////////////
     auto path = findPath(regions, L2NormDiff, f_state_cost, f_is_valid, f_generic_inverse_kinematics);
 
     for (auto q : path)
