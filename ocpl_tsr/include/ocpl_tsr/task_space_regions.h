@@ -5,9 +5,6 @@
 
 #include <Eigen/Geometry>
 
-#include <ocpl_sampling/sampler.h>
-#include <ocpl_sampling/grid_sampler.h>
-
 namespace ocpl
 {
 typedef Eigen::Isometry3d Transform;
@@ -32,13 +29,10 @@ class TSR
 {
     Eigen::Isometry3d tf_nominal_;
     TSRBounds bounds_;
-    SamplerPtr sampler_;
 
   public:
-    TSR(Transform tf, TSRBounds bounds, SamplerPtr sampler);
-    TSR(Transform tf, TSRBounds bounds, std::shared_ptr<GridSampler> sampler, const std::vector<int>& num_samples);
+    TSR(Transform tf, TSRBounds bounds);
     ~TSR() = default;
-    std::vector<Transform> getSamples(const int n = 1) const;
 
     /** \brief Turn a six vector of position and euler angle values into an end-effector pose.
      *
@@ -56,6 +50,11 @@ class TSR
     {
         return tf_nominal_;
     };
+
+    const TSRBounds& getBounds() const
+    {
+        return bounds_;
+    }
 
     /** \brief Specific volume metric from the paper
      *

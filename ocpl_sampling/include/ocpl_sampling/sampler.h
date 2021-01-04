@@ -24,6 +24,10 @@ class Sampler
     virtual void addDimension(double lower_bound, double upper_bound);
     virtual void addDimension(double lower_bound, double upper_bound, int num_samples);
     virtual std::vector<std::vector<double>> getSamples(const int n = 1) = 0;
+    int getNumDimensions()
+    {
+        return dimensions_;
+    }
 };
 
 typedef std::shared_ptr<Sampler> SamplerPtr;

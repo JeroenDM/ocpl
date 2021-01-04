@@ -11,6 +11,16 @@
 
 using namespace ocpl;
 
+void configureSampler(const TSR& tsr, std::shared_ptr<GridSampler>& sampler, const std::vector<int>& num_samples)
+{
+    sampler->addDimension(tsr.getBounds().x.lower, tsr.getBounds().x.upper, num_samples[0]);
+    sampler->addDimension(tsr.getBounds().y.lower, tsr.getBounds().y.upper, num_samples[1]);
+    sampler->addDimension(tsr.getBounds().z.lower, tsr.getBounds().z.upper, num_samples[2]);
+    sampler->addDimension(tsr.getBounds().rx.lower, tsr.getBounds().rx.upper, num_samples[3]);
+    sampler->addDimension(tsr.getBounds().ry.lower, tsr.getBounds().ry.upper, num_samples[4]);
+    sampler->addDimension(tsr.getBounds().rz.lower, tsr.getBounds().rz.upper, num_samples[5]);
+}
+
 double L2NormDiff(NodePtr n1, NodePtr n2)
 {
     double cost{};
@@ -54,7 +64,7 @@ int main(int argc, char** argv)
         Transform tf = tf_start;
         tf.translation().x() = 2.6;
         tf.translation().y() = static_cast<double>(i) / 10 - 0.5;
-        regions.push_back({ tf, bounds, std::make_shared<GridSampler>(), { 1, 1, 1, 1, 1, 10 } });
+        regions.push_back({ tf, bounds });
         rviz.plotPose(tf);
         ros::Duration(0.05).sleep();
     }
@@ -63,7 +73,22 @@ int main(int argc, char** argv)
     // Describe problem
     //////////////////////////////////
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
-    auto f_generic_inverse_kinematics = [&robot](const Transform& tf) { return robot.ik(tf); };
+    auto f_generic_inverse_kinematics = [&robot](const TSR& tsr) {
+        static auto sampler = std::make_shared<GridSampler>();
+        if (sampler->getNumDimensions() == 0)
+        {
+            configureSampler(tsr, sampler, { 1, 1, 1, 1, 1, 10 });
+        }
+        IKSolution result;
+        for (auto sample : sampler->getSamples())
+        {
+            for (auto q : robot.ik(tsr.valuesToPose(sample)))
+            {
+                result.push_back(q);
+            }
+        }
+        return result;
+    };
 
     // // appart from edge costs, the graph also used node costs
     double state_weight{ 1.0 };
@@ -80,7 +105,7 @@ int main(int argc, char** argv)
     // //////////////////////////////////
     auto path = findPath(regions, L2NormDiff, f_state_cost, f_is_valid, f_generic_inverse_kinematics);
 
-    for (auto q : path)
+    for (JointPositions q : path)
     {
         if (robot.isInCollision(q))
             robot.plot(rviz.visual_tools_, q, rviz_visual_tools::RED);

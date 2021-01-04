@@ -6,18 +6,30 @@
 
 namespace ocpl
 {
+// std::vector<JointPositions> sampleTSR(const TSR& tsr, std::function<bool(const JointPositions&)> is_valid,
+//                                       std::function<IKSolution(const Transform&)> generic_inverse_kinematics)
+// {
+//     std::vector<JointPositions> valid_ik_solutions;
+//     auto samples = tsr.getSamples();
+//     for (Transform& tf : samples)
+//     {
+//         for (JointPositions& q : generic_inverse_kinematics(tf))
+//         {
+//             if (is_valid(q))
+//                 valid_ik_solutions.push_back(q);
+//         }
+//     }
+//     return valid_ik_solutions;
+// };
+
 std::vector<JointPositions> sampleTSR(const TSR& tsr, std::function<bool(const JointPositions&)> is_valid,
-                                      std::function<IKSolution(const Transform&)> generic_inverse_kinematics)
+                                      std::function<IKSolution(const TSR&)> generic_inverse_kinematics)
 {
     std::vector<JointPositions> valid_ik_solutions;
-    auto samples = tsr.getSamples();
-    for (Transform& tf : samples)
+    for (JointPositions& q : generic_inverse_kinematics(tsr))
     {
-        for (JointPositions& q : generic_inverse_kinematics(tf))
-        {
-            if (is_valid(q))
-                valid_ik_solutions.push_back(q);
-        }
+        if (is_valid(q))
+            valid_ik_solutions.push_back(q);
     }
     return valid_ik_solutions;
 };
@@ -26,7 +38,7 @@ std::vector<JointPositions> findPath(const std::vector<TSR>& tsrs,
                                      std::function<double(const NodePtr, const NodePtr)> cost_function,
                                      std::function<double(const TSR&, const JointPositions&)> state_cost,
                                      std::function<bool(const JointPositions&)> is_valid,
-                                     std::function<IKSolution(const Transform&)> generic_inverse_kinematics)
+                                     std::function<IKSolution(const TSR&)> generic_inverse_kinematics)
 {
     // calculate joint positions for all path points in Cartesian space
     std::vector<std::vector<JointPositions>> graph_data;

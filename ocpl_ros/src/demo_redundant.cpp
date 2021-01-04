@@ -12,6 +12,16 @@
 
 using namespace ocpl;
 
+void configureSampler(const TSR& tsr, std::shared_ptr<GridSampler>& sampler, const std::vector<int>& num_samples)
+{
+    sampler->addDimension(tsr.getBounds().x.lower, tsr.getBounds().x.upper, num_samples[0]);
+    sampler->addDimension(tsr.getBounds().y.lower, tsr.getBounds().y.upper, num_samples[1]);
+    sampler->addDimension(tsr.getBounds().z.lower, tsr.getBounds().z.upper, num_samples[2]);
+    sampler->addDimension(tsr.getBounds().rx.lower, tsr.getBounds().rx.upper, num_samples[3]);
+    sampler->addDimension(tsr.getBounds().ry.lower, tsr.getBounds().ry.upper, num_samples[4]);
+    sampler->addDimension(tsr.getBounds().rz.lower, tsr.getBounds().rz.upper, num_samples[5]);
+}
+
 double L2NormDiff(NodePtr n1, NodePtr n2)
 {
     double cost{};
@@ -65,10 +75,10 @@ int main(int argc, char** argv)
         ros::Duration(0.5).sleep();
     }
 
-    auto sampler = std::make_shared<GridSampler>();
-    sampler->addDimension(-1.5, 1.5, 6);
-    sampler->addDimension(-1.5, 1.5, 6);
-    sampler->addDimension(-1.5, 1.5, 6);
+    auto csampler = std::make_shared<GridSampler>();
+    csampler->addDimension(-1.5, 1.5, 6);
+    csampler->addDimension(-1.5, 1.5, 6);
+    csampler->addDimension(-1.5, 1.5, 6);
 
     // for (auto q_red : sampler->getSamples())
     // {
@@ -84,7 +94,7 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Create task
     //////////////////////////////////
-    const double small_passage_width {0.5};
+    const double small_passage_width{ 0.5 };
     Transform tf1 = Transform::Identity();
     tf1.translation() << 4.0, small_passage_width / 2, tf_start.translation().z();
     TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
@@ -94,7 +104,7 @@ int main(int argc, char** argv)
     for (int i{ 0 }; i < 5; ++i)
     {
         tf.translation() += 0.2 * Eigen::Vector3d::UnitX();
-        regions.push_back({ tf, bounds, std::make_shared<GridSampler>(), { 1, 1, 1, 1, 1, 30 } });
+        regions.push_back({ tf, bounds });
     }
 
     for (auto tsr : regions)
@@ -107,14 +117,23 @@ int main(int argc, char** argv)
     // Describe problem
     //////////////////////////////////
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
-    auto f_generic_inverse_kinematics = [&robot, &sampler](const Transform& tf) {
-        IKSolution result;
-        for (auto q_red : sampler->getSamples())
+    auto f_generic_inverse_kinematics = [&robot, &csampler](const TSR& tsr) {
+        static auto t_sampler = std::make_shared<GridSampler>();
+        if (t_sampler->getNumDimensions() == 0)
         {
-            auto solution = robot.ik(tf, q_red);
-            for (auto q : solution)
+            configureSampler(tsr, t_sampler, { 1, 1, 1, 1, 1, 30 });
+        }
+
+        IKSolution result;
+        for (auto t_sample : t_sampler->getSamples())
+        {
+            for (auto q_red : csampler->getSamples())
             {
-                result.push_back(q);
+                auto solution = robot.ik(tsr.valuesToPose(t_sample), q_red);
+                for (auto q : solution)
+                {
+                    result.push_back(q);
+                }
             }
         }
         return result;
