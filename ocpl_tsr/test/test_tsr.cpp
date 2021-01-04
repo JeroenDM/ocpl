@@ -1,5 +1,4 @@
 #include <ocpl_tsr/task_space_regions.h>
-#include <ocpl_sampling/grid_sampler.h>
 
 #include <Eigen/Geometry>
 
@@ -11,179 +10,179 @@ using namespace ocpl;
 const double TOLERANCE = 1e-8;
 void comparePoses(const Transform& Ta, const Transform& Tb);
 
-TEST(TestConstructor, TestPositionSamples)
-{
-    EXPECT_TRUE(true);
+// TEST(TestConstructor, TestPositionSamples)
+// {
+//     EXPECT_TRUE(true);
 
-    // create all the input for the constructor
-    auto tf = Transform::Identity();
-    TSRBounds tsr_bounds{ { -1, 1 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } };
-    auto sampler = std::make_shared<GridSampler>();
-    std::vector<int> num_samples = { 3, 1, 1, 1, 1, 1 };
+//     // create all the input for the constructor
+//     auto tf = Transform::Identity();
+//     TSRBounds tsr_bounds{ { -1, 1 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } };
+//     auto sampler = std::make_shared<GridSampler>();
+//     std::vector<int> num_samples = { 3, 1, 1, 1, 1, 1 };
 
-    TSR tsr(tf, tsr_bounds, sampler, num_samples);
+//     TSR tsr(tf, tsr_bounds, sampler, num_samples);
 
-    auto samples = tsr.getSamples();
-    EXPECT_EQ(samples.size(), 3);
+//     auto samples = tsr.getSamples();
+//     EXPECT_EQ(samples.size(), 3);
 
-    // create the expected reference frames to check the output
-    auto tf_1 = Eigen::Isometry3d::Identity();
-    tf_1.translation().x() = -1.0;
-    auto tf_2 = Eigen::Isometry3d::Identity();
-    auto tf_3 = Eigen::Isometry3d::Identity();
-    tf_3.translation().x() = 1.0;
+//     // create the expected reference frames to check the output
+//     auto tf_1 = Eigen::Isometry3d::Identity();
+//     tf_1.translation().x() = -1.0;
+//     auto tf_2 = Eigen::Isometry3d::Identity();
+//     auto tf_3 = Eigen::Isometry3d::Identity();
+//     tf_3.translation().x() = 1.0;
 
-    comparePoses(samples[0], tf_1);
-    comparePoses(samples[1], tf_2);
-    comparePoses(samples[2], tf_3);
-}
+//     comparePoses(samples[0], tf_1);
+//     comparePoses(samples[1], tf_2);
+//     comparePoses(samples[2], tf_3);
+// }
 
-TEST(TestConstructor, TestVolume)
-{
-    EXPECT_TRUE(true);
+// TEST(TestConstructor, TestVolume)
+// {
+//     EXPECT_TRUE(true);
 
-    // create all the input for the constructor
-    auto tf = Eigen::Isometry3d::Identity();
-    TSRBounds tsr_bounds{ { -1, 1 }, { 0, 0.3 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 1 } };
-    auto sampler = std::make_shared<GridSampler>();
-    std::vector<int> num_samples = { 3, 2, 1, 1, 1, 2 };
+//     // create all the input for the constructor
+//     auto tf = Eigen::Isometry3d::Identity();
+//     TSRBounds tsr_bounds{ { -1, 1 }, { 0, 0.3 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 1 } };
+//     auto sampler = std::make_shared<GridSampler>();
+//     std::vector<int> num_samples = { 3, 2, 1, 1, 1, 2 };
 
-    TSR tsr(tf, tsr_bounds, sampler, num_samples);
+//     TSR tsr(tf, tsr_bounds, sampler, num_samples);
 
-    EXPECT_DOUBLE_EQ(tsr.volume(), 3.3);
-    // multiply the angular part by 2
-    EXPECT_DOUBLE_EQ(tsr.volume(2.0), 4.3);
-}
+//     EXPECT_DOUBLE_EQ(tsr.volume(), 3.3);
+//     // multiply the angular part by 2
+//     EXPECT_DOUBLE_EQ(tsr.volume(2.0), 4.3);
+// }
 
-TEST(TestConstructor, TestRotationSamples)
-{
-    EXPECT_TRUE(true);
+// TEST(TestConstructor, TestRotationSamples)
+// {
+//     EXPECT_TRUE(true);
 
-    // create all the input for the constructor
-    auto tf = Eigen::Isometry3d::Identity();
-    TSRBounds tsr_bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { -1, 1 }, { 0, 0 }, { 0, 0 } };
-    auto sampler = std::make_shared<GridSampler>();
-    std::vector<int> num_samples = { 1, 1, 1, 3, 1, 1 };
+//     // create all the input for the constructor
+//     auto tf = Eigen::Isometry3d::Identity();
+//     TSRBounds tsr_bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { -1, 1 }, { 0, 0 }, { 0, 0 } };
+//     auto sampler = std::make_shared<GridSampler>();
+//     std::vector<int> num_samples = { 1, 1, 1, 3, 1, 1 };
 
-    TSR tsr(tf, tsr_bounds, sampler, num_samples);
+//     TSR tsr(tf, tsr_bounds, sampler, num_samples);
 
-    auto samples = tsr.getSamples();
-    EXPECT_EQ(samples.size(), 3);
+//     auto samples = tsr.getSamples();
+//     EXPECT_EQ(samples.size(), 3);
 
-    // create the expected reference frames to check the output
-    auto tf_1 = Eigen::Isometry3d::Identity();
-    tf_1 *= Eigen::AngleAxisd(-1, Eigen::Vector3d::UnitX());
-    auto tf_2 = Eigen::Isometry3d::Identity();
-    auto tf_3 = Eigen::Isometry3d::Identity();
-    tf_3 *= Eigen::AngleAxisd(1, Eigen::Vector3d::UnitX());
+//     // create the expected reference frames to check the output
+//     auto tf_1 = Eigen::Isometry3d::Identity();
+//     tf_1 *= Eigen::AngleAxisd(-1, Eigen::Vector3d::UnitX());
+//     auto tf_2 = Eigen::Isometry3d::Identity();
+//     auto tf_3 = Eigen::Isometry3d::Identity();
+//     tf_3 *= Eigen::AngleAxisd(1, Eigen::Vector3d::UnitX());
 
-    comparePoses(samples[0], tf_1);
-    comparePoses(samples[1], tf_2);
-    comparePoses(samples[2], tf_3);
-}
+//     comparePoses(samples[0], tf_1);
+//     comparePoses(samples[1], tf_2);
+//     comparePoses(samples[2], tf_3);
+// }
 
-TEST(TestConstructor, TestPosAndRotSamples)
-{
-    EXPECT_TRUE(true);
+// TEST(TestConstructor, TestPosAndRotSamples)
+// {
+//     EXPECT_TRUE(true);
 
-    // create all the input for the constructor
-    auto tf = Eigen::Isometry3d::Identity();
-    TSRBounds tsr_bounds{ { -1, 1 }, { 0, 0 }, { 0, 0 }, { -1, 1 }, { 0, 0 }, { 0, 0 } };
-    auto sampler = std::make_shared<GridSampler>();
-    std::vector<int> num_samples = { 3, 1, 1, 2, 1, 1 };
+//     // create all the input for the constructor
+//     auto tf = Eigen::Isometry3d::Identity();
+//     TSRBounds tsr_bounds{ { -1, 1 }, { 0, 0 }, { 0, 0 }, { -1, 1 }, { 0, 0 }, { 0, 0 } };
+//     auto sampler = std::make_shared<GridSampler>();
+//     std::vector<int> num_samples = { 3, 1, 1, 2, 1, 1 };
 
-    TSR tsr(tf, tsr_bounds, sampler, num_samples);
+//     TSR tsr(tf, tsr_bounds, sampler, num_samples);
 
-    auto samples = tsr.getSamples();
-    EXPECT_EQ(samples.size(), 6);
+//     auto samples = tsr.getSamples();
+//     EXPECT_EQ(samples.size(), 6);
 
-    // create the expected reference frames to check the output
-    auto tf_1 = Eigen::Isometry3d::Identity();
-    tf_1 *= Eigen::AngleAxisd(-1, Eigen::Vector3d::UnitX());
-    tf_1.translation().x() = -1.0;
+//     // create the expected reference frames to check the output
+//     auto tf_1 = Eigen::Isometry3d::Identity();
+//     tf_1 *= Eigen::AngleAxisd(-1, Eigen::Vector3d::UnitX());
+//     tf_1.translation().x() = -1.0;
 
-    auto tf_2 = Eigen::Isometry3d::Identity();
-    tf_2 *= Eigen::AngleAxisd(-1, Eigen::Vector3d::UnitX());
+//     auto tf_2 = Eigen::Isometry3d::Identity();
+//     tf_2 *= Eigen::AngleAxisd(-1, Eigen::Vector3d::UnitX());
 
-    auto tf_3 = Eigen::Isometry3d::Identity();
-    tf_3 *= Eigen::AngleAxisd(-1, Eigen::Vector3d::UnitX());
-    tf_3.translation().x() = 1.0;
+//     auto tf_3 = Eigen::Isometry3d::Identity();
+//     tf_3 *= Eigen::AngleAxisd(-1, Eigen::Vector3d::UnitX());
+//     tf_3.translation().x() = 1.0;
 
-    auto tf_4 = Eigen::Isometry3d::Identity();
-    tf_4 *= Eigen::AngleAxisd(1, Eigen::Vector3d::UnitX());
-    tf_4.translation().x() = -1.0;
+//     auto tf_4 = Eigen::Isometry3d::Identity();
+//     tf_4 *= Eigen::AngleAxisd(1, Eigen::Vector3d::UnitX());
+//     tf_4.translation().x() = -1.0;
 
-    auto tf_5 = Eigen::Isometry3d::Identity();
-    tf_5 *= Eigen::AngleAxisd(1, Eigen::Vector3d::UnitX());
+//     auto tf_5 = Eigen::Isometry3d::Identity();
+//     tf_5 *= Eigen::AngleAxisd(1, Eigen::Vector3d::UnitX());
 
-    auto tf_6 = Eigen::Isometry3d::Identity();
-    tf_6 *= Eigen::AngleAxisd(1, Eigen::Vector3d::UnitX());
-    tf_6.translation().x() = 1.0;
+//     auto tf_6 = Eigen::Isometry3d::Identity();
+//     tf_6 *= Eigen::AngleAxisd(1, Eigen::Vector3d::UnitX());
+//     tf_6.translation().x() = 1.0;
 
-    comparePoses(samples[0], tf_1);
-    comparePoses(samples[1], tf_4);
-    comparePoses(samples[2], tf_2);
-    comparePoses(samples[3], tf_5);
-    comparePoses(samples[4], tf_3);
-    comparePoses(samples[5], tf_6);
-}
+//     comparePoses(samples[0], tf_1);
+//     comparePoses(samples[1], tf_4);
+//     comparePoses(samples[2], tf_2);
+//     comparePoses(samples[3], tf_5);
+//     comparePoses(samples[4], tf_3);
+//     comparePoses(samples[5], tf_6);
+// }
 
-TEST(TestConversions, TestValuesAndPose)
-{
-    // create all the input for the constructor
-    auto tf = Eigen::Isometry3d::Identity();
-    TSRBounds tsr_bounds{ { -1, 1 }, { 0, 0 }, { 0, 0 }, { -1, 1 }, { 0, 0 }, { 0, 0 } };
-    auto sampler = std::make_shared<GridSampler>();
-    std::vector<int> num_samples = { 3, 1, 1, 2, 1, 1 };
+// TEST(TestConversions, TestValuesAndPose)
+// {
+//     // create all the input for the constructor
+//     auto tf = Eigen::Isometry3d::Identity();
+//     TSRBounds tsr_bounds{ { -1, 1 }, { 0, 0 }, { 0, 0 }, { -1, 1 }, { 0, 0 }, { 0, 0 } };
+//     auto sampler = std::make_shared<GridSampler>();
+//     std::vector<int> num_samples = { 3, 1, 1, 2, 1, 1 };
 
-    // create the task space region
-    TSR tsr(tf, tsr_bounds, sampler, num_samples);
+//     // create the task space region
+//     TSR tsr(tf, tsr_bounds, sampler, num_samples);
 
-    std::vector<double> v{ -0.1, -0.2, -0.3, 0.1, 0.2, 0.3 };
-    auto tf_v = tsr.valuesToPose(v);
-    auto new_v = tsr.poseToValues(tf_v);
+//     std::vector<double> v{ -0.1, -0.2, -0.3, 0.1, 0.2, 0.3 };
+//     auto tf_v = tsr.valuesToPose(v);
+//     auto new_v = tsr.poseToValues(tf_v);
 
-    for (std::size_t i{ 0 }; i < v.size(); ++i)
-    {
-        EXPECT_NEAR(v[i], new_v[i], TOLERANCE) << "Values not equal at dimension " << i;
-    }
-}
+//     for (std::size_t i{ 0 }; i < v.size(); ++i)
+//     {
+//         EXPECT_NEAR(v[i], new_v[i], TOLERANCE) << "Values not equal at dimension " << i;
+//     }
+// }
 
-TEST(TestEulerStuff, Stuff)
-{
-    // create all the input for the constructor
-    auto tf = Eigen::Isometry3d::Identity();
-    TSRBounds tsr_bounds{ { -1, 1 }, { 0, 0 }, { 0, 0 }, { -1, 1 }, { 0, 0 }, { 0, 0 } };
-    auto sampler = std::make_shared<GridSampler>();
-    std::vector<int> num_samples = { 3, 1, 1, 2, 1, 1 };
+// TEST(TestEulerStuff, Stuff)
+// {
+//     // create all the input for the constructor
+//     auto tf = Eigen::Isometry3d::Identity();
+//     TSRBounds tsr_bounds{ { -1, 1 }, { 0, 0 }, { 0, 0 }, { -1, 1 }, { 0, 0 }, { 0, 0 } };
+//     auto sampler = std::make_shared<GridSampler>();
+//     std::vector<int> num_samples = { 3, 1, 1, 2, 1, 1 };
 
-    // create the task space region
-    TSR tsr(tf, tsr_bounds, sampler, num_samples);
+//     // create the task space region
+//     TSR tsr(tf, tsr_bounds, sampler, num_samples);
 
-    Eigen::Vector3d a1(0.1, 0.2, 0.3);
-    auto res1 = minNormEquivalent(a1);
-    // std::cout << res1.transpose() << std::endl;
+//     Eigen::Vector3d a1(0.1, 0.2, 0.3);
+//     auto res1 = minNormEquivalent(a1);
+//     // std::cout << res1.transpose() << std::endl;
 
-    EXPECT_NEAR(a1[0], res1[0], TOLERANCE);
-    EXPECT_NEAR(a1[1], res1[1], TOLERANCE);
-    EXPECT_NEAR(a1[2], res1[2], TOLERANCE);
+//     EXPECT_NEAR(a1[0], res1[0], TOLERANCE);
+//     EXPECT_NEAR(a1[1], res1[1], TOLERANCE);
+//     EXPECT_NEAR(a1[2], res1[2], TOLERANCE);
 
-    Eigen::Vector3d a2(3.0, -3.0, 0.3);
-    Eigen::Vector3d expected2(3.0 - M_PI, 3.0 - M_PI, 0.3 - M_PI);
-    auto res2 = minNormEquivalent(a2);
-    // std::cout << res2.transpose() << std::endl;
-    // std::cout << expected2.transpose() << std::endl;
+//     Eigen::Vector3d a2(3.0, -3.0, 0.3);
+//     Eigen::Vector3d expected2(3.0 - M_PI, 3.0 - M_PI, 0.3 - M_PI);
+//     auto res2 = minNormEquivalent(a2);
+//     // std::cout << res2.transpose() << std::endl;
+//     // std::cout << expected2.transpose() << std::endl;
 
-    EXPECT_NEAR(expected2[0], res2[0], TOLERANCE);
-    EXPECT_NEAR(expected2[1], res2[1], TOLERANCE);
-    EXPECT_NEAR(expected2[2], res2[2], TOLERANCE);
+//     EXPECT_NEAR(expected2[0], res2[0], TOLERANCE);
+//     EXPECT_NEAR(expected2[1], res2[1], TOLERANCE);
+//     EXPECT_NEAR(expected2[2], res2[2], TOLERANCE);
 
-    std::vector<double> v_before{0, 0, 0, a2.x(), a2.y(), a2.z()};
-    std::vector<double> v_after {0, 0, 0, res2.x(), res2.y(), res2.z()};
-    auto tf2_before = tsr.valuesToPose(v_before);
-    auto tf2_after = tsr.valuesToPose(v_after);
-    comparePoses(tf2_before, tf2_after);
-}
+//     std::vector<double> v_before{0, 0, 0, a2.x(), a2.y(), a2.z()};
+//     std::vector<double> v_after {0, 0, 0, res2.x(), res2.y(), res2.z()};
+//     auto tf2_before = tsr.valuesToPose(v_before);
+//     auto tf2_after = tsr.valuesToPose(v_after);
+//     comparePoses(tf2_before, tf2_after);
+// }
 
 TEST(TestMath, TestPoseDistanceSimple)
 {

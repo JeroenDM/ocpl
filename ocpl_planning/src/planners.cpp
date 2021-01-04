@@ -44,7 +44,7 @@ std::vector<JointPositions> findPath(const std::vector<TSR>& tsrs,
     std::vector<std::vector<JointPositions>> graph_data;
     for (auto tsr : tsrs)
     {
-        std::cout << "ocpl_planner: processing path point " << tsr.getNominalPose().translation().transpose() << "\n";
+        std::cout << "ocpl_planner: processing path point " << tsr.tf_nominal.translation().transpose() << "\n";
         auto solutions = sampleTSR(tsr, is_valid, generic_inverse_kinematics);
         std::cout << "ocpl_planner: found " << solutions.size() << std::endl;
         graph_data.push_back(solutions);

@@ -13,12 +13,12 @@ using namespace ocpl;
 
 void configureSampler(const TSR& tsr, std::shared_ptr<GridSampler>& sampler, const std::vector<int>& num_samples)
 {
-    sampler->addDimension(tsr.getBounds().x.lower, tsr.getBounds().x.upper, num_samples[0]);
-    sampler->addDimension(tsr.getBounds().y.lower, tsr.getBounds().y.upper, num_samples[1]);
-    sampler->addDimension(tsr.getBounds().z.lower, tsr.getBounds().z.upper, num_samples[2]);
-    sampler->addDimension(tsr.getBounds().rx.lower, tsr.getBounds().rx.upper, num_samples[3]);
-    sampler->addDimension(tsr.getBounds().ry.lower, tsr.getBounds().ry.upper, num_samples[4]);
-    sampler->addDimension(tsr.getBounds().rz.lower, tsr.getBounds().rz.upper, num_samples[5]);
+    sampler->addDimension(tsr.bounds.x.lower, tsr.bounds.x.upper, num_samples[0]);
+    sampler->addDimension(tsr.bounds.y.lower, tsr.bounds.y.upper, num_samples[1]);
+    sampler->addDimension(tsr.bounds.z.lower, tsr.bounds.z.upper, num_samples[2]);
+    sampler->addDimension(tsr.bounds.rx.lower, tsr.bounds.rx.upper, num_samples[3]);
+    sampler->addDimension(tsr.bounds.ry.lower, tsr.bounds.ry.upper, num_samples[4]);
+    sampler->addDimension(tsr.bounds.rz.lower, tsr.bounds.rz.upper, num_samples[5]);
 }
 
 double L2NormDiff(NodePtr n1, NodePtr n2)
@@ -93,7 +93,7 @@ int main(int argc, char** argv)
     // // appart from edge costs, the graph also used node costs
     double state_weight{ 1.0 };
     auto f_state_cost = [&robot, state_weight](const TSR& tsr, const JointPositions& q) {
-        double z0 = tsr.getNominalPose().rotation().eulerAngles(0, 1, 2).z();
+        double z0 = tsr.tf_nominal.rotation().eulerAngles(0, 1, 2).z();
         double z1 = robot.fk(q).rotation().eulerAngles(0, 1, 2).z();
         return state_weight * (z0 - z1) * (z0 - z1);
         // return std::abs(z1 - 0.3);

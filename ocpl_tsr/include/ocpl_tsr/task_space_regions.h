@@ -25,18 +25,17 @@ struct TSRBounds
     Bounds rx, ry, rz;
 };
 
-class TSR
+struct TSR
 {
-    Eigen::Isometry3d tf_nominal_;
-    TSRBounds bounds_;
+    Eigen::Isometry3d tf_nominal;
+    TSRBounds bounds;
 
-  public:
     TSR(Transform tf, TSRBounds bounds);
     ~TSR() = default;
 
     /** \brief Turn a six vector of position and euler angle values into an end-effector pose.
      *
-     * This 'values' vector expresses the local diviation from the nominal task space region frame.
+     * This 'values' vector expresses the local deviation from the nominal task space region frame.
      * Therefore it is pre-multiplied with this nominal pose after conversion, before returning it.
      * */
     Transform valuesToPose(const std::vector<double>& values) const;
@@ -46,15 +45,6 @@ class TSR
      * The reverse of `valuesToPose`.
      * */
     std::vector<double> poseToValues(const Transform& tf) const;
-    Transform getNominalPose() const
-    {
-        return tf_nominal_;
-    };
-
-    const TSRBounds& getBounds() const
-    {
-        return bounds_;
-    }
 
     /** \brief Specific volume metric from the paper
      *

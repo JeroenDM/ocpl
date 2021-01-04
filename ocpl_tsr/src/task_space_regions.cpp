@@ -6,7 +6,7 @@
 
 namespace ocpl
 {
-TSR::TSR(Transform tf, TSRBounds bounds) : tf_nominal_(tf), bounds_(bounds)
+TSR::TSR(Transform tf, TSRBounds bounds) : tf_nominal(tf), bounds(bounds)
 {
 }
 
@@ -23,13 +23,13 @@ Transform TSR::valuesToPose(const std::vector<double>& values) const
           AngleAxis(values[4], Vector::UnitY()) *
           AngleAxis(values[5], Vector::UnitZ());
     // clang-format on
-    return tf_nominal_ * t;
+    return tf_nominal * t;
 }
 
 std::vector<double> TSR::poseToValues(const Transform& tf) const
 {
     // values are calculated in nominal frame of this tsr
-    Eigen::Isometry3d tf_diff = tf_nominal_.inverse() * tf;
+    Eigen::Isometry3d tf_diff = tf_nominal.inverse() * tf;
     Eigen::Vector3d pos = tf_diff.translation();
     // Eigen documentation:
     //    The returned angles are in the ranges [0:pi]x[-pi:pi]x[-pi:pi].
@@ -43,13 +43,13 @@ double TSR::volume(double angle_weight) const
 {
     double volume{ 0.0 };
     // position part
-    volume += bounds_.x.range();
-    volume += bounds_.y.range();
-    volume += bounds_.z.range();
+    volume += bounds.x.range();
+    volume += bounds.y.range();
+    volume += bounds.z.range();
     // angular part
-    volume += angle_weight * bounds_.rx.range();
-    volume += angle_weight * bounds_.ry.range();
-    volume += angle_weight * bounds_.rz.range();
+    volume += angle_weight * bounds.rx.range();
+    volume += angle_weight * bounds.ry.range();
+    volume += angle_weight * bounds.rz.range();
     return volume;
 }
 
