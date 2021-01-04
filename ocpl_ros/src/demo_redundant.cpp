@@ -1,6 +1,5 @@
 #include <ros/ros.h>
 
-#include <cmath>
 #include <algorithm>
 #include <limits>
 
@@ -10,8 +9,10 @@
 #include <ocpl_sampling/halton_sampler.h>
 #include <ocpl_sampling/random_sampler.h>
 #include <ocpl_tsr/task_space_regions.h>
+
 #include <ocpl_planning/planners.h>
 #include <ocpl_planning/factories.h>
+#include <ocpl_planning/cost_functions.h>
 
 using namespace ocpl;
 
@@ -56,30 +57,12 @@ SamplerPtr createIncrementalRobotSampler(SamplerType type)
     return sampler;
 }
 
-double L2NormDiff(NodePtr n1, NodePtr n2)
-{
-    double cost{};
-    int s = n1->data.size();
-    for (int i = 0; i < n1->data.size(); ++i)
-    {
-        cost += std::sqrt((n1->data[i] - n2->data[i]) * (n1->data[i] - n2->data[i]));
-    }
-    return cost;
-}
-
-double L1NormDiff(NodePtr n1, NodePtr n2)
-{
-    double cost{};
-    int s = n1->data.size();
-    for (int i = 0; i < n1->data.size(); ++i)
-    {
-        cost += std::abs(n1->data[i] - n2->data[i]);
-    }
-    // if (cost > 1.0)
-    //     cost = std::numeric_limits<double>::max();
-    return cost;
-}
-
+/** \brief Demo for a planar, 6 link robot.
+ * 
+ * You can specify and load collision objects with the python script "load_collision_objects.py".
+ * The main function shows how to setup and solve a task of following a simple straight line.
+ * 
+ * */
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "ocpl_moveit_demo_r6");

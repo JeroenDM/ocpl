@@ -1,6 +1,5 @@
 #include <ros/ros.h>
 
-#include <cmath>
 #include <algorithm>
 
 #include <ocpl_ros/moveit_robot_examples.h>
@@ -9,20 +8,12 @@
 #include <ocpl_sampling/halton_sampler.h>
 #include <ocpl_sampling/random_sampler.h>
 #include <ocpl_tsr/task_space_regions.h>
+
 #include <ocpl_planning/planners.h>
 #include <ocpl_planning/factories.h>
+#include <ocpl_planning/cost_functions.h>
 
 using namespace ocpl;
-
-double L2NormDiff(NodePtr n1, NodePtr n2)
-{
-    double cost{};
-    for (int i = 0; i < n1->data.size(); ++i)
-    {
-        cost += std::sqrt((n1->data[i] - n2->data[i]) * (n1->data[i] - n2->data[i]));
-    }
-    return cost;
-}
 
 int main(int argc, char** argv)
 {
