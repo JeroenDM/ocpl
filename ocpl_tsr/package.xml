@@ -9,6 +9,7 @@
   <license>MIT</license>
 
   <buildtool_depend>catkin</buildtool_depend>
+  <depend>ocpl_sampling</depend>
 
   <export>
   </export>

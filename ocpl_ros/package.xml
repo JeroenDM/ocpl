@@ -22,6 +22,11 @@
   <exec_depend>moveit_visual_tools</exec_depend>
   <exec_depend>roscpp</exec_depend>
 
+  <depend>ocpl_sampling</depend>
+  <depend>ocpl_graph</depend>
+  <depend>ocpl_tsr</depend>
+  <depend>ocpl_planning</depend>
+
   <export>
   </export>
 </package>

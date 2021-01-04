@@ -10,6 +10,10 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
+  <depend>ocpl_sampling</depend>
+  <depend>ocpl_graph</depend>
+  <depend>ocpl_tsr</depend>
+
   <export>
   </export>
 </package>
