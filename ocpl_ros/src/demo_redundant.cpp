@@ -7,19 +7,53 @@
 #include <ocpl_ros/moveit_robot_examples.h>
 #include <ocpl_ros/rviz.h>
 #include <ocpl_sampling/grid_sampler.h>
+#include <ocpl_sampling/halton_sampler.h>
+#include <ocpl_sampling/random_sampler.h>
 #include <ocpl_tsr/task_space_regions.h>
 #include <ocpl_planning/planners.h>
+#include <ocpl_planning/factories.h>
 
 using namespace ocpl;
 
-void configureSampler(const TSR& tsr, std::shared_ptr<GridSampler>& sampler, const std::vector<int>& num_samples)
+/** \brief Factory function to create a sampler specific to the robot of this demo.
+ * 
+ * Joint limits are hard coded here for now, but could be extracted from the MoveIt
+ * specific robot model used in this demo. **/
+SamplerPtr createGridRobotSampler(const std::vector<int>& num_samples)
 {
-    sampler->addDimension(tsr.bounds.x.lower, tsr.bounds.x.upper, num_samples[0]);
-    sampler->addDimension(tsr.bounds.y.lower, tsr.bounds.y.upper, num_samples[1]);
-    sampler->addDimension(tsr.bounds.z.lower, tsr.bounds.z.upper, num_samples[2]);
-    sampler->addDimension(tsr.bounds.rx.lower, tsr.bounds.rx.upper, num_samples[3]);
-    sampler->addDimension(tsr.bounds.ry.lower, tsr.bounds.ry.upper, num_samples[4]);
-    sampler->addDimension(tsr.bounds.rz.lower, tsr.bounds.rz.upper, num_samples[5]);
+    SamplerPtr sampler = std::make_shared<GridSampler>();
+    assert(num_samples.size() == 3);
+    sampler->addDimension(-1.5, 1.5, num_samples[0]);
+    sampler->addDimension(-1.5, 1.5, num_samples[1]);
+    sampler->addDimension(-1.5, 1.5, num_samples[2]);
+    return sampler;
+}
+
+/** \brief Factory function to create a sampler specific to the robot of this demo.
+ * 
+ * Joint limits are hard coded here for now, but could be extracted from the MoveIt
+ * specific robot model used in this demo. **/
+SamplerPtr createIncrementalRobotSampler(SamplerType type)
+{
+    SamplerPtr sampler;
+    switch (type)
+    {
+        case SamplerType::RANDOM: {
+            sampler = std::make_shared<RandomSampler>();
+            break;
+        }
+        case SamplerType::HALTON: {
+            sampler = std::make_shared<HaltonSampler>();
+            break;
+        }
+        default: {
+            assert(false && "Jeroen, you forgot to implement a SamplerType!");
+        }
+    }
+    sampler->addDimension(-1.5, 1.5);
+    sampler->addDimension(-1.5, 1.5);
+    sampler->addDimension(-1.5, 1.5);
+    return sampler;
 }
 
 double L2NormDiff(NodePtr n1, NodePtr n2)
@@ -75,11 +109,6 @@ int main(int argc, char** argv)
         ros::Duration(0.5).sleep();
     }
 
-    auto csampler = std::make_shared<GridSampler>();
-    csampler->addDimension(-1.5, 1.5, 6);
-    csampler->addDimension(-1.5, 1.5, 6);
-    csampler->addDimension(-1.5, 1.5, 6);
-
     // for (auto q_red : sampler->getSamples())
     // {
     //     auto solution = robot.ik(tf_start, q_red);
@@ -117,17 +146,15 @@ int main(int argc, char** argv)
     // Describe problem
     //////////////////////////////////
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
-    auto f_generic_inverse_kinematics = [&robot, &csampler](const TSR& tsr) {
-        static auto t_sampler = std::make_shared<GridSampler>();
-        if (t_sampler->getNumDimensions() == 0)
-        {
-            configureSampler(tsr, t_sampler, { 1, 1, 1, 1, 1, 30 });
-        }
+
+    auto f_generic_inverse_kinematics = [&robot](const TSR& tsr) {
+        static SamplerPtr t_sampler = createGridSampler(tsr, { 1, 1, 1, 1, 1, 30 });
+        static SamplerPtr c_sampler = createGridRobotSampler({6, 6, 6});
 
         IKSolution result;
         for (auto t_sample : t_sampler->getSamples())
         {
-            for (auto q_red : csampler->getSamples())
+            for (auto q_red : c_sampler->getSamples())
             {
                 auto solution = robot.ik(tsr.valuesToPose(t_sample), q_red);
                 for (auto q : solution)
@@ -138,6 +165,27 @@ int main(int argc, char** argv)
         }
         return result;
     };
+
+    // use a different sampler
+    // -----------------------
+    // auto f_generic_inverse_kinematics = [&robot](const TSR& tsr) {
+    //     static SamplerPtr t_sampler = createIncrementalSampler(tsr, SamplerType::RANDOM);
+    //     static SamplerPtr c_sampler = createIncrementalRobotSampler(SamplerType::RANDOM);
+
+    //     IKSolution result;
+    //     for (auto t_sample : t_sampler->getSamples(30))
+    //     {
+    //         for (auto q_red : c_sampler->getSamples(216))
+    //         {
+    //             auto solution = robot.ik(tsr.valuesToPose(t_sample), q_red);
+    //             for (auto q : solution)
+    //             {
+    //                 result.push_back(q);
+    //             }
+    //         }
+    //     }
+    //     return result;
+    // };
 
     // appart from edge costs, the graph also used node costs
     // double state_weight{ 1.0 };
