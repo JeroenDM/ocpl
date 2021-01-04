@@ -2,7 +2,7 @@
 
 #include <queue>
 #include <algorithm>  // std::find, std::min_element
-// #include <iostream>
+#include <iostream>
 
 namespace ocpl
 {
@@ -240,11 +240,22 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
         }
     }
 
-    // find the goal node with the smallest distance
-    auto n_goal = *std::min_element(goal_nodes.begin(), goal_nodes.end(),
-                                    [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
+    if (goal_nodes_to_reach > 0)
+    {
+        std::cout << "Not all goal nodes reached.\n";
+    }
 
-    return _extract_path(n_goal);
+    // find the goal node with the smallest distance
+    auto node_iter = std::min_element(goal_nodes.begin(), goal_nodes.end(),
+                                    [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
+    
+    if (node_iter == goal_nodes.end())
+    {
+        std::cout << "None of the goals are reached.\n";
+        return {};
+    }
+
+    return _extract_path(*node_iter);
 }
 
 std::ostream& operator<<(std::ostream& os, const Node& node)
