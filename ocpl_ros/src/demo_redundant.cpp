@@ -58,6 +58,42 @@ SamplerPtr createIncrementalRobotSampler(SamplerType type, int dims)
     return sampler;
 }
 
+/** Case 2 from my 2018 paper. **/
+std::vector<TSR> createCase2()
+{
+    const double small_passage_width{ 0.5 };
+    Transform tf1 = Transform::Identity();
+    tf1.translation() << 4.0, small_passage_width / 2, 0.0;
+    TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
+    std::vector<TSR> task;
+
+    Transform tf = tf1;
+    for (int i{ 0 }; i < 5; ++i)
+    {
+        tf.translation() += 0.2 * Eigen::Vector3d::UnitX();
+        task.push_back({ tf, bounds });
+    }
+    return task;
+}
+
+/** Case 3 from my 2018 paper. **/
+std::vector<TSR> createCase3()
+{
+    Transform tf1 = Transform::Identity();
+    tf1.translation() << 5.0, 1.3, 0.0;
+    TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI_2, M_PI_2 } };
+    std::vector<TSR> task;
+
+    Transform tf = tf1;
+    double step = (2.5 - 1.3) / 5.0;
+    for (int i{ 0 }; i < 5; ++i)
+    {
+        tf.translation() += step * Eigen::Vector3d::UnitY();
+        task.push_back({ tf, bounds });
+    }
+    return task;
+}
+
 /** \brief Demo for a planar, 6 link robot.
  *
  * You can specify and load collision objects with the python script "load_collision_objects.py".
@@ -110,18 +146,11 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Create task
     //////////////////////////////////
-    const double small_passage_width{ 0.5 };
-    Transform tf1 = Transform::Identity();
-    tf1.translation() << 4.0, small_passage_width / 2, 0.0;
-    TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
-    std::vector<TSR> regions;
+    // small passage case
+    auto regions = createCase2();
 
-    Transform tf = tf1;
-    for (int i{ 0 }; i < 5; ++i)
-    {
-        tf.translation() += 0.2 * Eigen::Vector3d::UnitX();
-        regions.push_back({ tf, bounds });
-    }
+    // 8 dof zig zag case
+    // auto regions = createCase3();
 
     for (TSR& tsr : regions)
     {
@@ -133,8 +162,8 @@ int main(int argc, char** argv)
     // Describe problem
     //////////////////////////////////
     // grid planner parameters
-    const std::vector<int> N_T_SPACE{ 1, 1, 1, 1, 1, 10 };       // resolution task space tolerance
-    const std::vector<int> N_C_SPACE(robot.getNumDof() - 3, 4);  // resolution to sample redundant joints
+    const std::vector<int> N_T_SPACE{ 1, 1, 1, 1, 1, 20 };       // resolution task space tolerance
+    const std::vector<int> N_C_SPACE(robot.getNumDof() - 3, 5);  // resolution to sample redundant joints
 
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
 
@@ -160,8 +189,8 @@ int main(int argc, char** argv)
     // use a different sampler
     // -----------------------
     // incremental planner parames
-    const int T_SPACE_BATCH_SIZE {15};
-    const int C_SPACE_BATCH_SIZE {600};
+    const int T_SPACE_BATCH_SIZE{ 15 };
+    const int C_SPACE_BATCH_SIZE{ 600 };
 
     // auto f_generic_inverse_kinematics = [&robot, T_SPACE_BATCH_SIZE, C_SPACE_BATCH_SIZE](const TSR& tsr) {
     //     static SamplerPtr t_sampler = createIncrementalSampler(tsr, SamplerType::RANDOM);
