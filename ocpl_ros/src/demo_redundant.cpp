@@ -24,11 +24,18 @@ using namespace ocpl;
 SamplerPtr createGridRobotSampler(const std::vector<int> num_samples)
 {
     SamplerPtr sampler = std::make_shared<GridSampler>();
-    assert(num_samples.size() == 3);
     for (int ns : num_samples)
     {
         sampler->addDimension(-1.5, 1.5, ns);
     }
+    return sampler;
+}
+
+SamplerPtr createGridRobotSamplerCase1(const std::vector<int> num_samples)
+{
+    SamplerPtr sampler = std::make_shared<GridSampler>();
+    sampler->addDimension(2.0, 3.0, num_samples[0]);
+    sampler->addDimension(0.0, 0.9, num_samples[1]);
     return sampler;
 }
 
@@ -56,6 +63,24 @@ SamplerPtr createIncrementalRobotSampler(SamplerType type, int dims)
     for (int i{ 0 }; i < dims; ++i)
         sampler->addDimension(-1.5, 1.5);
     return sampler;
+}
+
+/** Case 1 from my 2018 paper. **/
+std::vector<TSR> createCase1()
+{
+    Transform tf1 = Transform::Identity();
+    tf1.translation() << 0.5, 2.0, 0.0;
+    TSRBounds bounds{ { -0.2, 0.3 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, 0.0 } };
+    std::vector<TSR> task;
+
+    Transform tf = tf1;
+    double step = (2.5 - 2.0) / 5.0;
+    for (int i{ 0 }; i < 5; ++i)
+    {
+        tf.translation() += step * Eigen::Vector3d::UnitY();
+        task.push_back({ tf, bounds });
+    }
+    return task;
 }
 
 /** Case 2 from my 2018 paper. **/
@@ -146,8 +171,11 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Create task
     //////////////////////////////////
+    // 2P 3R robot case
+    auto regions = createCase1();
+
     // small passage case
-    auto regions = createCase2();
+    // auto regions = createCase2();
 
     // 8 dof zig zag case
     // auto regions = createCase3();
@@ -162,14 +190,16 @@ int main(int argc, char** argv)
     // Describe problem
     //////////////////////////////////
     // grid planner parameters
-    const std::vector<int> N_T_SPACE{ 1, 1, 1, 1, 1, 20 };       // resolution task space tolerance
+    const std::vector<int> N_T_SPACE{ 5, 1, 1, 1, 1, 32 };  // resolution task space tolerance
+    // const std::vector<int> N_T_SPACE{ 1, 1, 1, 1, 1, 20 };       // resolution task space tolerance
     const std::vector<int> N_C_SPACE(robot.getNumDof() - 3, 5);  // resolution to sample redundant joints
 
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
 
     auto f_generic_inverse_kinematics = [&robot, N_T_SPACE, N_C_SPACE](const TSR& tsr) {
         static SamplerPtr t_sampler = createGridSampler(tsr, N_T_SPACE);
-        static SamplerPtr c_sampler = createGridRobotSampler(N_C_SPACE);
+        // static SamplerPtr c_sampler = createGridRobotSampler(N_C_SPACE);
+        static SamplerPtr c_sampler = createGridRobotSamplerCase1({10, 9});
 
         IKSolution result;
         for (auto t_sample : t_sampler->getSamples())

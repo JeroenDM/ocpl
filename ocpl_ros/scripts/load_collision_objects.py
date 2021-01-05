@@ -22,6 +22,22 @@ def create_3r_spheres():
 
     return ["sphere", "sphere"], [pose_s, pose_2], [0.2, 0.4]
 
+def create_case_1_2018():
+    poses = [PoseStamped(), PoseStamped(), PoseStamped(), PoseStamped(), PoseStamped()]
+    for pose in poses:
+        pose.header.frame_id = "world"
+
+    poses[0].pose = Pose(position=Vector3(1.5, 1.75, 0), orientation=Quaternion(w=1))
+    poses[1].pose = Pose(position=Vector3(3.5, 2.1, 0), orientation=Quaternion(w=1))
+    poses[2].pose = Pose(position=Vector3(2, 3.45, 0), orientation=Quaternion(w=1))
+    poses[3].pose = Pose(position=Vector3(0.1, 2.1, 0), orientation=Quaternion(w=1))
+    poses[4].pose = Pose(position=Vector3(0.6, 1.25, 0), orientation=Quaternion(w=1))
+
+    return (
+        ["box"] * 5,
+        poses,
+        [(1, 1.5, 1), (1, 2.2, 1), (4, 0.5, 1), (0.2, 2.2, 1), (0.8, 0.5, 1)],
+    )
 
 def create_case_2_2018():
     small_passage_width = 0.5
@@ -59,6 +75,7 @@ def create_case_3_2018():
 
 factories = {
     "3r_spheres": create_3r_spheres,
+    "case_1_2018": create_case_1_2018,
     "case_2_2018": create_case_2_2018,
     "case_3_2018": create_case_3_2018,
 }
