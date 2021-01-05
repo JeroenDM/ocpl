@@ -25,7 +25,7 @@ IKSolution PlanarRobot3R::ik(const Transform& tf)
  * *******************/
 PlanarRobotNR::PlanarRobotNR(const std::string& tcp_frame) : MoveItRobot(tcp_frame)
 {
-    assert(num_dof_ > 3); // this class is for planar redundant robots
+    assert(num_dof_ > 3);  // this class is for planar redundant robots
     messyHardCodedStuff();
 }
 
@@ -35,8 +35,19 @@ void PlanarRobotNR::messyHardCodedStuff()
     std::size_t link_index = num_dof_ - num_base_joints_;
     analytical_ik_base_link_ =
         joint_model_group_->getActiveJointModels().at(link_index)->getChildLinkModel()->getName();
-    // getting these values from the urdf is possible ...
-    analytical_ik_link_length_ = { 1.0, 1.0, 1.0 };
+
+    // get the link lengths of the last three links
+    auto joint_models = joint_model_group_->getActiveJointModels();
+
+    // iterate over the last two active links of the robot
+    for (int i{ 2 }; i > 0; --i)
+    {
+        std::string name = joint_models[num_dof_ - i]->getChildLinkModel()->getName();
+        double length = getLinkFixedRelativeTransform(name).translation().norm();
+        analytical_ik_link_length_.push_back(length);
+    }
+    // the last link length is measured towards the flange
+    analytical_ik_link_length_.push_back(getLinkFixedRelativeTransform("flange").translation().norm());
 }
 
 IKSolution PlanarRobotNR::ik(const Transform& tf)
