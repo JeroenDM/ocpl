@@ -1,10 +1,24 @@
 #include <cmath>
 #include <vector>
 
-
-/** Analytical inverse kinematics for a planar robot with 3 revolute joints. **/
 template <typename T>
-std::vector<std::vector<T>> planar_3r_ik(T x, T y, T angle, std::vector<T> l)
+bool isInLimits(std::vector<T> v, T lower, T upper)
+{
+    for (auto value : v)
+    {
+        if (value < lower || value > upper)
+            return false;
+    }
+    return true;
+}
+
+/** Analytical inverse kinematics for a planar robot with 3 revolute joints.
+ *
+ * I hard coded the joint limits as default parameters for now.
+ *
+ * **/
+template <typename T>
+std::vector<std::vector<T>> planar_3r_ik(T x, T y, T angle, std::vector<T> l, T lower_limit = -1.5, T upper_limit = 1.5)
 {
     std::vector<std::vector<T>> sol;
 
@@ -35,7 +49,8 @@ std::vector<std::vector<T>> planar_3r_ik(T x, T y, T angle, std::vector<T> l)
                 q_up[0] = std::atan2(pwy, pwx);
                 q_up[1] = 0.0;
                 q_up[2] = angle - q_up[0];
-                sol.push_back(q_up);
+                if (isInLimits(q_up, lower_limit, upper_limit))
+                    sol.push_back(q_up);
                 return sol;
             }
             else if (abs(-c2 - 1) < TOL)
@@ -44,11 +59,13 @@ std::vector<std::vector<T>> planar_3r_ik(T x, T y, T angle, std::vector<T> l)
                 q_up[0] = std::atan2(pwy, pwx);
                 q_up[1] = M_PI;
                 q_up[2] = angle - q_up[0] - q_up[1];
-                sol.push_back(q_up);
+                if (isInLimits(q_up, lower_limit, upper_limit))
+                    sol.push_back(q_up);
                 q_down[0] = std::atan2(pwy, pwx);
                 q_down[1] = -M_PI;
                 q_down[2] = angle - q_down[0] - q_down[1];
-                sol.push_back(q_up);
+                if (isInLimits(q_down, lower_limit, upper_limit))
+                    sol.push_back(q_down);
                 return sol;
             }
             else
@@ -69,8 +86,10 @@ std::vector<std::vector<T>> planar_3r_ik(T x, T y, T angle, std::vector<T> l)
                 q_up[2] = angle - q_up[0] - q_up[1];
                 q_down[2] = angle - q_down[0] - q_down[1];
 
-                sol.push_back(q_up);
-                sol.push_back(q_down);
+                if (isInLimits(q_up, lower_limit, upper_limit))
+                    sol.push_back(q_up);
+                if (isInLimits(q_down, lower_limit, upper_limit))
+                    sol.push_back(q_down);
                 return sol;
             }
         }
