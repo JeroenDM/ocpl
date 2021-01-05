@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <chrono>
 
 #include <ocpl_ros/moveit_robot_examples.h>
 #include <ocpl_ros/rviz.h>
@@ -17,24 +18,25 @@
 using namespace ocpl;
 
 /** \brief Factory function to create a sampler specific to the robot of this demo.
- * 
+ *
  * Joint limits are hard coded here for now, but could be extracted from the MoveIt
  * specific robot model used in this demo. **/
-SamplerPtr createGridRobotSampler(const std::vector<int>& num_samples)
+SamplerPtr createGridRobotSampler(const std::vector<int> num_samples)
 {
     SamplerPtr sampler = std::make_shared<GridSampler>();
     assert(num_samples.size() == 3);
-    sampler->addDimension(-1.5, 1.5, num_samples[0]);
-    sampler->addDimension(-1.5, 1.5, num_samples[1]);
-    sampler->addDimension(-1.5, 1.5, num_samples[2]);
+    for (int ns : num_samples)
+    {
+        sampler->addDimension(-1.5, 1.5, ns);
+    }
     return sampler;
 }
 
 /** \brief Factory function to create a sampler specific to the robot of this demo.
- * 
+ *
  * Joint limits are hard coded here for now, but could be extracted from the MoveIt
  * specific robot model used in this demo. **/
-SamplerPtr createIncrementalRobotSampler(SamplerType type)
+SamplerPtr createIncrementalRobotSampler(SamplerType type, int dims)
 {
     SamplerPtr sampler;
     switch (type)
@@ -51,34 +53,36 @@ SamplerPtr createIncrementalRobotSampler(SamplerType type)
             assert(false && "Jeroen, you forgot to implement a SamplerType!");
         }
     }
-    sampler->addDimension(-1.5, 1.5);
-    sampler->addDimension(-1.5, 1.5);
-    sampler->addDimension(-1.5, 1.5);
+    for (int i{ 0 }; i < dims; ++i)
+        sampler->addDimension(-1.5, 1.5);
     return sampler;
 }
 
 /** \brief Demo for a planar, 6 link robot.
- * 
+ *
  * You can specify and load collision objects with the python script "load_collision_objects.py".
  * The main function shows how to setup and solve a task of following a simple straight line.
- * 
+ *
  * */
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "ocpl_moveit_demo_r6");
+    ros::init(argc, argv, "ocpl_moveit_demo_rn");
     ros::NodeHandle node_handle;
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
-    PlanarRobot6R robot;
+    PlanarRobotNR robot;
     Rviz rviz;
     ros::Duration(0.2).sleep();
     rviz.clear();
     ros::Duration(0.2).sleep();
 
-    std::vector<double> q_start = { 1.0, -2.0, 1.0, -1.0, 1.0, -1.0 };
+    // create an interesting start configurations
+    std::vector<double> q_start(robot.getNumDof(), 1.0);
+
     auto tf_start = robot.fk(q_start);
-    auto solution = robot.ik(tf_start, { 1.0, -1.0, 0.3 });
+    JointPositions q_fixed(q_start.begin() + 3, q_start.end());
+    auto solution = robot.ik(tf_start, q_fixed);
 
     std::cout << tf_start.translation().transpose() << std::endl;
 
@@ -108,7 +112,7 @@ int main(int argc, char** argv)
     //////////////////////////////////
     const double small_passage_width{ 0.5 };
     Transform tf1 = Transform::Identity();
-    tf1.translation() << 4.0, small_passage_width / 2, tf_start.translation().z();
+    tf1.translation() << 4.0, small_passage_width / 2, 0.0;
     TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
     std::vector<TSR> regions;
 
@@ -128,11 +132,15 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Describe problem
     //////////////////////////////////
+    // grid planner parameters
+    const std::vector<int> N_T_SPACE{ 1, 1, 1, 1, 1, 10 };       // resolution task space tolerance
+    const std::vector<int> N_C_SPACE(robot.getNumDof() - 3, 4);  // resolution to sample redundant joints
+
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
 
-    auto f_generic_inverse_kinematics = [&robot](const TSR& tsr) {
-        static SamplerPtr t_sampler = createGridSampler(tsr, { 1, 1, 1, 1, 1, 30 });
-        static SamplerPtr c_sampler = createGridRobotSampler({6, 6, 6});
+    auto f_generic_inverse_kinematics = [&robot, N_T_SPACE, N_C_SPACE](const TSR& tsr) {
+        static SamplerPtr t_sampler = createGridSampler(tsr, N_T_SPACE);
+        static SamplerPtr c_sampler = createGridRobotSampler(N_C_SPACE);
 
         IKSolution result;
         for (auto t_sample : t_sampler->getSamples())
@@ -151,14 +159,18 @@ int main(int argc, char** argv)
 
     // use a different sampler
     // -----------------------
-    // auto f_generic_inverse_kinematics = [&robot](const TSR& tsr) {
+    // incremental planner parames
+    const int T_SPACE_BATCH_SIZE {15};
+    const int C_SPACE_BATCH_SIZE {600};
+
+    // auto f_generic_inverse_kinematics = [&robot, T_SPACE_BATCH_SIZE, C_SPACE_BATCH_SIZE](const TSR& tsr) {
     //     static SamplerPtr t_sampler = createIncrementalSampler(tsr, SamplerType::RANDOM);
-    //     static SamplerPtr c_sampler = createIncrementalRobotSampler(SamplerType::RANDOM);
+    //     static SamplerPtr c_sampler = createIncrementalRobotSampler(SamplerType::RANDOM, robot.getNumDof() - 3);
 
     //     IKSolution result;
-    //     for (auto t_sample : t_sampler->getSamples(30))
+    //     for (auto t_sample : t_sampler->getSamples(T_SPACE_BATCH_SIZE))
     //     {
-    //         for (auto q_red : c_sampler->getSamples(216))
+    //         for (auto q_red : c_sampler->getSamples(C_SPACE_BATCH_SIZE))
     //         {
     //             auto solution = robot.ik(tsr.valuesToPose(t_sample), q_red);
     //             for (auto q : solution)
@@ -176,7 +188,7 @@ int main(int argc, char** argv)
     //     double z0 = tsr.tf_nominal.rotation().eulerAngles(0, 1, 2).z();
     //     double z1 = robot.fk(q).rotation().eulerAngles(0, 1, 2).z();
     //     return state_weight * (z0 - z1) * (z0 - z1);
-    //     // return std::abs(z1 - 0.3);
+    //     // return std::abs(z1 - 0.5);
     // };
 
     auto f_state_cost = [](const TSR& /* tsr */, const JointPositions& /* q */) { return 0.0; };
@@ -184,7 +196,12 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Solve problem
     //////////////////////////////////
+    auto start = std::chrono::steady_clock::now();
     auto path = findPath(regions, L1NormDiff, f_state_cost, f_is_valid, f_generic_inverse_kinematics);
+    auto stop = std::chrono::steady_clock::now();
+
+    std::chrono::duration<double> elapsed_seconds = stop - start;
+    std::cout << "Case solved in " << elapsed_seconds.count() << " seconds.\n";
 
     for (auto q : path)
     {

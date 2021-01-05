@@ -80,6 +80,10 @@ class MoveItRobot
     bool isPathColliding(const JointPositions& q_from, const JointPositions& q_to, int steps) const;
     void plot(moveit_visual_tools::MoveItVisualToolsPtr mvt, JointPositions& joint_pose,
               const rviz_visual_tools::colors& color = rviz_visual_tools::DEFAULT);
+    std::size_t getNumDof()
+    {
+        return num_dof_;
+    }
 };
 
 }  // namespace ocpl
