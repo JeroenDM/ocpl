@@ -28,10 +28,10 @@ int main(int argc, char** argv)
     rviz.clear();
     ros::Duration(0.2).sleep();
 
-    // std::vector<double> q_start = { 1.0, -0.7, 0 };
-    std::vector<double> q_start = { 0.0, 0.0, 0.0 };
+    std::vector<double> q_start = { 1.0, -0.7, 0 };
+    // std::vector<double> q_start = { 0.0, 0.0, 0.0 };
     auto tf_start = robot.fk(q_start);
-    auto solution = robot.ik(tf_start);
+    auto q_start_ik = robot.ik(tf_start);
 
     std::cout << tf_start.translation().transpose() << std::endl;
 
@@ -99,7 +99,37 @@ int main(int argc, char** argv)
     // //////////////////////////////////
     // // Solve problem
     // //////////////////////////////////
-    auto path = findPath(regions, L2NormDiff, f_state_cost, f_is_valid, f_generic_inverse_kinematics);
+    // auto path = findPath(regions, L2NormDiff, f_state_cost, f_is_valid, f_generic_inverse_kinematics);
+
+    // //////////////////////////////////
+    // // Alternative solver
+    // //////////////////////////////////
+    std::vector<std::function<IKSolution(int)>> path_samplers;
+    std::vector<Transform> nominal_tfs;
+    for (auto tsr : regions)
+    {
+        path_samplers.push_back([tsr, &robot](int num_samples) {
+            static SamplerPtr sampler = createIncrementalSampler(tsr, SamplerType::HALTON);
+
+            IKSolution result;
+            for (auto sample : sampler->getSamples(num_samples))
+            {
+                for (auto q : robot.ik(tsr.valuesToPose(sample)))
+                {
+                    result.push_back(q);
+                }
+            }
+            return result;
+        });
+        nominal_tfs.push_back(tsr.tf_nominal);
+    }
+
+    // change the first path point to a specific configuration
+    path_samplers[0] = [q_start_ik](int /*num_samples*/) -> IKSolution { return {q_start_ik.at(1)}; };
+
+    auto f_state_cost_2 = [](const Transform& /* tsr */, const JointPositions& /* q */) { return 0.0; };
+
+    auto path = findPath(path_samplers, nominal_tfs, L2NormDiff, f_state_cost_2, f_is_valid);
 
     for (JointPositions q : path)
     {

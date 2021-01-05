@@ -21,4 +21,10 @@ std::vector<JointPositions> findPath(const std::vector<TSR>& tsrs,
                                      std::function<bool(const JointPositions&)> is_valid,
                                      std::function<IKSolution(const TSR&)> generic_inverse_kinematics);
 
+std::vector<JointPositions> findPath(const std::vector<std::function<IKSolution(int)>>& path_samplers,
+                                     const std::vector<Transform>& nominal_tfs,
+                                     std::function<double(const NodePtr, const NodePtr)> cost_function,
+                                     std::function<double(const Transform&, const JointPositions&)> state_cost,
+                                     std::function<bool(const JointPositions&)> is_valid);
+
 }  // namespace ocpl
