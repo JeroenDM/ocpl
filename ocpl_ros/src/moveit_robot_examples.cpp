@@ -3,6 +3,9 @@
 
 namespace ocpl
 {
+/**********************
+ * 3R Robot
+ * *******************/
 IKSolution PlanarRobot3R::ik(const Transform& tf)
 {
     // account for fixed transform of tcp
@@ -17,29 +20,36 @@ IKSolution PlanarRobot3R::ik(const Transform& tf)
     return planar_3r_ik(pos[0], pos[1], rot[2], link_length);
 }
 
-PlanarRobot6R::PlanarRobot6R(const std::string& tcp_frame) : MoveItRobot(tcp_frame)
+/**********************
+ * >3 R Robot
+ * *******************/
+PlanarRobotNR::PlanarRobotNR(const std::string& tcp_frame) : MoveItRobot(tcp_frame)
 {
+    assert(num_dof_ > 3); // this class is for planar redundant robots
     messyHardCodedStuff();
 }
 
-void PlanarRobot6R::messyHardCodedStuff()
+void PlanarRobotNR::messyHardCodedStuff()
 {
     // guess the base link of the last three joints alternative
-    analytical_ik_base_link_ = joint_model_group_->getActiveJointModels().at(3)->getChildLinkModel()->getName();
+    std::size_t link_index = num_dof_ - num_base_joints_;
+    analytical_ik_base_link_ =
+        joint_model_group_->getActiveJointModels().at(link_index)->getChildLinkModel()->getName();
     // getting these values from the urdf is possible ...
     analytical_ik_link_length_ = { 1.0, 1.0, 1.0 };
 }
 
-IKSolution PlanarRobot6R::ik(const Transform& tf)
+IKSolution PlanarRobotNR::ik(const Transform& tf)
 {
-    return ik(tf, { 0.0, 0.0, 0.0 });
+    std::vector<double> zeros(num_dof_, 0.0);
+    return ik(tf, zeros);
 }
 
-IKSolution PlanarRobot6R::ik(const Transform& tf, const std::vector<double>& q_fixed)
+IKSolution PlanarRobotNR::ik(const Transform& tf, const std::vector<double>& q_fixed)
 {
     // set ik based given the fixed joint values q_fixed
-    std::vector<double> q_temp(ndof_, 0.0);
-    for (std::size_t i{ 0 }; i < (ndof_ - num_base_joints_); ++i)
+    std::vector<double> q_temp(num_dof_, 0.0);
+    for (std::size_t i{ 0 }; i < (num_dof_ - num_base_joints_); ++i)
         q_temp[i] = q_fixed[i];
 
     auto tf_ik_base = fk(q_temp, analytical_ik_base_link_);

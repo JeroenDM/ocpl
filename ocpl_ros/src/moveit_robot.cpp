@@ -29,10 +29,10 @@ MoveItRobot::MoveItRobot(const std::string& tcp_frame) : tcp_frame_(tcp_frame)
     planning_scene_monitor_.reset(new planning_scene_monitor::PlanningSceneMonitor("robot_description"));
     updatePlanningScene();
 
-    ndof_ = joint_model_group_->getVariableCount();
+    num_dof_ = joint_model_group_->getActiveJointModelNames().size();
 
     // debug info
-    ROS_DEBUG_STREAM("Number of DOFS: " << ndof_);
+    ROS_DEBUG_STREAM("Number of DOFS: " << num_dof_);
     auto joint_names = joint_model_group_->getActiveJointModelNames();
     for (const std::string& name : joint_names)
         ROS_DEBUG_STREAM("Joint name: " << name);

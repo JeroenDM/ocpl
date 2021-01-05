@@ -44,7 +44,7 @@ class MoveItRobot
     bool check_collisions_ = true;
 
     std::string tcp_frame_;
-    std::size_t ndof_;
+    std::size_t num_dof_;
 
   public:
     MoveItRobot(const std::string& tcp_frame = "tool0");
