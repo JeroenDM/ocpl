@@ -15,6 +15,18 @@
 
 using namespace ocpl;
 
+void showPath(const std::vector<JointPositions>& path, Rviz& rviz, PlanarRobot3R& robot)
+{
+    for (JointPositions q : path)
+    {
+        if (robot.isInCollision(q))
+            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::RED);
+        else
+            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
+        ros::Duration(0.5).sleep();
+    }
+}
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "ocpl_moveit_demo");
@@ -24,9 +36,7 @@ int main(int argc, char** argv)
 
     PlanarRobot3R robot;
     Rviz rviz;
-    ros::Duration(0.2).sleep();
     rviz.clear();
-    ros::Duration(0.2).sleep();
 
     std::vector<double> q_start = { 1.0, -0.7, 0 };
     // std::vector<double> q_start = { 0.0, 0.0, 0.0 };
@@ -54,91 +64,31 @@ int main(int argc, char** argv)
     }
 
     //////////////////////////////////
-    // Describe problem
+    // Simple interface solver
     //////////////////////////////////
+
+    // function that tells you whether a state is valid (collision free)
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
-    // auto f_generic_inverse_kinematics = [&robot](const TSR& tsr) {
-    //     static SamplerPtr sampler = createGridSampler(tsr, { 1, 1, 1, 1, 1, 10 });
-    //     IKSolution result;
-    //     for (auto sample : sampler->getSamples(10))
-    //     {
-    //         for (auto q : robot.ik(tsr.valuesToPose(sample)))
-    //         {
-    //             result.push_back(q);
-    //         }
-    //     }
-    //     return result;
-    // };
 
-    // using a different sampler
-    // -------------------------
-    auto f_generic_inverse_kinematics = [&robot](const TSR& tsr) {
-        static SamplerPtr sampler = createIncrementalSampler(tsr, SamplerType::HALTON);
+    // function that returns analytical inverse kinematics solution for end-effector pose
+    auto f_ik = [&robot](const Transform& tf) { return robot.ik(tf); };
 
-        IKSolution result;
-        for (auto sample : sampler->getSamples(10))
-        {
-            for (auto q : robot.ik(tsr.valuesToPose(sample)))
-            {
-                result.push_back(q);
-            }
-        }
-        return result;
+    // specify an objective to minimize the cost along the path
+    // here we use a predefined function that uses the L1 norm of the different
+    // between two joint positions
+    auto f_path_cost = L1NormDiff2;
+
+    // optionally we can set a state cost for every point along the path
+    // this one tries to keep the end-effector pose close the the nominal pose
+    // defined in the task space region
+    auto f_state_cost = [&robot](const TSR& tsr, const JointPositions& q) {
+        return poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
     };
 
-    // // appart from edge costs, the graph also used node costs
-    double state_weight{ 1.0 };
-    auto f_state_cost = [&robot, state_weight](const TSR& tsr, const JointPositions& q) {
-        double z0 = tsr.tf_nominal.rotation().eulerAngles(0, 1, 2).z();
-        double z1 = robot.fk(q).rotation().eulerAngles(0, 1, 2).z();
-        return state_weight * (z0 - z1) * (z0 - z1);
-        // return std::abs(z1 - 0.3);
-    };
-    // auto f_state_cost = [](const TSR& /* tsr */, const JointPositions& /* q */) { return 0.0; };
+    // solve it!
+    auto path = solve(regions, f_ik, f_is_valid, f_path_cost, f_state_cost);
 
-    // //////////////////////////////////
-    // // Solve problem
-    // //////////////////////////////////
-    // auto path = findPath(regions, L2NormDiff, f_state_cost, f_is_valid, f_generic_inverse_kinematics);
-
-    // //////////////////////////////////
-    // // Alternative solver
-    // //////////////////////////////////
-    std::vector<std::function<IKSolution(int)>> path_samplers;
-    std::vector<Transform> nominal_tfs;
-    for (auto tsr : regions)
-    {
-        path_samplers.push_back([tsr, &robot](int num_samples) {
-            static SamplerPtr sampler = createIncrementalSampler(tsr, SamplerType::HALTON);
-
-            IKSolution result;
-            for (auto sample : sampler->getSamples(num_samples))
-            {
-                for (auto q : robot.ik(tsr.valuesToPose(sample)))
-                {
-                    result.push_back(q);
-                }
-            }
-            return result;
-        });
-        nominal_tfs.push_back(tsr.tf_nominal);
-    }
-
-    // change the first path point to a specific configuration
-    path_samplers[0] = [q_start_ik](int /*num_samples*/) -> IKSolution { return {q_start_ik.at(1)}; };
-
-    auto f_state_cost_2 = [](const Transform& /* tsr */, const JointPositions& /* q */) { return 0.0; };
-
-    auto path = findPath(path_samplers, nominal_tfs, L2NormDiff, f_state_cost_2, f_is_valid);
-
-    for (JointPositions q : path)
-    {
-        if (robot.isInCollision(q))
-            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::RED);
-        else
-            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
-        ros::Duration(0.5).sleep();
-    }
+    showPath(path, rviz, robot);
 
     return 0;
 }

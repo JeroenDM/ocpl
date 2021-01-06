@@ -1,6 +1,8 @@
 #include <ocpl_planning/planners.h>
 
 #include <ocpl_graph/tree.h>
+#include <ocpl_planning/cost_functions.h>
+#include <ocpl_planning/factories.h>
 
 #include <iostream>
 
@@ -108,6 +110,74 @@ std::vector<JointPositions> findPath(const std::vector<std::function<IKSolution(
 
     // Find the shortest path in this structured array of nodes
     auto path_nodes = shortest_path_dag(nodes, cost_function);
+    std::vector<JointPositions> path;
+    for (NodePtr n : path_nodes)
+    {
+        path.push_back(n->data);
+        std::cout << "Node: " << (*n) << " dist: " << n->dist << "\n";
+    }
+    return path;
+}
+
+std::vector<JointPositions> solve(const std::vector<TSR>& task_space_regions,
+                                  std::function<IKSolution(const Transform&)> ik_fun,
+                                  std::function<bool(const JointPositions&)> is_valid_fun,
+                                  std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
+                                  std::function<double(const TSR&, const JointPositions&)> state_cost_fun)
+{
+    // create the path samplers
+    std::vector<std::function<IKSolution(int)>> path_samplers;
+    std::vector<Transform> nominal_tfs;
+    for (auto tsr : task_space_regions)
+    {
+        path_samplers.push_back([tsr, ik_fun, is_valid_fun](int num_samples) {
+            static SamplerPtr sampler = createIncrementalSampler(tsr, SamplerType::HALTON);
+
+            IKSolution result;
+            for (auto sample : sampler->getSamples(num_samples))
+            {
+                for (auto q : ik_fun(tsr.valuesToPose(sample)))
+                {
+                    if (is_valid_fun(q))
+                        result.push_back(q);
+                }
+            }
+            return result;
+        });
+        nominal_tfs.push_back(tsr.tf_nominal);
+    }
+
+    // sample valid joint positions along the path
+    // TODO run this in parallel
+    std::vector<std::vector<JointPositions>> graph_data;
+    int path_count{ 0 };
+    for (auto path_sampler : path_samplers)
+    {
+        std::cout << "ocpl_planner: processing path point " << path_count << "\n";
+        graph_data.push_back(path_sampler(10));
+        std::cout << "ocpl_planner: found " << graph_data.back().size() << std::endl;
+        path_count++;
+    }
+
+    // Convert the end-effector poses to Nodes, so we can search for the shortest path
+    std::vector<std::vector<NodePtr>> nodes;
+    nodes.resize(path_samplers.size());
+    for (std::size_t pt = 0; pt < graph_data.size(); pt++)
+    {
+        for (const JointPositions& q : graph_data[pt])
+        {
+            nodes[pt].push_back(std::make_shared<Node>(q, state_cost_fun(task_space_regions[pt], q)));
+        }
+    }
+
+    // convert the path cost function to something that can work with NodePtr instead of JointPositions
+    auto path_cost = [path_cost_fun](NodePtr n1, NodePtr n2)
+    {
+        return path_cost_fun(n1->data, n2->data);
+    };
+
+    // Find the shortest path in this structured array of nodes
+    auto path_nodes = shortest_path_dag(nodes, path_cost);
     std::vector<JointPositions> path;
     for (NodePtr n : path_nodes)
     {
