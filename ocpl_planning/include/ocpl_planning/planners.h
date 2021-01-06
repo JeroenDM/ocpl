@@ -6,6 +6,7 @@
 #include <ocpl_graph/tree.h>
 #include <ocpl_tsr/task_space_regions.h>
 #include <ocpl_planning/cost_functions.h>
+#include <ocpl_planning/settings.h>
 
 namespace ocpl
 {
@@ -29,9 +30,10 @@ std::vector<JointPositions> findPath(const std::vector<std::function<IKSolution(
                                      std::function<bool(const JointPositions&)> is_valid);
 
 std::vector<JointPositions> solve(const std::vector<TSR>& task_space_regions,
-                                  std::function<IKSolution(const Transform&)> ik_fun,
+                                  std::function<IKSolution(const Transform&, const JointPositions&)> ik_fun,
                                   std::function<bool(const JointPositions&)> is_valid_fun,
                                   std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
-                                  std::function<double(const TSR&, const JointPositions&)> state_cost_fun);
+                                  std::function<double(const TSR&, const JointPositions&)> state_cost_fun,
+                                  PlannerSettings ps);
 
 }  // namespace ocpl

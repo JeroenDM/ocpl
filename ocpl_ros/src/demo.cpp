@@ -12,6 +12,7 @@
 #include <ocpl_planning/planners.h>
 #include <ocpl_planning/factories.h>
 #include <ocpl_planning/cost_functions.h>
+#include <ocpl_planning/settings.h>
 
 using namespace ocpl;
 
@@ -71,7 +72,7 @@ int main(int argc, char** argv)
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
 
     // function that returns analytical inverse kinematics solution for end-effector pose
-    auto f_ik = [&robot](const Transform& tf) { return robot.ik(tf); };
+    auto f_ik = [&robot](const Transform& tf, const JointPositions& /*q_fixed*/) { return robot.ik(tf); };
 
     // specify an objective to minimize the cost along the path
     // here we use a predefined function that uses the L1 norm of the different
@@ -85,8 +86,16 @@ int main(int argc, char** argv)
         return poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
     };
 
+    // settings to select a planner
+    PlannerSettings ps;
+    ps.sample_method = SampleMethod::INCR_DET;
+    ps.t_space_batch_size = 10;
+    ps.t_space_batch_size = 1;  // robot is not redundant
+    ps.min_valid_samples = 50;
+    ps.max_iters = 50;
+
     // solve it!
-    auto path = solve(regions, f_ik, f_is_valid, f_path_cost, f_state_cost);
+    auto path = solve(regions, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
 
     showPath(path, rviz, robot);
 

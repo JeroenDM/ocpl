@@ -120,31 +120,73 @@ std::vector<JointPositions> findPath(const std::vector<std::function<IKSolution(
 }
 
 std::vector<JointPositions> solve(const std::vector<TSR>& task_space_regions,
-                                  std::function<IKSolution(const Transform&)> ik_fun,
+                                  std::function<IKSolution(const Transform&, const JointPositions&)> ik_fun,
                                   std::function<bool(const JointPositions&)> is_valid_fun,
                                   std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
-                                  std::function<double(const TSR&, const JointPositions&)> state_cost_fun)
+                                  std::function<double(const TSR&, const JointPositions&)> state_cost_fun,
+                                  PlannerSettings ps)
 {
-    // create the path samplers
-    std::vector<std::function<IKSolution(int)>> path_samplers;
-    std::vector<Transform> nominal_tfs;
-    for (auto tsr : task_space_regions)
+    SamplerType sampler_type;
+    if (ps.sample_method == SampleMethod::INCR_DET)
     {
-        path_samplers.push_back([tsr, ik_fun, is_valid_fun](int num_samples) {
-            static SamplerPtr sampler = createIncrementalSampler(tsr, SamplerType::HALTON);
+        sampler_type = SamplerType::HALTON;
+    }
+    else
+    {
+        sampler_type = SamplerType::RANDOM;
+    }
 
-            IKSolution result;
-            for (auto sample : sampler->getSamples(num_samples))
-            {
-                for (auto q : ik_fun(tsr.valuesToPose(sample)))
-                {
-                    if (is_valid_fun(q))
-                        result.push_back(q);
-                }
-            }
-            return result;
-        });
-        nominal_tfs.push_back(tsr.tf_nominal);
+    // create the path samplers
+    std::vector<std::function<IKSolution(int, int)>> path_samplers;
+
+    if (ps.is_redundant)
+    {
+        std::cout << "Not implemented yet" << std::endl;
+        exit(1);
+        // for (auto tsr : task_space_regions)
+        // {
+        //     path_samplers.push_back(
+        //         [tsr, ik_fun, is_valid_fun, sampler_type](int num_t_samples, int num_c_samples) {
+        //             static SamplerPtr t_sampler = createIncrementalSampler(tsr, sampler_type);
+        //             static SamplerPtr c_sampler = createIncrementalSampler(tsr, sampler_type);
+
+        //             IKSolution result;
+        //             for (auto sample : t_sampler->getSamples(num_t_samples))
+        //             {
+        //                 for (auto q_red : c_sampler->getSamples(num_c_samples))
+        //                 {
+        //                     for (auto q : ik_fun(tsr.valuesToPose(sample), q_red))
+        //                     {
+        //                         if (is_valid_fun(q))
+        //                             result.push_back(q);
+        //                     }
+        //                 }
+        //             }
+
+        //             return result;
+        //         });
+        // }
+    }  // namespace ocpl
+    else
+    {
+        for (auto tsr : task_space_regions)
+        {
+            path_samplers.push_back(
+                [tsr, ik_fun, is_valid_fun, sampler_type](int num_t_samples, int /* num_c_samples */) {
+                    static SamplerPtr sampler = createIncrementalSampler(tsr, sampler_type);
+
+                    IKSolution result;
+                    for (auto sample : sampler->getSamples(num_t_samples))
+                    {
+                        for (auto q : ik_fun(tsr.valuesToPose(sample), {}))
+                        {
+                            if (is_valid_fun(q))
+                                result.push_back(q);
+                        }
+                    }
+                    return result;
+                });
+        }
     }
 
     // sample valid joint positions along the path
@@ -154,8 +196,23 @@ std::vector<JointPositions> solve(const std::vector<TSR>& task_space_regions,
     for (auto path_sampler : path_samplers)
     {
         std::cout << "ocpl_planner: processing path point " << path_count << "\n";
-        graph_data.push_back(path_sampler(10));
-        std::cout << "ocpl_planner: found " << graph_data.back().size() << std::endl;
+
+        int iters{ 0 };
+        std::vector<JointPositions> valid_samples;
+        while (iters < ps.max_iters && valid_samples.size() < ps.min_valid_samples)
+        {
+            auto s = path_sampler(ps.t_space_batch_size, ps.c_space_batch_size);
+
+            // add the new joint positions to valid_samples (stl can be ugly...)
+            valid_samples.reserve(valid_samples.size() + std::distance(s.begin(), s.end()));
+            valid_samples.insert(valid_samples.end(), s.begin(), s.end());
+
+            iters++;
+        }
+        graph_data.push_back(valid_samples);
+
+        std::cout << "ocpl_planner: found " << valid_samples.size() << std::endl;
+
         path_count++;
     }
 
@@ -171,10 +228,7 @@ std::vector<JointPositions> solve(const std::vector<TSR>& task_space_regions,
     }
 
     // convert the path cost function to something that can work with NodePtr instead of JointPositions
-    auto path_cost = [path_cost_fun](NodePtr n1, NodePtr n2)
-    {
-        return path_cost_fun(n1->data, n2->data);
-    };
+    auto path_cost = [path_cost_fun](NodePtr n1, NodePtr n2) { return path_cost_fun(n1->data, n2->data); };
 
     // Find the shortest path in this structured array of nodes
     auto path_nodes = shortest_path_dag(nodes, path_cost);
@@ -185,6 +239,6 @@ std::vector<JointPositions> solve(const std::vector<TSR>& task_space_regions,
         std::cout << "Node: " << (*n) << " dist: " << n->dist << "\n";
     }
     return path;
-}
+}  // namespace ocpl
 
 }  // namespace ocpl
