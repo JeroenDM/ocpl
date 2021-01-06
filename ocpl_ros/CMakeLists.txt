@@ -12,6 +12,8 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_core
   moveit_ros_planning
   moveit_visual_tools
+  eigen_conversions
+  moveit_opw_kinematics_plugin
   roscpp
   ocpl_sampling
   ocpl_graph
@@ -72,6 +74,18 @@ set_target_properties(${PROJECT_NAME}_demo_redundant
   PROPERTIES OUTPUT_NAME demo_redundant PREFIX ""
 )
 target_link_libraries(${PROJECT_NAME}_demo_redundant
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
+
+# welding demo with kuka kr5
+add_executable(${PROJECT_NAME}_welding
+  demos/welding.cpp
+)
+set_target_properties(${PROJECT_NAME}_welding
+  PROPERTIES OUTPUT_NAME welding PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_welding
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
 )
