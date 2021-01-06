@@ -15,7 +15,7 @@ typedef Eigen::Isometry3d Transform;
 
 struct Rviz
 {
-    Rviz();
+    Rviz(const std::string& base_link_name = "world");
 
     /** \brief The visual tools ptr is public so others can visualize things freely using the same instance. **/
     moveit_visual_tools::MoveItVisualToolsPtr visual_tools_;
