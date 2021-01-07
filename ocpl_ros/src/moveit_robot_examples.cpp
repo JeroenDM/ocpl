@@ -59,7 +59,7 @@ void PlanarRobotNR::messyHardCodedStuff()
 
 IKSolution PlanarRobotNR::ik(const Transform& tf)
 {
-    std::vector<double> zeros(num_dof_, 0.0);
+    std::vector<double> zeros(num_dof_ - num_base_joints_, 0.0);
     return ik(tf, zeros);
 }
 
