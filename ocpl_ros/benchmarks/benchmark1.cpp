@@ -129,20 +129,9 @@ int main(int argc, char** argv)
     // };
     pb.state_cost_fun = zeroStateCost;
 
-    // settings to select a planner
-    // PlannerSettings ps;
-    // ps.name = "grid_30";
-    // ps.is_redundant = true;
-    // ps.sampler_type = SamplerType::HALTON;
-    // ps.t_space_batch_size = 10;
-    // ps.c_space_batch_size = 100;
-    // ps.min_valid_samples = 50;
-    // ps.max_iters = 200;
-
-    // // ps.sampler_type = SamplerType::GRID;
-    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
-    // ps.redundant_joints_resolution = std::vector<int>(robot.getNumDof(), 6);
-
+    //////////////////////////////////
+    // Planner settings
+    //////////////////////////////////
     // case 2
     PlannerSettings grid_2;
     grid_2.is_redundant = true;

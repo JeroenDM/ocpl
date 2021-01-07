@@ -11,20 +11,21 @@
 
 namespace ocpl
 {
-void runBenchmark(const std::string& name, const Problem& problem, const std::vector<TSR>& task, const std::vector<PlannerSettings>& settings,
-                  int num_repeats)
+void runBenchmark(const std::string& name, const Problem& problem, const std::vector<TSR>& task,
+                  const std::vector<PlannerSettings>& settings, int num_repeats)
 {
-
     std::cout << "Starting benchmark named: " << name << " repeating it " << num_repeats << " times \n";
     Logger log(name);
     log.header("settings,run,success,time,cost");
 
-    for (int run{ 0 }; run < num_repeats; ++run)
+    for (auto ps : settings)
     {
-        std::cout << "--- run " << run << " ---\n";
-        for (auto ps : settings)
+        std::cout << "--- planner " << ps.name << " ---\n";
+
+        for (int run{ 0 }; run < num_repeats; ++run)
         {
-            std::cout << "--- planner " << ps.name << " ---\n";
+            std::cout << "--- run " << run << " ---\n";
+
             Timer timer;
             timer.start();
             Solution solution = solve(task, problem.redundant_joint_limits, problem.ik_fun, problem.is_valid_fun,
