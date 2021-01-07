@@ -76,7 +76,7 @@ int main(int argc, char** argv)
     }
     ros::Duration(0.5).sleep();
 
-     // joint limits for the redundant joints
+    // joint limits for the redundant joints
     JointLimits joint_limits{};
 
     //////////////////////////////////
@@ -85,6 +85,7 @@ int main(int argc, char** argv)
 
     // function that tells you whether a state is valid (collision free)
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
+    // auto f_is_valid = [&robot](const JointPositions& q) { return true; };
 
     // function that returns analytical inverse kinematics solution for end-effector pose
     auto f_ik = [&robot](const Transform& tf, const JointPositions& /*q_fixed*/) { return robot.ik(tf); };
@@ -103,11 +104,14 @@ int main(int argc, char** argv)
 
     // settings to select a planner
     PlannerSettings ps;
-    ps.sampler_type = SamplerType::HALTON;
+    // ps.sampler_type = SamplerType::HALTON;
     ps.t_space_batch_size = 10;
     ps.t_space_batch_size = 1;  // robot is not redundant
     ps.min_valid_samples = 100;
     ps.max_iters = 50;
+
+    ps.sampler_type = SamplerType::GRID;
+    ps.tsr_resolution = { 3, 1, 1, 1, 1, 10 };
 
     // solve it!
     auto path = solve(regions, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);

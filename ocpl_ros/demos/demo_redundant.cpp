@@ -136,12 +136,12 @@ int main(int argc, char** argv)
     // Create task
     //////////////////////////////////
     // 2P 3R robot case
-    // auto regions = createCase1();
-    // JointLimits joint_limits{{2.0, 3.0}, {0.0, 0.9}};  // joint limits for the redundant joints
+    auto regions = createCase1();
+    JointLimits joint_limits{{2.0, 3.0}, {0.0, 0.9}};  // joint limits for the redundant joints
 
     // small passage case
-    auto regions = createCase2();
-    JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // joint limits for the redundant joints
+    // auto regions = createCase2();
+    // JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // joint limits for the redundant joints
 
     // 8 dof zig zag case
     // auto regions = createCase3();
@@ -180,15 +180,19 @@ int main(int argc, char** argv)
     // settings to select a planner
     PlannerSettings ps;
     ps.is_redundant = true;
-    ps.sampler_type = SamplerType::HALTON;
+    // ps.sampler_type = SamplerType::HALTON;
     ps.t_space_batch_size = 10;
-    ps.c_space_batch_size = 10;
+    ps.c_space_batch_size = 100;
     ps.min_valid_samples = 50;
-    ps.max_iters = 50;
+    ps.max_iters = 200;
 
-    // ps.sampler_type = SamplerType::GRID;
-    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
-    // ps.redundant_joints_resolution = {5, 5, 5};
+    ps.sampler_type = SamplerType::GRID;
+    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 20 };
+    // ps.redundant_joints_resolution = std::vector<int>(robot.getNumDof(), 5);
+
+    // case 1
+    ps.tsr_resolution = { 5, 1, 1, 1, 1, 32 };
+    ps.redundant_joints_resolution = {10, 9};
 
     // solve it!
     auto path = solve(regions, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
