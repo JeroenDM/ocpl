@@ -5,7 +5,6 @@
 #include <chrono>
 
 #include <ocpl_ros/moveit_robot_examples.h>
-#include <ocpl_ros/rviz.h>
 #include <ocpl_sampling/grid_sampler.h>
 #include <ocpl_sampling/halton_sampler.h>
 #include <ocpl_sampling/random_sampler.h>
@@ -14,6 +13,8 @@
 #include <ocpl_planning/planners.h>
 #include <ocpl_planning/factories.h>
 #include <ocpl_planning/cost_functions.h>
+
+#include <ocpl_benchmark/benchmark.h>
 
 using namespace ocpl;
 
@@ -71,18 +72,6 @@ std::vector<TSR> createCase3()
     return task;
 }
 
-void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& robot)
-{
-    for (JointPositions q : path)
-    {
-        if (robot.isInCollision(q))
-            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::RED);
-        else
-            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
-        ros::Duration(0.5).sleep();
-    }
-}
-
 /** \brief Demo for a planar, 6 link robot.
  *
  * You can specify and load collision objects with the python script "load_collision_objects.py".
@@ -91,46 +80,12 @@ void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& 
  * */
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "ocpl_moveit_demo_rn");
+    ros::init(argc, argv, "ocpl_benchmark1");
     ros::NodeHandle node_handle;
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
     PlanarRobotNR robot;
-    Rviz rviz;
-    ros::Duration(0.2).sleep();
-    rviz.clear();
-    ros::Duration(0.2).sleep();
-
-    // create an interesting start configurations
-    std::vector<double> q_start(robot.getNumDof(), 1.0);
-
-    auto tf_start = robot.fk(q_start);
-    JointPositions q_fixed(q_start.begin() + 3, q_start.end());
-    auto ik_solution = robot.ik(tf_start, q_fixed);
-
-    std::cout << tf_start.translation().transpose() << std::endl;
-
-    rviz.plotPose(tf_start);
-    robot.plot(rviz.visual_tools_, q_start);
-
-    ROS_INFO_STREAM("Found " << ik_solution.size() << " ik solutions.");
-    for (auto q : ik_solution)
-    {
-        robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
-        ros::Duration(0.5).sleep();
-    }
-
-    // for (auto q_red : sampler->getSamples())
-    // {
-    //     auto solution = robot.ik(tf_start, q_red);
-    //     ROS_INFO_STREAM("Found " << solution.size() << " ik solutions.");
-    //     for (auto q : solution)
-    //     {
-    //         robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
-    //         ros::Duration(0.1).sleep();
-    //     }
-    // }
 
     //////////////////////////////////
     // Create task
@@ -149,35 +104,30 @@ int main(int argc, char** argv)
     // for (int i = 0; i < 5; ++i)
     //     joint_limits.push_back({ -1.5, 1.5 });
 
-    for (TSR& tsr : regions)
-    {
-        rviz.plotPose(tsr.tf_nominal);
-        ros::Duration(0.05).sleep();
-    }
-
     //////////////////////////////////
     // Simple interface solver
     //////////////////////////////////
-    auto redundant_joint_limits = joint_limits;
+    Problem pb;
+    pb.redundant_joint_limits = joint_limits;
 
     // function that tells you whether a state is valid (collision free)
-    auto is_valid_fun = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
+    pb.is_valid_fun = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
 
     // function that returns analytical inverse kinematics solution for end-effector pose
-    auto ik_fun = [&robot](const Transform& tf, const JointPositions& q_fixed) { return robot.ik(tf, q_fixed); };
+    pb.ik_fun = [&robot](const Transform& tf, const JointPositions& q_fixed) { return robot.ik(tf, q_fixed); };
 
     // specify an objective to minimize the cost along the path
     // here we use a predefined function that uses the L1 norm of the different
     // between two joint positions
-    auto path_cost_fun = L1NormDiff2;
+    pb.path_cost_fun = L1NormDiff2;
 
     // optionally we can set a state cost for every point along the path
     // this one tries to keep the end-effector pose close the the nominal pose
     // defined in the task space region
-    auto state_cost_fun = [&robot](const TSR& tsr, const JointPositions& q) {
-        return poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
-    };
-    // auto state_cost_fun = zeroStateCost;
+    // auto f_state_cost = [&robot](const TSR& tsr, const JointPositions& q) {
+    //     return poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
+    // };
+    pb.state_cost_fun = zeroStateCost;
 
     // settings to select a planner
     PlannerSettings ps;
@@ -192,22 +142,7 @@ int main(int argc, char** argv)
     ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
     ps.redundant_joints_resolution = std::vector<int>(robot.getNumDof(), 6);
 
-    // case 1
-    // ps.tsr_resolution = { 5, 1, 1, 1, 1, 32 };
-    // ps.redundant_joints_resolution = { 10, 9 };
-
-    // solve it!
-    Solution solution = solve(regions, joint_limits, ik_fun, is_valid_fun, path_cost_fun, state_cost_fun, ps);
-    if (solution.success)
-    {
-        std::cout << "A solution is found with a cost of " << solution.cost << "\n";
-    }
-    else
-    {
-        std::cout << "No complete solution was found.\n";
-    }
-
-    showPath(solution.path, rviz, robot);
+    runBenchmark(pb, regions, { ps }, 5);
 
     return 0;
 }

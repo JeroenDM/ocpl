@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   ocpl_graph
   ocpl_tsr
   ocpl_planning
+  ocpl_benchmark
 )
 
 find_package(Eigen3 REQUIRED)
@@ -86,6 +87,17 @@ set_target_properties(${PROJECT_NAME}_welding
   PROPERTIES OUTPUT_NAME welding PREFIX ""
 )
 target_link_libraries(${PROJECT_NAME}_welding
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
+
+add_executable(${PROJECT_NAME}_benchmark1
+  benchmarks/benchmark1.cpp
+)
+set_target_properties(${PROJECT_NAME}_benchmark1
+  PROPERTIES OUTPUT_NAME benchmark1 PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_benchmark1
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
 )
