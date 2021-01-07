@@ -130,19 +130,46 @@ int main(int argc, char** argv)
     pb.state_cost_fun = zeroStateCost;
 
     // settings to select a planner
-    PlannerSettings ps;
-    ps.is_redundant = true;
+    // PlannerSettings ps;
+    // ps.name = "grid_30";
+    // ps.is_redundant = true;
     // ps.sampler_type = SamplerType::HALTON;
     // ps.t_space_batch_size = 10;
     // ps.c_space_batch_size = 100;
     // ps.min_valid_samples = 50;
     // ps.max_iters = 200;
 
-    ps.sampler_type = SamplerType::GRID;
-    ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
-    ps.redundant_joints_resolution = std::vector<int>(robot.getNumDof(), 6);
+    // // ps.sampler_type = SamplerType::GRID;
+    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
+    // ps.redundant_joints_resolution = std::vector<int>(robot.getNumDof(), 6);
 
-    runBenchmark(pb, regions, { ps }, 5);
+    // case 2
+    PlannerSettings grid_2;
+    grid_2.is_redundant = true;
+    grid_2.name = "grid_2";
+    grid_2.sampler_type = SamplerType::GRID;
+    grid_2.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
+    grid_2.redundant_joints_resolution = { 6, 6, 6 };
+
+    PlannerSettings halton_2;
+    halton_2.is_redundant = true;
+    halton_2.name = "halton_2";
+    halton_2.sampler_type = SamplerType::HALTON;
+    halton_2.t_space_batch_size = 30;
+    halton_2.c_space_batch_size = 6 * 6 * 6;
+    // For the first table in the paper I only did a single run
+    halton_2.max_iters = 1;
+
+    PlannerSettings random_2;
+    random_2.is_redundant = true;
+    random_2.name = "random_2";
+    random_2.sampler_type = SamplerType::RANDOM;
+    random_2.t_space_batch_size = 30;
+    random_2.c_space_batch_size = 6 * 6 * 6;
+    // For the first table in the paper I only did a single run
+    random_2.max_iters = 1;
+
+    runBenchmark("benchmark_case_2.csv", pb, regions, { grid_2, halton_2, random_2 }, 20);
 
     return 0;
 }

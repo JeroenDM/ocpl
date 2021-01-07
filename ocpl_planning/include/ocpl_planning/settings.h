@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <string>
 #include <vector>
 
 #include <ocpl_sampling/sampler.h>
@@ -9,6 +10,9 @@ namespace ocpl
 {
 struct PlannerSettings
 {
+    /** A name that is used when writing benchmarking results to a file. **/
+    std::string name;
+    
     /** Does the robot have more than 3 / 6 joints for 2D / 3D case. **/
     bool is_redundant{ false };
 
@@ -33,8 +37,12 @@ struct PlannerSettings
     /** How many samples for the redundant joints do we draw every iteration? **/
     int c_space_batch_size;
 
-    /** How many collision free samples do we want at least for every path point? **/
-    int min_valid_samples;
+    /** How many collision free samples do we want at least for every path point?
+     * 
+     * This defaults to 1, to make sure the sample loop at least runs 1 time,
+     * when the maximum number of iterations is set to 1.
+     * **/
+    int min_valid_samples {1};
 
     /** How many iterations can we try to find valid samples before giving up. **/
     int max_iters{ 50 };

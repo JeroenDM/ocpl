@@ -1,5 +1,6 @@
 #include "ocpl_benchmark/benchmark.h"
 #include "ocpl_benchmark/timer.h"
+#include "ocpl_benchmark/data_logger.h"
 
 #include <vector>
 #include <iostream>
@@ -10,21 +11,32 @@
 
 namespace ocpl
 {
-void runBenchmark(const Problem& problem, const std::vector<TSR>& task, const std::vector<PlannerSettings>& settings,
+void runBenchmark(const std::string& name, const Problem& problem, const std::vector<TSR>& task, const std::vector<PlannerSettings>& settings,
                   int num_repeats)
 {
-    std::cout << "success,\ttime,\tcost\n";
+
+    std::cout << "Starting benchmark named: " << name << " repeating it " << num_repeats << " times \n";
+    Logger log(name);
+    log.header("settings,run,success,time,cost");
+
     for (int run{ 0 }; run < num_repeats; ++run)
     {
-        std::cout << "run " << run << " ---\n";
+        std::cout << "--- run " << run << " ---\n";
         for (auto ps : settings)
         {
+            std::cout << "--- planner " << ps.name << " ---\n";
             Timer timer;
             timer.start();
             Solution solution = solve(task, problem.redundant_joint_limits, problem.ik_fun, problem.is_valid_fun,
                                       problem.path_cost_fun, problem.state_cost_fun, ps);
             double t = timer.stop();
-            std::cout << solution.success << ",\t" << t << ",\t" << solution.cost << "\n";
+
+            log.log(ps.name);
+            log.log(run);
+            log.log(solution.success);
+            log.log(t);
+            log.log(solution.cost);
+            log.nextLine();
         }
     }
 }

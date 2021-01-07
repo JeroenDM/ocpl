@@ -51,6 +51,8 @@ include_directories(
 ## Declare a C++ library
 add_library(${PROJECT_NAME}
   src/benchmark.cpp
+  src/data_logger.cpp
+  src/timer.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}

@@ -110,7 +110,7 @@ createCSpaceGraphIncrementally(std::vector<std::function<IKSolution()>> path_sam
     int path_count{ 0 };
     for (auto path_sampler : path_samplers)
     {
-        std::cout << "ocpl_planner: processing path point " << path_count << "\n";
+        std::cout << "ocpl_planner: processing path point " << path_count << "...";
 
         int iters{ 0 };
         std::vector<JointPositions> valid_samples;
@@ -126,7 +126,10 @@ createCSpaceGraphIncrementally(std::vector<std::function<IKSolution()>> path_sam
         }
         graph_data.push_back(valid_samples);
 
-        std::cout << "ocpl_planner: found " << valid_samples.size() << std::endl;
+        std::cout << "ocpl_planner: found " << valid_samples.size() << "\n";
+
+        if (iters == settings.max_iters)
+            std::cout << "ocpl_planner: maximum number of iterations reached.\n";
 
         path_count++;
     }
@@ -168,37 +171,34 @@ Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& re
     {
         for (auto tsr : task_space_regions)
         {
-            path_samplers.push_back([tsr, ik_fun, is_valid_fun, &redundant_joint_limits, &settings]() {
-                static SamplerPtr t_sampler =
-                    createSampler(tsr.bounds.asVector(), settings.sampler_type, settings.tsr_resolution);
-                static SamplerPtr c_sampler =
-                    createSampler(redundant_joint_limits, settings.sampler_type, settings.redundant_joints_resolution);
-
-                IKSolution result;
-                for (auto tsr_values : t_sampler->getSamples(settings.t_space_batch_size))
-                {
-                    for (auto q_red : c_sampler->getSamples(settings.c_space_batch_size))
+            SamplerPtr t_sampler = createSampler(tsr.bounds.asVector(), settings.sampler_type, settings.tsr_resolution);
+            SamplerPtr c_sampler =
+                createSampler(redundant_joint_limits, settings.sampler_type, settings.redundant_joints_resolution);
+            path_samplers.push_back(
+                [tsr, ik_fun, is_valid_fun, redundant_joint_limits, settings, t_sampler, c_sampler]() {
+                    IKSolution result;
+                    for (auto tsr_values : t_sampler->getSamples(settings.t_space_batch_size))
                     {
-                        for (auto q : ik_fun(tsr.valuesToPose(tsr_values), q_red))
+                        for (auto q_red : c_sampler->getSamples(settings.c_space_batch_size))
                         {
-                            if (is_valid_fun(q))
-                                result.push_back(q);
+                            for (auto q : ik_fun(tsr.valuesToPose(tsr_values), q_red))
+                            {
+                                if (is_valid_fun(q))
+                                    result.push_back(q);
+                            }
                         }
                     }
-                }
 
-                return result;
-            });
+                    return result;
+                });
         }
     }  // namespace ocpl
     else
     {
         for (const TSR& tsr : task_space_regions)
         {
-            path_samplers.push_back([tsr, ik_fun, is_valid_fun, &settings]() {
-                static SamplerPtr sampler =
-                    createSampler(tsr.bounds.asVector(), settings.sampler_type, settings.tsr_resolution);
-
+            SamplerPtr sampler = createSampler(tsr.bounds.asVector(), settings.sampler_type, settings.tsr_resolution);
+            path_samplers.push_back([tsr, ik_fun, is_valid_fun, &settings, sampler]() {
                 IKSolution result;
                 for (auto tsr_values : sampler->getSamples(settings.t_space_batch_size))
                 {

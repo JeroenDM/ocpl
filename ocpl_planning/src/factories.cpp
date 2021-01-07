@@ -6,6 +6,8 @@
 #include <ocpl_sampling/halton_sampler.h>
 #include <ocpl_sampling/random_sampler.h>
 
+// #include <iostream>
+
 namespace ocpl
 {
 SamplerPtr createSampler(const std::vector<Bounds> bounds, SamplerType type, const std::vector<int>& num_samples)
@@ -24,6 +26,7 @@ SamplerPtr createSampler(const std::vector<Bounds> bounds, SamplerType type, con
 
 SamplerPtr createGridSampler(const std::vector<Bounds> bounds, const std::vector<int>& num_samples)
 {
+    // std::cout << " Using a grid sampler! \n";
     assert(bounds.size() == num_samples.size());
     SamplerPtr sampler = std::make_shared<GridSampler>();
     for (std::size_t dim{ 0 }; dim < bounds.size(); ++dim)
@@ -39,10 +42,12 @@ SamplerPtr createIncrementalSampler(const std::vector<Bounds> bounds, SamplerTyp
     switch (type)
     {
         case SamplerType::RANDOM: {
+            // std::cout << " Using a random sampler! \n";
             sampler = std::make_shared<RandomSampler>();
             break;
         }
         case SamplerType::HALTON: {
+            // std::cout << " Using a halton sampler! \n";
             sampler = std::make_shared<HaltonSampler>();
             break;
         }
