@@ -1,4 +1,5 @@
 #include "ocpl_benchmark/benchmark.h"
+#include "ocpl_benchmark/timer.h"
 
 #include <vector>
 #include <iostream>
@@ -9,18 +10,6 @@
 
 namespace ocpl
 {
-void Timer::start()
-{
-    start_time_ = std::chrono::steady_clock::now();
-}
-
-double Timer::stop()
-{
-    auto stop_time = std::chrono::steady_clock::now();
-    std::chrono::duration<double> t = stop_time - start_time_;
-    return t.count();
-}
-
 void runBenchmark(const Problem& problem, const std::vector<TSR>& task, const std::vector<PlannerSettings>& settings,
                   int num_repeats)
 {
