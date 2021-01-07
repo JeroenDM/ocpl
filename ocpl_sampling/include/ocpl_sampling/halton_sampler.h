@@ -7,7 +7,6 @@ namespace ocpl
 {
 class HaltonSampler : public Sampler
 {
-    std::vector<int> primes_;
     int vdc_count_{ 1 };
 
   public:
