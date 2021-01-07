@@ -17,54 +17,6 @@
 
 using namespace ocpl;
 
-/** \brief Factory function to create a sampler specific to the robot of this demo.
- *
- * Joint limits are hard coded here for now, but could be extracted from the MoveIt
- * specific robot model used in this demo. **/
-SamplerPtr createGridRobotSampler(const std::vector<int> num_samples)
-{
-    SamplerPtr sampler = std::make_shared<GridSampler>();
-    for (int ns : num_samples)
-    {
-        sampler->addDimension(-1.5, 1.5, ns);
-    }
-    return sampler;
-}
-
-SamplerPtr createGridRobotSamplerCase1(const std::vector<int> num_samples)
-{
-    SamplerPtr sampler = std::make_shared<GridSampler>();
-    sampler->addDimension(2.0, 3.0, num_samples[0]);
-    sampler->addDimension(0.0, 0.9, num_samples[1]);
-    return sampler;
-}
-
-/** \brief Factory function to create a sampler specific to the robot of this demo.
- *
- * Joint limits are hard coded here for now, but could be extracted from the MoveIt
- * specific robot model used in this demo. **/
-SamplerPtr createIncrementalRobotSampler(SamplerType type, int dims)
-{
-    SamplerPtr sampler;
-    switch (type)
-    {
-        case SamplerType::RANDOM: {
-            sampler = std::make_shared<RandomSampler>();
-            break;
-        }
-        case SamplerType::HALTON: {
-            sampler = std::make_shared<HaltonSampler>();
-            break;
-        }
-        default: {
-            assert(false && "Jeroen, you forgot to implement a SamplerType!");
-        }
-    }
-    for (int i{ 0 }; i < dims; ++i)
-        sampler->addDimension(-1.5, 1.5);
-    return sampler;
-}
-
 /** Case 1 from my 2018 paper. **/
 std::vector<TSR> createCase1()
 {
@@ -117,6 +69,18 @@ std::vector<TSR> createCase3()
         task.push_back({ tf, bounds });
     }
     return task;
+}
+
+void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& robot)
+{
+    for (JointPositions q : path)
+    {
+        if (robot.isInCollision(q))
+            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::RED);
+        else
+            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
+        ros::Duration(0.5).sleep();
+    }
 }
 
 /** \brief Demo for a planar, 6 link robot.
@@ -172,13 +136,18 @@ int main(int argc, char** argv)
     // Create task
     //////////////////////////////////
     // 2P 3R robot case
-    auto regions = createCase1();
+    // auto regions = createCase1();
+    // JointLimits joint_limits{{2.0, 3.0}, {0.0, 0.9}};  // joint limits for the redundant joints
 
     // small passage case
-    // auto regions = createCase2();
+    auto regions = createCase2();
+    JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // joint limits for the redundant joints
 
     // 8 dof zig zag case
     // auto regions = createCase3();
+    // JointLimits joint_limits{};
+    // for (int i = 0; i < 5; ++i)
+    //     joint_limits.push_back({ -1.5, 1.5 });
 
     for (TSR& tsr : regions)
     {
@@ -187,89 +156,43 @@ int main(int argc, char** argv)
     }
 
     //////////////////////////////////
-    // Describe problem
+    // Simple interface solver
     //////////////////////////////////
-    // grid planner parameters
-    const std::vector<int> N_T_SPACE{ 5, 1, 1, 1, 1, 32 };  // resolution task space tolerance
-    // const std::vector<int> N_T_SPACE{ 1, 1, 1, 1, 1, 20 };       // resolution task space tolerance
-    const std::vector<int> N_C_SPACE(robot.getNumDof() - 3, 5);  // resolution to sample redundant joints
 
+    // function that tells you whether a state is valid (collision free)
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
 
-    auto f_generic_inverse_kinematics = [&robot, N_T_SPACE, N_C_SPACE](const TSR& tsr) {
-        static SamplerPtr t_sampler = createGridSampler(tsr, N_T_SPACE);
-        // static SamplerPtr c_sampler = createGridRobotSampler(N_C_SPACE);
-        static SamplerPtr c_sampler = createGridRobotSamplerCase1({10, 9});
+    // function that returns analytical inverse kinematics solution for end-effector pose
+    auto f_ik = [&robot](const Transform& tf, const JointPositions& q_fixed) { return robot.ik(tf, q_fixed); };
 
-        IKSolution result;
-        for (auto t_sample : t_sampler->getSamples())
-        {
-            for (auto q_red : c_sampler->getSamples())
-            {
-                auto solution = robot.ik(tsr.valuesToPose(t_sample), q_red);
-                for (auto q : solution)
-                {
-                    result.push_back(q);
-                }
-            }
-        }
-        return result;
+    // specify an objective to minimize the cost along the path
+    // here we use a predefined function that uses the L1 norm of the different
+    // between two joint positions
+    auto f_path_cost = L1NormDiff2;
+
+    // optionally we can set a state cost for every point along the path
+    // this one tries to keep the end-effector pose close the the nominal pose
+    // defined in the task space region
+    auto f_state_cost = [&robot](const TSR& tsr, const JointPositions& q) {
+        return poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
     };
 
-    // use a different sampler
-    // -----------------------
-    // incremental planner parames
-    const int T_SPACE_BATCH_SIZE{ 15 };
-    const int C_SPACE_BATCH_SIZE{ 600 };
+    // settings to select a planner
+    PlannerSettings ps;
+    ps.is_redundant = true;
+    ps.sampler_type = SamplerType::HALTON;
+    ps.t_space_batch_size = 10;
+    ps.c_space_batch_size = 10;
+    ps.min_valid_samples = 50;
+    ps.max_iters = 50;
 
-    // auto f_generic_inverse_kinematics = [&robot, T_SPACE_BATCH_SIZE, C_SPACE_BATCH_SIZE](const TSR& tsr) {
-    //     static SamplerPtr t_sampler = createIncrementalSampler(tsr, SamplerType::RANDOM);
-    //     static SamplerPtr c_sampler = createIncrementalRobotSampler(SamplerType::RANDOM, robot.getNumDof() - 3);
+    // ps.sampler_type = SamplerType::GRID;
+    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
+    // ps.redundant_joints_resolution = {5, 5, 5};
 
-    //     IKSolution result;
-    //     for (auto t_sample : t_sampler->getSamples(T_SPACE_BATCH_SIZE))
-    //     {
-    //         for (auto q_red : c_sampler->getSamples(C_SPACE_BATCH_SIZE))
-    //         {
-    //             auto solution = robot.ik(tsr.valuesToPose(t_sample), q_red);
-    //             for (auto q : solution)
-    //             {
-    //                 result.push_back(q);
-    //             }
-    //         }
-    //     }
-    //     return result;
-    // };
+    // solve it!
+    auto path = solve(regions, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
 
-    // appart from edge costs, the graph also used node costs
-    // double state_weight{ 1.0 };
-    // auto f_state_cost = [&robot, state_weight](const TSR& tsr, const JointPositions& q) {
-    //     double z0 = tsr.tf_nominal.rotation().eulerAngles(0, 1, 2).z();
-    //     double z1 = robot.fk(q).rotation().eulerAngles(0, 1, 2).z();
-    //     return state_weight * (z0 - z1) * (z0 - z1);
-    //     // return std::abs(z1 - 0.5);
-    // };
-
-    auto f_state_cost = [](const TSR& /* tsr */, const JointPositions& /* q */) { return 0.0; };
-
-    //////////////////////////////////
-    // Solve problem
-    //////////////////////////////////
-    auto start = std::chrono::steady_clock::now();
-    auto path = findPath(regions, L1NormDiff, f_state_cost, f_is_valid, f_generic_inverse_kinematics);
-    auto stop = std::chrono::steady_clock::now();
-
-    std::chrono::duration<double> elapsed_seconds = stop - start;
-    std::cout << "Case solved in " << elapsed_seconds.count() << " seconds.\n";
-
-    for (auto q : path)
-    {
-        if (robot.isInCollision(q))
-            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::RED);
-        else
-            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
-        ros::Duration(0.5).sleep();
-    }
-
+    showPath(path, rviz, robot);
     return 0;
 }

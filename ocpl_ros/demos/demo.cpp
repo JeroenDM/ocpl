@@ -64,6 +64,9 @@ int main(int argc, char** argv)
         ros::Duration(0.05).sleep();
     }
 
+    // joint limits for the redundant joints
+    JointLimits joint_limits{};
+
     //////////////////////////////////
     // Simple interface solver
     //////////////////////////////////
@@ -88,14 +91,17 @@ int main(int argc, char** argv)
 
     // settings to select a planner
     PlannerSettings ps;
-    ps.sample_method = SampleMethod::INCR_DET;
+    ps.sampler_type = SamplerType::HALTON;
     ps.t_space_batch_size = 10;
-    ps.t_space_batch_size = 1;  // robot is not redundant
+    // ps.c_space_batch_size = 1;  // robot is not redundant
     ps.min_valid_samples = 50;
     ps.max_iters = 50;
 
+    // ps.sampler_type = SamplerType::GRID;
+    ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
+
     // solve it!
-    auto path = solve(regions, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
+    auto path = solve(regions, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
 
     showPath(path, rviz, robot);
 

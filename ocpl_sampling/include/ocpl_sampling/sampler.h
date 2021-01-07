@@ -32,7 +32,7 @@ class Sampler
 
 typedef std::shared_ptr<Sampler> SamplerPtr;
 
-/** \brief Different type of incremental samplers.
+/** \brief  How do we sample the solutions space?
  * 
  * OCPL implements different types of incremental samplers.
  * For example deterministic halton sampling.
@@ -40,7 +40,8 @@ typedef std::shared_ptr<Sampler> SamplerPtr;
 enum class SamplerType
 {
     RANDOM,
-    HALTON
+    HALTON,
+    GRID
 };
 
 }  // namespace ocpl

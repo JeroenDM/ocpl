@@ -23,6 +23,11 @@ struct TSRBounds
 {
     Bounds x, y, z;
     Bounds rx, ry, rz;
+
+    std::vector<Bounds> asVector() const
+    {
+        return {x, y, z, rx, ry, rz};
+    }
 };
 
 struct TSR

@@ -8,19 +8,32 @@
 
 namespace ocpl
 {
-SamplerPtr createGridSampler(const TSR& tsr, const std::vector<int>& num_samples)
+SamplerPtr createSampler(const std::vector<Bounds> bounds, SamplerType type, const std::vector<int>& num_samples)
 {
-    SamplerPtr sampler = std::make_shared<GridSampler>();
-    sampler->addDimension(tsr.bounds.x.lower, tsr.bounds.x.upper, num_samples[0]);
-    sampler->addDimension(tsr.bounds.y.lower, tsr.bounds.y.upper, num_samples[1]);
-    sampler->addDimension(tsr.bounds.z.lower, tsr.bounds.z.upper, num_samples[2]);
-    sampler->addDimension(tsr.bounds.rx.lower, tsr.bounds.rx.upper, num_samples[3]);
-    sampler->addDimension(tsr.bounds.ry.lower, tsr.bounds.ry.upper, num_samples[4]);
-    sampler->addDimension(tsr.bounds.rz.lower, tsr.bounds.rz.upper, num_samples[5]);
+    SamplerPtr sampler{ nullptr };
+    if (type == SamplerType::GRID)
+    {
+        sampler = createGridSampler(bounds, num_samples);  // TODO error
+    }
+    else
+    {
+        sampler = createIncrementalSampler(bounds, type);
+    }
     return sampler;
 }
 
-SamplerPtr createIncrementalSampler(const TSR& tsr, SamplerType type)
+SamplerPtr createGridSampler(const std::vector<Bounds> bounds, const std::vector<int>& num_samples)
+{
+    assert(bounds.size() == num_samples.size());
+    SamplerPtr sampler = std::make_shared<GridSampler>();
+    for (std::size_t dim{ 0 }; dim < bounds.size(); ++dim)
+    {
+        sampler->addDimension(bounds[dim].lower, bounds[dim].upper, num_samples[dim]);
+    }
+    return sampler;
+}
+
+SamplerPtr createIncrementalSampler(const std::vector<Bounds> bounds, SamplerType type)
 {
     SamplerPtr sampler;
     switch (type)
@@ -38,12 +51,11 @@ SamplerPtr createIncrementalSampler(const TSR& tsr, SamplerType type)
         }
     }
 
-    sampler->addDimension(tsr.bounds.x.lower, tsr.bounds.x.upper);
-    sampler->addDimension(tsr.bounds.y.lower, tsr.bounds.y.upper);
-    sampler->addDimension(tsr.bounds.z.lower, tsr.bounds.z.upper);
-    sampler->addDimension(tsr.bounds.rx.lower, tsr.bounds.rx.upper);
-    sampler->addDimension(tsr.bounds.ry.lower, tsr.bounds.ry.upper);
-    sampler->addDimension(tsr.bounds.rz.lower, tsr.bounds.rz.upper);
+    for (std::size_t dim{ 0 }; dim < bounds.size(); ++dim)
+    {
+        sampler->addDimension(bounds[dim].lower, bounds[dim].upper);
+    }
+    return sampler;
     return sampler;
 }
 
