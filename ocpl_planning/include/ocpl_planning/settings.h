@@ -10,7 +10,7 @@ namespace ocpl
 struct PlannerSettings
 {
     /** Does the robot have more than 3 / 6 joints for 2D / 3D case. **/
-    bool is_redundant{false};
+    bool is_redundant{ false };
 
     /* Sample with a grid or incrementally? */
     SamplerType sampler_type;
@@ -37,7 +37,7 @@ struct PlannerSettings
     int min_valid_samples;
 
     /** How many iterations can we try to find valid samples before giving up. **/
-    int max_iters{50};
+    int max_iters{ 50 };
 };
 
 }  // namespace ocpl

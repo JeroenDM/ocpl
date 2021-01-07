@@ -26,6 +26,7 @@
   <depend>ocpl_graph</depend>
   <depend>ocpl_tsr</depend>
   <depend>ocpl_planning</depend>
+  <depend>ocpl_benchmark</depend>
 
   <export>
   </export>

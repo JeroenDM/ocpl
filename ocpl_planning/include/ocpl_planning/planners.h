@@ -16,6 +16,15 @@ typedef std::vector<std::vector<JointPositions>> GraphData;
 
 typedef std::vector<Bounds> JointLimits;
 
+struct Problem
+{
+    JointLimits redundant_joint_limits;
+    std::function<IKSolution(const Transform&, const JointPositions&)> ik_fun;
+    std::function<bool(const JointPositions&)> is_valid_fun;
+    std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun;
+    std::function<double(const TSR&, const JointPositions&)> state_cost_fun;
+};
+
 struct Solution
 {
     bool success;
