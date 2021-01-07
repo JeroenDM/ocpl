@@ -8,22 +8,6 @@
 
 namespace ocpl
 {
-// std::vector<JointPositions> sampleTSR(const TSR& tsr, std::function<bool(const JointPositions&)> is_valid,
-//                                       std::function<IKSolution(const Transform&)> generic_inverse_kinematics)
-// {
-//     std::vector<JointPositions> valid_ik_solutions;
-//     auto samples = tsr.getSamples();
-//     for (Transform& tf : samples)
-//     {
-//         for (JointPositions& q : generic_inverse_kinematics(tf))
-//         {
-//             if (is_valid(q))
-//                 valid_ik_solutions.push_back(q);
-//         }
-//     }
-//     return valid_ik_solutions;
-// };
-
 std::vector<JointPositions> sampleTSR(const TSR& tsr, std::function<bool(const JointPositions&)> is_valid,
                                       std::function<IKSolution(const TSR&)> generic_inverse_kinematics)
 {
@@ -156,9 +140,9 @@ std::vector<std::vector<JointPositions>> createCSpaceGraphGrid(std::vector<std::
     std::size_t path_count{ 0 };
     for (auto sample_grid : path_samplers)
     {
-        std::cout << "ocpl_planner: processing path point " << path_count << "\n";
+        std::cout << "ocpl_planner: processing path point " << path_count << "...";
         graph_data[path_count] = sample_grid();
-        std::cout << "ocpl_planner: found " << graph_data[path_count].size() << std::endl;
+        std::cout << " found " << graph_data[path_count].size() << std::endl;
         path_count++;
     }
     return graph_data;
