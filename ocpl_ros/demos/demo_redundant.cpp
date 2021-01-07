@@ -83,6 +83,24 @@ void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& 
     }
 }
 
+class Timer
+{
+    std::chrono::steady_clock::time_point start_time_;
+
+  public:
+    void start()
+    {
+        start_time_ = std::chrono::steady_clock::now();
+    }
+
+    double stop()
+    {
+        auto stop_time = std::chrono::steady_clock::now();
+        std::chrono::duration<double> t = stop_time - start_time_;
+        return t.count();
+    }
+};
+
 /** \brief Demo for a planar, 6 link robot.
  *
  * You can specify and load collision objects with the python script "load_collision_objects.py".
@@ -107,15 +125,15 @@ int main(int argc, char** argv)
 
     auto tf_start = robot.fk(q_start);
     JointPositions q_fixed(q_start.begin() + 3, q_start.end());
-    auto solution = robot.ik(tf_start, q_fixed);
+    auto ik_solution = robot.ik(tf_start, q_fixed);
 
     std::cout << tf_start.translation().transpose() << std::endl;
 
     rviz.plotPose(tf_start);
     robot.plot(rviz.visual_tools_, q_start);
 
-    ROS_INFO_STREAM("Found " << solution.size() << " ik solutions.");
-    for (auto q : solution)
+    ROS_INFO_STREAM("Found " << ik_solution.size() << " ik solutions.");
+    for (auto q : ik_solution)
     {
         robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
         ros::Duration(0.5).sleep();
@@ -136,12 +154,12 @@ int main(int argc, char** argv)
     // Create task
     //////////////////////////////////
     // 2P 3R robot case
-    auto regions = createCase1();
-    JointLimits joint_limits{{2.0, 3.0}, {0.0, 0.9}};  // joint limits for the redundant joints
+    // auto regions = createCase1();
+    // JointLimits joint_limits{ { 2.0, 3.0 }, { 0.0, 0.9 } };  // joint limits for the redundant joints
 
     // small passage case
-    // auto regions = createCase2();
-    // JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // joint limits for the redundant joints
+    auto regions = createCase2();
+    JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
 
     // 8 dof zig zag case
     // auto regions = createCase3();
@@ -187,16 +205,29 @@ int main(int argc, char** argv)
     ps.max_iters = 200;
 
     ps.sampler_type = SamplerType::GRID;
-    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 20 };
-    // ps.redundant_joints_resolution = std::vector<int>(robot.getNumDof(), 5);
+    ps.tsr_resolution = { 1, 1, 1, 1, 1, 20 };
+    ps.redundant_joints_resolution = std::vector<int>(robot.getNumDof(), 5);
 
     // case 1
-    ps.tsr_resolution = { 5, 1, 1, 1, 1, 32 };
-    ps.redundant_joints_resolution = {10, 9};
+    // ps.tsr_resolution = { 5, 1, 1, 1, 1, 32 };
+    // ps.redundant_joints_resolution = { 10, 9 };
 
     // solve it!
-    auto path = solve(regions, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
+    Timer timer;
+    timer.start();
+    Solution solution = solve(regions, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
+    double t = timer.stop();
+    std::cout << "ocpl demo: solving the case took " << t << " seconds.\n";
+    if (solution.success)
+    {
+        std::cout << "A solution is found with a cost of " << solution.cost << "\n";
+    }
+    else
+    {
+        std::cout << "No complete solution was found.\n";
+    }
+    
 
-    showPath(path, rviz, robot);
+    showPath(solution.path, rviz, robot);
     return 0;
 }

@@ -114,9 +114,9 @@ int main(int argc, char** argv)
     ps.tsr_resolution = { 3, 1, 1, 1, 1, 10 };
 
     // solve it!
-    auto path = solve(regions, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
+    auto solution = solve(regions, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
 
-    showPath(path, rviz, robot);
+    showPath(solution.path, rviz, robot);
 
     return 0;
 }

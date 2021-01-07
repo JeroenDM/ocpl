@@ -16,6 +16,13 @@ typedef std::vector<std::vector<JointPositions>> GraphData;
 
 typedef std::vector<Bounds> JointLimits;
 
+struct Solution
+{
+    bool success;
+    std::vector<JointPositions> path;
+    double cost{0.0};
+};
+
 std::vector<JointPositions> sampleTSR(const TSR& tsr, std::function<bool(const JointPositions&)> is_valid,
                                       std::function<IKSolution(const Transform&)> generic_inverse_kinematics);
 
@@ -36,11 +43,10 @@ createCSpaceGraphIncrementally(std::vector<std::function<IKSolution()>> path_sam
 
 std::vector<std::vector<JointPositions>> createCSpaceGraphGrid(std::vector<std::function<IKSolution()>> path_samplers);
 
-std::vector<JointPositions> solve(const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits,
-                                  std::function<IKSolution(const Transform&, const JointPositions&)> ik_fun,
-                                  std::function<bool(const JointPositions&)> is_valid_fun,
-                                  std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
-                                  std::function<double(const TSR&, const JointPositions&)> state_cost_fun,
-                                  PlannerSettings settings);
+Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits,
+               std::function<IKSolution(const Transform&, const JointPositions&)> ik_fun,
+               std::function<bool(const JointPositions&)> is_valid_fun,
+               std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
+               std::function<double(const TSR&, const JointPositions&)> state_cost_fun, PlannerSettings settings);
 
 }  // namespace ocpl

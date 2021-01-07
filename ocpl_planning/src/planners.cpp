@@ -148,12 +148,11 @@ std::vector<std::vector<JointPositions>> createCSpaceGraphGrid(std::vector<std::
     return graph_data;
 }
 
-std::vector<JointPositions> solve(const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits,
-                                  std::function<IKSolution(const Transform&, const JointPositions&)> ik_fun,
-                                  std::function<bool(const JointPositions&)> is_valid_fun,
-                                  std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
-                                  std::function<double(const TSR&, const JointPositions&)> state_cost_fun,
-                                  PlannerSettings settings)
+Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits,
+               std::function<IKSolution(const Transform&, const JointPositions&)> ik_fun,
+               std::function<bool(const JointPositions&)> is_valid_fun,
+               std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
+               std::function<double(const TSR&, const JointPositions&)> state_cost_fun, PlannerSettings settings)
 {
     // create the path samplers
     std::vector<std::function<IKSolution()>> path_samplers;
@@ -242,13 +241,22 @@ std::vector<JointPositions> solve(const std::vector<TSR>& task_space_regions, co
 
     // Find the shortest path in this structured array of nodes
     auto path_nodes = shortest_path_dag(nodes, path_cost);
+
     std::vector<JointPositions> path;
     for (NodePtr n : path_nodes)
     {
         path.push_back(n->data);
         std::cout << "Node: " << (*n) << " dist: " << n->dist << "\n";
     }
-    return path;
+
+    if (path_nodes.size() < task_space_regions.size())
+    {
+        return Solution{ false, path };
+    }
+    else
+    {
+        return Solution{ true, path, path_nodes.back()->dist };
+    }
 }  // namespace ocpl
 
 }  // namespace ocpl
