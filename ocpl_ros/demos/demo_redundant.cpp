@@ -17,58 +17,49 @@
 
 using namespace ocpl;
 
-/** Case 1 from my 2018 paper. **/
-std::vector<TSR> createCase1()
+std::vector<TSR> createLineTask(TSRBounds bounds, Eigen::Vector3d start, Eigen::Vector3d stop,
+                                Eigen::Isometry3d orientation, std::size_t num_points)
 {
-    Transform tf1 = Transform::Identity();
-    tf1.translation() << 0.5, 2.0, 0.0;
-    TSRBounds bounds{ { -0.2, 0.3 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, 0.0 } };
     std::vector<TSR> task;
+    Transform tf(orientation);
+    tf.translation() = start;
 
-    Transform tf = tf1;
-    double step = (2.5 - 2.0) / 5.0;
+    Eigen::Vector3d direction = (stop - start).normalized();
+
+    double step = (stop - start).norm() / num_points;
     for (int i{ 0 }; i < 5; ++i)
     {
-        tf.translation() += step * Eigen::Vector3d::UnitY();
+        tf.translation() += step * direction;
         task.push_back({ tf, bounds });
     }
     return task;
+}
+
+/** Case 1 from my 2018 paper. **/
+std::vector<TSR> createCase1()
+{
+    TSRBounds bounds{ { -0.2, 0.3 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, 0.0 } };
+    Eigen::Vector3d start(0.5, 2.0, 0.0);
+    Eigen::Vector3d stop(0.5, 2.5, 0.0);
+    return createLineTask(bounds, start, stop, Eigen::Isometry3d::Identity(), 5);
 }
 
 /** Case 2 from my 2018 paper. **/
 std::vector<TSR> createCase2()
 {
-    const double small_passage_width{ 0.5 };
-    Transform tf1 = Transform::Identity();
-    tf1.translation() << 4.0, small_passage_width / 2, 0.0;
     TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
-    std::vector<TSR> task;
-
-    Transform tf = tf1;
-    for (int i{ 0 }; i < 5; ++i)
-    {
-        tf.translation() += 0.2 * Eigen::Vector3d::UnitX();
-        task.push_back({ tf, bounds });
-    }
-    return task;
+    Eigen::Vector3d start(4.0, 0.25, 0.0);
+    Eigen::Vector3d stop(5.0, 0.25, 0.0);
+    return createLineTask(bounds, start, stop, Eigen::Isometry3d::Identity(), 5);
 }
 
 /** Case 3 from my 2018 paper. **/
 std::vector<TSR> createCase3()
 {
-    Transform tf1 = Transform::Identity();
-    tf1.translation() << 5.0, 1.3, 0.0;
     TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI_2, M_PI_2 } };
-    std::vector<TSR> task;
-
-    Transform tf = tf1;
-    double step = (2.5 - 1.3) / 5.0;
-    for (int i{ 0 }; i < 5; ++i)
-    {
-        tf.translation() += step * Eigen::Vector3d::UnitY();
-        task.push_back({ tf, bounds });
-    }
-    return task;
+    Eigen::Vector3d start(5.0, 1.3, 0.0);
+    Eigen::Vector3d stop(5.0, 2.5, 0.0);
+    return createLineTask(bounds, start, stop, Eigen::Isometry3d::Identity(), 5);
 }
 
 void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& robot)
