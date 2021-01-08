@@ -45,7 +45,7 @@ std::vector<TSR> createLineTask(TSRBounds bounds, Eigen::Vector3d start, Eigen::
     Eigen::Vector3d direction = (stop - start).normalized();
 
     double step = (stop - start).norm() / num_points;
-    for (int i{ 0 }; i < 5; ++i)
+    for (int i{ 0 }; i < num_points; ++i)
     {
         tf.translation() += step * direction;
         task.push_back({ tf, bounds });
