@@ -169,11 +169,11 @@ Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& re
 
     if (settings.is_redundant)
     {
-        SamplerPtr c_sampler =
-            createSampler(redundant_joint_limits, settings.sampler_type, settings.redundant_joints_resolution);
         for (auto tsr : task_space_regions)
         {
             SamplerPtr t_sampler = createSampler(tsr.bounds.asVector(), settings.sampler_type, settings.tsr_resolution);
+            SamplerPtr c_sampler =
+                createSampler(redundant_joint_limits, settings.sampler_type, settings.redundant_joints_resolution);
             path_samplers.push_back(
                 [tsr, ik_fun, is_valid_fun, redundant_joint_limits, settings, t_sampler, c_sampler]() {
                     IKSolution result;
