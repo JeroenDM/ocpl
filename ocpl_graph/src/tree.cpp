@@ -3,6 +3,7 @@
 #include <queue>
 #include <algorithm>  // std::find, std::min_element
 #include <iostream>
+#include <cmath>  // isnan
 
 namespace ocpl
 {
@@ -168,7 +169,7 @@ std::vector<NodePtr> shortest_path(Tree& tree, std::vector<NodePtr> start_nodes,
 }
 
 std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& nodes,
-                                   std::function<double(const NodePtr, const NodePtr)> cost_function)
+                                       std::function<double(const NodePtr, const NodePtr)> cost_function)
 {
     std::priority_queue<NodePtr, std::vector<NodePtr>, compareNodesFunction> Q;
 
@@ -225,17 +226,21 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
 
         for (auto nb : neighbors)
         {
-            double new_dist = current_node->dist + cost_function(current_node, nb) + nb->cost;
-            if (new_dist < nb->dist)
+            double dist_to_nb = cost_function(current_node, nb) + nb->cost;
+            if (!std::isnan(dist_to_nb))
             {
-                nb->dist = new_dist;
-                nb->parent = current_node;
-            }
+                double new_dist = current_node->dist + dist_to_nb;
+                if (new_dist < nb->dist)
+                {
+                    nb->dist = new_dist;
+                    nb->parent = current_node;
+                }
 
-            if (!nb->visited)
-            {
-                Q.push(nb);
-                nb->visited = true;
+                if (!nb->visited)
+                {
+                    Q.push(nb);
+                    nb->visited = true;
+                }
             }
         }
     }
@@ -247,8 +252,8 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
 
     // find the goal node with the smallest distance
     auto node_iter = std::min_element(goal_nodes.begin(), goal_nodes.end(),
-                                    [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
-    
+                                      [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
+
     if (node_iter == goal_nodes.end())
     {
         std::cout << "None of the goals are reached.\n";

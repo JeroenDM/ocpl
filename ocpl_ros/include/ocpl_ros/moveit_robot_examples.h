@@ -31,6 +31,8 @@ class IndustrialRobot : public MoveItRobot
 {
     opw_kinematics::Parameters<double> opw_parameters_;
     std::string group_name_;
+    Transform tool0_to_tcp_;
+     Transform tool0_to_tcp_inverse_;
 
     void messyHardCodedStuff();
 

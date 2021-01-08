@@ -58,7 +58,7 @@ int main(int argc, char** argv)
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
-    IndustrialRobot robot;
+    IndustrialRobot robot("tool_tip");
     Rviz rviz("base_link");
     rviz.clear();
 
@@ -85,7 +85,7 @@ int main(int argc, char** argv)
     // Create task
     //////////////////////////////////
     // 0.18 0 0.02 0 135 90
-    TSRBounds bounds{ { -0.1, 0.1 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
+    TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { -0.5, 0.5 }, { 0, 0 }, { -M_PI, M_PI } };
     Transform tf = robot.fk(q_zero);
     // tf.translation() << 0.8, -0.2, 0.2;
 
@@ -99,7 +99,8 @@ int main(int argc, char** argv)
     Eigen::Vector3d stop(0.98, 0.5, 0.02);
 
     // std::vector<TSR> task = createLineTask(bounds, start, stop, Eigen::Isometry3d(tf.linear()), 10);
-    std::vector<TSR> task = createLineTask(bounds, start, stop, ori, 10);
+    const int num_points{ 30 };
+    std::vector<TSR> task = createLineTask(bounds, start, stop, ori, num_points);
 
     for (auto tsr : task)
     {
@@ -114,7 +115,6 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Simple interface solver
     //////////////////////////////////
-
     // function that tells you whether a state is valid (collision free)
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
     // auto f_is_valid = [&robot](const JointPositions& q) { return true; };
@@ -122,30 +122,67 @@ int main(int argc, char** argv)
     // function that returns analytical inverse kinematics solution for end-effector pose
     auto f_ik = [&robot](const Transform& tf, const JointPositions& /*q_fixed*/) { return robot.ik(tf); };
 
+    // calculate max step size for joints based on max speed
+    // TODO get this from robot model!
+    std::vector<double> max_joint_speed{ 154, 154, 228, 343, 384, 721 };  // radians / second
+    // convert to radians and scale:
+    for (double& s : max_joint_speed)
+    {
+        s = 0.2 * deg2rad(s);
+    }
+    // welding speed 10 cm / seconde? 0.1 m/s
+    const double welding_speed{ 0.1 };
+    const double dt = ((stop - start).norm() / welding_speed) / num_points;
+    std::cout << "Timing dt: " << dt << "\n";
+    std::cout << "Max joint motion: " << dt * max_joint_speed[0] << "\n";
+
     // specify an objective to minimize the cost along the path
     // here we use a predefined function that uses the L1 norm of the different
     // between two joint positions
-    auto f_path_cost = L1NormDiff2;
+    // auto f_path_cost = L1NormDiff2;
+    auto f_path_cost = [&max_joint_speed, dt](const std::vector<double>& n1, const std::vector<double>& n2) {
+        assert(n1.size() == n2.size());
+        assert(max_joint_speed.size() == n1.size());
+
+        double cost{ 0.0 };
+        for (int i = 0; i < n1.size(); ++i)
+        {
+            double inc = std::abs(n1[i] - n2[i]);
+            if (inc > max_joint_speed[i] * dt)
+                return std::nan("1");
+            cost += inc;
+        }
+        // if (cost > 1.0)
+        //     cost = std::numeric_limits<double>::max();
+        return cost;
+    };
 
     // optionally we can set a state cost for every point along the path
     // this one tries to keep the end-effector pose close the the nominal pose
     // defined in the task space region
-    auto f_state_cost = [&robot](const TSR& tsr, const JointPositions& q) {
-        return 10.0 * poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
-    };
+    // auto f_state_cost = [&robot](const TSR& tsr, const JointPositions& q) {
+    //     return 10.0 * poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
+    // };
+    // auto f_state_cost = zeroStateCost;
+
+    // keep close to robot home pose
+    std::vector<double> q_home{ 0, -1.5708, 1.5708, 0, 0, 0 };
+    robot.plot(rviz.visual_tools_, q_home, rviz_visual_tools::MAGENTA);
+    ros::Duration(0.5).sleep();
+
+    auto f_state_cost = [q_home](const TSR& tsr, const JointPositions& q) { return L2NormDiff2(q, q_home); };
 
     // settings to select a planner
     PlannerSettings ps;
-    // ps.sampler_type = SamplerType::HALTON;
-    ps.t_space_batch_size = 10;
-    ps.t_space_batch_size = 1;  // robot is not redundant
-    ps.min_valid_samples = 100;
-    ps.max_iters = 50;
+    ps.sampler_type = SamplerType::HALTON;
+    ps.t_space_batch_size = 100;
+    ps.min_valid_samples = 50;
+    ps.max_iters = 200;
 
-    ps.sampler_type = SamplerType::GRID;
-    ps.tsr_resolution = { 3, 1, 1, 1, 1, 10 };
+    // ps.sampler_type = SamplerType::GRID;
+    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 10 };
 
-    // solve it!
+    // // solve it!
     auto solution = solve(task, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
 
     showPath(solution.path, rviz, robot);

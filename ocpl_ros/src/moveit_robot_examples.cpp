@@ -105,8 +105,10 @@ IKSolution IndustrialRobot::ik(const Transform& pose)
 {
     IKSolution joint_poses;
 
+    auto tf_tool0 = pose * tool0_to_tcp_inverse_;
+
     std::array<double, 6 * 8> sols;
-    opw_kinematics::inverse(opw_parameters_, pose, sols.data());
+    opw_kinematics::inverse(opw_parameters_, tf_tool0, sols.data());
 
     // Check the output
     std::vector<double> tmp(6);  // temporary storage for API reasons
@@ -131,6 +133,33 @@ IKSolution IndustrialRobot::ik(const Transform& pose)
 
 void IndustrialRobot::messyHardCodedStuff()
 {
+    // Find the transform between the end-effector tip link
+    // and the tool0 reference for the analytical inverse kinematics solver
+    auto names = kinematic_model_->getLinkModelNames();
+    std::vector<std::string> offset_chain;
+    bool tool0_found{ false };
+    for (const std::string& name : names)
+    {
+        std::cout << name << "\n";
+        if (tool0_found)
+            offset_chain.push_back(name);
+
+        if (name == "tool0")
+            tool0_found = true;
+    }
+
+    std::cout << "Found offset chain with length: " << offset_chain.size() << "\n";
+    for (auto s : offset_chain)
+        std::cout << s << ", ";
+    std::cout << std::endl;
+    
+    tool0_to_tcp_ = Transform::Identity();
+    for (std::string name : offset_chain)
+    {
+        tool0_to_tcp_ = tool0_to_tcp_ * getLinkFixedRelativeTransform(name);
+    }
+    tool0_to_tcp_inverse_ = tool0_to_tcp_.inverse();
+    std::cout << "Offset transform: " << tool0_to_tcp_.translation().transpose() << std::endl;
 }
 
 bool IndustrialRobot::setOPWParameters()
