@@ -32,6 +32,7 @@ add_library(
   ${PROJECT_NAME}
   src/planners.cpp
   src/factories.cpp
+  src/io.cpp
 )
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
