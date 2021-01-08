@@ -14,9 +14,14 @@
 #include <ocpl_planning/cost_functions.h>
 #include <ocpl_planning/settings.h>
 
+// ROS Trajectory Action server definition
+#include <control_msgs/FollowJointTrajectoryAction.h>
+// Means by which we communicate with above action-server
+#include <actionlib/client/simple_action_client.h>
+
 using namespace ocpl;
 
-void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& robot)
+void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& robot, double dt = 0.5)
 {
     for (JointPositions q : path)
     {
@@ -24,8 +29,69 @@ void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& 
             robot.plot(rviz.visual_tools_, q, rviz_visual_tools::RED);
         else
             robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
-        ros::Duration(0.5).sleep();
+        ros::Duration(dt).sleep();
     }
+}
+
+/** \brief Read the data from the puzzle piece from the Descartes tutorials.
+ * code copied from:
+ * https://github.com/ros-industrial-consortium/descartes_tutorials/blob/master/descartes_tutorials/src/tutorial2.cpp
+ * 
+ * (And the corresponding csv file is also copied from these tutorials.)
+ * **/
+static EigenSTL::vector_Isometry3d makePuzzleToolPoses()
+{
+    EigenSTL::vector_Isometry3d path;  // results
+    std::ifstream indata;              // input file
+
+    // You could load your parts from anywhere, but we are transporting them with the git repo
+    std::string filename = ros::package::getPath("ocpl_ros") + "/data/puzzle_descartes.csv";
+
+    // In a non-trivial app, you'll of course want to check that calls like 'open' succeeded
+    indata.open(filename);
+
+    std::string line;
+    int lnum = 0;
+    while (std::getline(indata, line))
+    {
+        ++lnum;
+        if (lnum < 3)
+            continue;
+
+        std::stringstream lineStream(line);
+        std::string cell;
+        Eigen::Matrix<double, 6, 1> xyzijk;
+        int i = -2;
+        while (std::getline(lineStream, cell, ','))
+        {
+            ++i;
+            if (i == -1)
+                continue;
+
+            xyzijk(i) = std::stod(cell);
+        }
+
+        Eigen::Vector3d pos = xyzijk.head<3>();
+        pos = pos / 1000.0;  // Most things in ROS use meters as the unit of length. Our part was exported in mm.
+        Eigen::Vector3d norm = xyzijk.tail<3>();
+        norm.normalize();
+
+        // This code computes two extra directions to turn the normal direction into a full defined frame. Descartes
+        // will search around this frame for extra poses, so the exact values do not matter as long they are valid.
+        Eigen::Vector3d temp_x = (-1 * pos).normalized();
+        Eigen::Vector3d y_axis = (norm.cross(temp_x)).normalized();
+        Eigen::Vector3d x_axis = (y_axis.cross(norm)).normalized();
+        Eigen::Isometry3d pose;
+        pose.matrix().col(0).head<3>() = x_axis;
+        pose.matrix().col(1).head<3>() = y_axis;
+        pose.matrix().col(2).head<3>() = norm;
+        pose.matrix().col(3).head<3>() = pos;
+
+        path.push_back(pose);
+    }
+    indata.close();
+
+    return path;
 }
 
 std::vector<TSR> createLineTask(TSRBounds bounds, Eigen::Vector3d start, Eigen::Vector3d stop,
@@ -85,29 +151,49 @@ int main(int argc, char** argv)
     // Create task
     //////////////////////////////////
     // 0.18 0 0.02 0 135 90
-    TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { -0.5, 0.5 }, { 0, 0 }, { -M_PI, M_PI } };
+    // TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { -0.5, 0.5 }, { 0, 0 }, { -M_PI, M_PI } };
+    TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
     Transform tf = robot.fk(q_zero);
     // tf.translation() << 0.8, -0.2, 0.2;
 
     using Eigen::AngleAxisd;
     using Eigen::Vector3d;
 
-    Eigen::Isometry3d ori(AngleAxisd(0.0, Vector3d::UnitX()) * AngleAxisd(deg2rad(135), Vector3d::UnitY()) *
-                          AngleAxisd(deg2rad(90), Vector3d::UnitZ()));
+    // Eigen::Isometry3d ori(AngleAxisd(0.0, Vector3d::UnitX()) * AngleAxisd(deg2rad(135), Vector3d::UnitY()) *
+    //                       AngleAxisd(deg2rad(90), Vector3d::UnitZ()));
+    // Eigen::Vector3d start(0.98, -0.5, 0.02);
+    // Eigen::Vector3d stop(0.98, 0.5, 0.02);
+    // const std::size_t num_points{ 30 };
+    // const double total_distance = (stop - start).norm();
+    // std::vector<TSR> task = createLineTask(bounds, start, stop, ori, num_points);
 
-    Eigen::Vector3d start(0.98, -0.5, 0.02);
-    Eigen::Vector3d stop(0.98, 0.5, 0.02);
+    // EigenSTL::vector_Vector3d visual_path;
+    // for (auto tsr : task)
+    // {
+    //     rviz.plotPose(tsr.tf_nominal);
+    //     visual_path.push_back(tsr.tf_nominal.translation());
+    //     ros::Duration(0.1).sleep();
+    // }
+    // ros::Duration(0.5).sleep();
 
-    // std::vector<TSR> task = createLineTask(bounds, start, stop, Eigen::Isometry3d(tf.linear()), 10);
-    const int num_points{ 30 };
-    std::vector<TSR> task = createLineTask(bounds, start, stop, ori, num_points);
-
-    for (auto tsr : task)
+    auto task_tfs = makePuzzleToolPoses();
+    std::size_t num_points = task_tfs.size();
+    EigenSTL::vector_Vector3d visual_path;
+    std::vector<TSR> task;
+    for (auto& pose : task_tfs)
     {
-        rviz.plotPose(tsr.tf_nominal);
-        ros::Duration(0.1).sleep();
+        pose.translation().x() += 0.8;
+        task.push_back({ pose, bounds });
+        visual_path.push_back(pose.translation());
     }
-    ros::Duration(0.5).sleep();
+    double total_distance{0.0};
+    for (std::size_t i{1}; i < task_tfs.size(); ++i)
+    {
+        total_distance += (task_tfs[i].translation() - task_tfs[i-1].translation()).norm();
+    }
+
+    rviz.visual_tools_->publishPath(visual_path);
+    ros::Duration(1.0).sleep();
 
     // joint limits for the redundant joints
     JointLimits joint_limits{};
@@ -128,34 +214,36 @@ int main(int argc, char** argv)
     // convert to radians and scale:
     for (double& s : max_joint_speed)
     {
-        s = 0.2 * deg2rad(s);
+        s = 1.0 * deg2rad(s);
     }
     // welding speed 10 cm / seconde? 0.1 m/s
     const double welding_speed{ 0.1 };
-    const double dt = ((stop - start).norm() / welding_speed) / num_points;
-    std::cout << "Timing dt: " << dt << "\n";
-    std::cout << "Max joint motion: " << dt * max_joint_speed[0] << "\n";
+    const double dt = (total_distance / welding_speed) / num_points;
+
+    std::cout << "distance: " << total_distance << "\n";
+    std::cout << "dt: " << dt << "\n";
+    std::cout << "max dq: " << dt * max_joint_speed[0] << "\n";
 
     // specify an objective to minimize the cost along the path
     // here we use a predefined function that uses the L1 norm of the different
     // between two joint positions
-    // auto f_path_cost = L1NormDiff2;
-    auto f_path_cost = [&max_joint_speed, dt](const std::vector<double>& n1, const std::vector<double>& n2) {
-        assert(n1.size() == n2.size());
-        assert(max_joint_speed.size() == n1.size());
+    auto f_path_cost = L1NormDiff2;
+    // auto f_path_cost = [&max_joint_speed, dt](const std::vector<double>& n1, const std::vector<double>& n2) {
+    //     assert(n1.size() == n2.size());
+    //     assert(max_joint_speed.size() == n1.size());
 
-        double cost{ 0.0 };
-        for (int i = 0; i < n1.size(); ++i)
-        {
-            double inc = std::abs(n1[i] - n2[i]);
-            if (inc > max_joint_speed[i] * dt)
-                return std::nan("1");
-            cost += inc;
-        }
-        // if (cost > 1.0)
-        //     cost = std::numeric_limits<double>::max();
-        return cost;
-    };
+    //     double cost{ 0.0 };
+    //     for (int i = 0; i < n1.size(); ++i)
+    //     {
+    //         double inc = std::abs(n1[i] - n2[i]);
+    //         if (inc > max_joint_speed[i] * dt)
+    //             return std::nan("1");
+    //         cost += inc;
+    //     }
+    //     // if (cost > 1.0)
+    //     //     cost = std::numeric_limits<double>::max();
+    //     return cost;
+    // };
 
     // optionally we can set a state cost for every point along the path
     // this one tries to keep the end-effector pose close the the nominal pose
@@ -176,7 +264,7 @@ int main(int argc, char** argv)
     PlannerSettings ps;
     ps.sampler_type = SamplerType::HALTON;
     ps.t_space_batch_size = 100;
-    ps.min_valid_samples = 50;
+    ps.min_valid_samples = 10;
     ps.max_iters = 200;
 
     // ps.sampler_type = SamplerType::GRID;
@@ -185,7 +273,7 @@ int main(int argc, char** argv)
     // // solve it!
     auto solution = solve(task, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
 
-    showPath(solution.path, rviz, robot);
+    showPath(solution.path, rviz, robot, dt);
 
     return 0;
 }
