@@ -46,8 +46,16 @@ std::vector<std::vector<double>> HaltonSampler::getSamples(const int n)
     {
         for (int dim = 0; dim < dimensions_; ++dim)
         {
-            samples[i].push_back(scale(vdc(vdc_count_, PRIMES[dim]), dim));
-            vdc_count_++;
+            if (has_tolerance_[dim])
+            {
+                double u = vdc(vdc_count_, PRIMES[dim]);
+                samples[i].push_back(scale(u, dim));
+                vdc_count_++;
+            }
+            else
+            {
+                samples[i].push_back(lower_bounds_[dim]);  // lower_bound == upper_bound
+            }
         }
     }
 

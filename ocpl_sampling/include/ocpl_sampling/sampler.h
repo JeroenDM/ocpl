@@ -17,6 +17,7 @@ class Sampler
     int dimensions_{ 0 };
     std::vector<double> lower_bounds_;
     std::vector<double> upper_bounds_;
+    std::vector<bool> has_tolerance_;
 
     double scale(double random_value, int dim);
 

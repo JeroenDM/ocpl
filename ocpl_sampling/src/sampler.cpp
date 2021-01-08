@@ -11,6 +11,7 @@ void Sampler::addDimension(double lower_bound, double upper_bound)
   dimensions_ += 1;
   lower_bounds_.push_back(lower_bound);
   upper_bounds_.push_back(upper_bound);
+  has_tolerance_.push_back(lower_bound != upper_bound);
 }
 
 /** n argument not used, but I'm having a C++ design problem I cannot solve yet.
