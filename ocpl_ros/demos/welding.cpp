@@ -28,6 +28,29 @@ void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& 
     }
 }
 
+std::vector<TSR> createLineTask(TSRBounds bounds, Eigen::Vector3d start, Eigen::Vector3d stop,
+                                Eigen::Isometry3d orientation, std::size_t num_points)
+{
+    std::vector<TSR> task;
+    Transform tf(orientation);
+    tf.translation() = start;
+
+    Eigen::Vector3d direction = (stop - start).normalized();
+
+    double step = (stop - start).norm() / num_points;
+    for (int i{ 0 }; i < num_points; ++i)
+    {
+        tf.translation() += step * direction;
+        task.push_back({ tf, bounds });
+    }
+    return task;
+}
+
+inline double deg2rad(double deg)
+{
+    return deg * M_PI / 180.0;
+}
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "ocpl_moveit_demo");
@@ -61,18 +84,27 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Create task
     //////////////////////////////////
+    // 0.18 0 0.02 0 135 90
     TSRBounds bounds{ { -0.1, 0.1 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
     Transform tf = robot.fk(q_zero);
-    tf.translation() << 0.8, -0.2, 0.2;
+    // tf.translation() << 0.8, -0.2, 0.2;
 
-    std::vector<TSR> regions;
-    double step = (0.2 + 0.2) / 10.0;
-    for (int i{ 0 }; i < 10; ++i)
+    using Eigen::AngleAxisd;
+    using Eigen::Vector3d;
+
+    Eigen::Isometry3d ori(AngleAxisd(0.0, Vector3d::UnitX()) * AngleAxisd(deg2rad(135), Vector3d::UnitY()) *
+                          AngleAxisd(deg2rad(90), Vector3d::UnitZ()));
+
+    Eigen::Vector3d start(0.98, -0.5, 0.02);
+    Eigen::Vector3d stop(0.98, 0.5, 0.02);
+
+    // std::vector<TSR> task = createLineTask(bounds, start, stop, Eigen::Isometry3d(tf.linear()), 10);
+    std::vector<TSR> task = createLineTask(bounds, start, stop, ori, 10);
+
+    for (auto tsr : task)
     {
-        tf.translation() += step * Eigen::Vector3d::UnitY();
-        regions.push_back({ tf, bounds });
-        rviz.plotPose(tf);
-        ros::Duration(0.05).sleep();
+        rviz.plotPose(tsr.tf_nominal);
+        ros::Duration(0.1).sleep();
     }
     ros::Duration(0.5).sleep();
 
@@ -114,7 +146,7 @@ int main(int argc, char** argv)
     ps.tsr_resolution = { 3, 1, 1, 1, 1, 10 };
 
     // solve it!
-    auto solution = solve(regions, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
+    auto solution = solve(task, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
 
     showPath(solution.path, rviz, robot);
 
