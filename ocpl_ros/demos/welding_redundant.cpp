@@ -38,6 +38,31 @@ std::vector<TSR> createLineTask(TSRBounds bounds, Eigen::Vector3d start, Eigen::
     return task;
 }
 
+std::vector<TSR> createCircleSegment(TSRBounds bounds, Transform start, Vector3d stop, Vector3d centre, Vector3d axis,
+                                     std::size_t num_points)
+{
+    std::vector<TSR> task;
+
+    // calculate circle segment angle
+    Vector3d a = (start.translation() - centre).normalized();
+    Vector3d b = (stop - centre).normalized();
+    double angle = std::acos(a.dot(b));
+    double step = angle / (num_points - 1);
+
+    Isometry3d r(start.linear());
+    Vector3d v = (start.translation() - centre);
+
+    for (int i{ 0 }; i < num_points; ++i)
+    {
+        Transform tf(r);
+        tf.translation() = centre + v;
+        task.push_back({ tf, bounds });
+        v = AngleAxisd(step, axis) * v;
+        r = AngleAxisd(step, axis) * r;
+    }
+    return task;
+}
+
 void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& robot)
 {
     for (JointPositions q : path)
@@ -84,17 +109,16 @@ int main(int argc, char** argv)
     robot.plot(rviz.visual_tools_, q_start, rviz_visual_tools::MAGENTA);
     ros::Duration(0.2).sleep();
 
-
-    // for (auto q_red : sampler->getSamples())
+    // // for (auto q_red : sampler->getSamples())
+    // // {
+    // auto solution = robot.ik(tf_start, {0.5});
+    // ROS_INFO_STREAM("Found " << solution.size() << " ik solutions.");
+    // for (auto q : solution)
     // {
-    auto solution = robot.ik(tf_start, {0.5});
-    ROS_INFO_STREAM("Found " << solution.size() << " ik solutions.");
-    for (auto q : solution)
-    {
-        robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
-        ros::Duration(0.2).sleep();
-    }
+    //     robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
+    //     ros::Duration(0.2).sleep();
     // }
+    // // }
 
     //////////////////////////////////
     // Create task
@@ -105,25 +129,51 @@ int main(int argc, char** argv)
     Vector3d stop(0.9, 1.05, 0.05);
     Isometry3d ori(AngleAxisd(deg2rad(135), Vector3d::UnitX()) * AngleAxisd(0.0, Vector3d::UnitY()) *
                    AngleAxisd(0.0, Vector3d::UnitZ()));
-    auto regions = createLineTask(bounds, start + work, stop + work, ori, 10);
+    auto regions = createLineTask(bounds, start + work, stop + work, ori, 20);
 
     // add another line
     Vector3d start_2(0.95, 1.1, 0.05);
     Vector3d stop_2(0.95, 2.9, 0.05);
     Isometry3d ori_2(AngleAxisd(0.0, Vector3d::UnitX()) * AngleAxisd(deg2rad(135), Vector3d::UnitY()) *
-                   AngleAxisd(deg2rad(90), Vector3d::UnitZ()));
-    
-    auto second_line = createLineTask(bounds, start_2 + work, stop_2 + work, ori_2, 20);
+                     AngleAxisd(deg2rad(90), Vector3d::UnitZ()));
+    auto second_line = createLineTask(bounds, start_2 + work, stop_2 + work, ori_2, 40);
+
+    // and add another line
+    Vector3d start_3(0.9, 2.95, 0.05);
+    Vector3d stop_3(0.0, 2.95, 0.05);
+    Isometry3d ori_3(AngleAxisd(deg2rad(-135), Vector3d::UnitX()) * AngleAxisd(0.0, Vector3d::UnitY()) *
+                     AngleAxisd(deg2rad(180), Vector3d::UnitZ()));
+    auto third_line = createLineTask(bounds, start_3 + work, stop_3 + work, ori_3, 20);
+
+    // connect them with a circle segment
+    Transform tf_a(ori);
+    tf_a.translation() = stop + work;
+    Vector3d centre(0.9, 1.1, 0.05);
+    centre += work;
+    auto circle_segment = createCircleSegment(bounds, tf_a, start_2 + work, centre, Eigen::Vector3d::UnitZ(), 10);
+
+    Transform tf_a_2(ori_2);
+    tf_a_2.translation() = stop_2 + work;
+    Vector3d centre_2(0.9, 2.9, 0.05);
+    centre_2 += work;
+    auto circle_segment_2 = createCircleSegment(bounds, tf_a_2, start_3 + work, centre_2, Eigen::Vector3d::UnitZ(), 10);
+
+    regions.insert(regions.end(), circle_segment.begin(), circle_segment.end());
     regions.insert(regions.end(), second_line.begin(), second_line.end());
+    regions.insert(regions.end(), circle_segment_2.begin(), circle_segment_2.end());
+    regions.insert(regions.end(), third_line.begin(), third_line.end());
 
+    JointLimits joint_limits{ { 0.0, 3.0 } };
 
-    JointLimits joint_limits{{0.0, 3.0}};
-
+    EigenSTL::vector_Vector3d visual_path;
     for (TSR& tsr : regions)
     {
-        rviz.plotPose(tsr.tf_nominal);
-        ros::Duration(0.05).sleep();
+        //rviz.plotPose(tsr.tf_nominal);
+        //ros::Duration(0.05).sleep();
+        visual_path.push_back(tsr.tf_nominal.translation());
     }
+    rviz.visual_tools_->publishPath(visual_path);
+    rviz.visual_tools_->trigger();
 
     //////////////////////////////////
     // Simple interface solver
@@ -139,7 +189,28 @@ int main(int argc, char** argv)
     // specify an objective to minimize the cost along the path
     // here we use a predefined function that uses the L1 norm of the different
     // between two joint positions
-    auto path_cost_fun = L1NormDiff2;
+    // auto path_cost_fun = L1NormDiff2;
+
+    // // try to limit joint speed
+    std::vector<double> max_joint_speed(robot.getNumDof(), 1.0);
+
+    auto path_cost_fun = [&max_joint_speed](const std::vector<double>& n1, const std::vector<double>& n2) {
+        assert(n1.size() == n2.size());
+        assert(max_joint_speed.size() == n1.size());
+
+        double cost{ 0.0 };
+        for (int i = 0; i < n1.size(); ++i)
+        {
+            double inc = std::abs(n1[i] - n2[i]);
+            inc = std::min(inc, 2 * M_PI - inc);
+            if (inc > max_joint_speed[i])
+                return std::nan("1");
+            cost += inc;
+        }
+        // if (cost > 1.0)
+        //     cost = std::numeric_limits<double>::max();
+        return cost;
+    };
 
     // optionally we can set a state cost for every point along the path
     // this one tries to keep the end-effector pose close the the nominal pose
@@ -152,15 +223,17 @@ int main(int argc, char** argv)
     // settings to select a planner
     PlannerSettings ps;
     ps.is_redundant = true;
-    // ps.sampler_type = SamplerType::HALTON;
-    // ps.t_space_batch_size = 10;
-    // ps.c_space_batch_size = 100;
-    // ps.min_valid_samples = 50;
-    // ps.max_iters = 200;
+    ps.sampler_type = SamplerType::HALTON;
+    ps.t_space_batch_size = 20;
+    ps.c_space_batch_size = 60;
+    ps.min_valid_samples = 500;
+    ps.max_iters = 500;
 
-    ps.sampler_type = SamplerType::GRID;
-    ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
-    ps.redundant_joints_resolution = std::vector<int> {30};
+    // ps.sampler_type = SamplerType::GRID;
+    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
+    // ps.redundant_joints_resolution = std::vector<int>{ 30 };
+    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 60 };
+    // ps.redundant_joints_resolution = std::vector<int>{ 60 };
 
     // solve it!
     Solution res = solve(regions, joint_limits, ik_fun, is_valid_fun, path_cost_fun, state_cost_fun, ps);
