@@ -249,6 +249,11 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
     {
         std::cout << "Not all goal nodes reached.\n";
     }
+    if (goal_nodes_to_reach == goal_nodes.size())
+    {
+        std::cout << "None of the goals are reached in graph search.\n";
+        return _extract_partial_solution(nodes);
+    }
 
     // find the goal node with the smallest distance
     auto node_iter = std::min_element(goal_nodes.begin(), goal_nodes.end(),
@@ -261,6 +266,24 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
     }
 
     return _extract_path(*node_iter);
+}
+
+std::vector<NodePtr> _extract_partial_solution(const std::vector<std::vector<NodePtr>>& nodes)
+{
+    for (std::size_t pi{nodes.size()-1}; pi >= 0; --pi)
+    {
+        auto pt_nodes = nodes[pi];
+        auto node_iter = std::min_element(pt_nodes.begin(), pt_nodes.end(),
+                                      [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
+        if (node_iter != pt_nodes.end() && (*node_iter)->parent != nullptr)
+        {
+            std::cout << "Found partial path up until pt index: " << pi << ".\n";
+            return _extract_path(*node_iter);
+        }
+
+    }
+    std::cout << "Also could not extract partial solution.\n";
+    return {};
 }
 
 std::ostream& operator<<(std::ostream& os, const Node& node)
