@@ -32,7 +32,10 @@ class IndustrialRobot : public MoveItRobot
     opw_kinematics::Parameters<double> opw_parameters_;
     std::string group_name_;
     Transform tool0_to_tcp_;
-     Transform tool0_to_tcp_inverse_;
+    Transform tool0_to_tcp_inverse_;
+    const std::size_t num_base_joints_{ 6 };
+    std::size_t num_red_joints_{ 0 };
+    bool is_redundant_{ false };
 
     void messyHardCodedStuff();
 
@@ -76,6 +79,7 @@ class IndustrialRobot : public MoveItRobot
   public:
     IndustrialRobot(const std::string& tcp_frame = "tool0");
     IKSolution ik(const Transform& tf) override;
+    IKSolution ik(const Transform& tf, const std::vector<double>& q_redundant) override;
     bool setOPWParameters();
 };
 

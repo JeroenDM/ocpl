@@ -97,15 +97,49 @@ IKSolution PlanarRobotNR::ik(const Transform& tf, const std::vector<double>& q_f
 IndustrialRobot::IndustrialRobot(const std::string& tcp_frame) : MoveItRobot(tcp_frame)
 {
     group_name_ = joint_model_group_->getName();
+    if (num_dof_ > num_base_joints_)  // dof > 6 for 3D robots
+    {
+        is_redundant_ = true;
+        num_red_joints_ = num_dof_ - num_base_joints_;
+        ROS_INFO_STREAM("Robot is redundant with " << num_red_joints_ << " redundant joints.");
+    }
     setOPWParameters();
     messyHardCodedStuff();
 }
 
-IKSolution IndustrialRobot::ik(const Transform& pose)
+IKSolution IndustrialRobot::ik(const Transform& tf)
+{
+    if (is_redundant_)
+    {
+        std::vector<double> zeros(num_dof_ - num_base_joints_, 0.0);
+        return ik(tf, zeros);
+    }
+    else
+    {
+        return ik(tf);
+    }
+}
+
+IKSolution IndustrialRobot::ik(const Transform& pose, const std::vector<double>& q_redundant)
 {
     IKSolution joint_poses;
 
     auto tf_tool0 = pose * tool0_to_tcp_inverse_;
+
+    if (is_redundant_)
+    {
+        assert(q_redundant.size() == num_red_joints_);
+        // get base frame for 6dof robot ik
+        std::vector<double> q_dummy(num_dof_, 0.0);
+        for (std::size_t i{}; i < num_red_joints_; ++i)
+        {
+            q_dummy[i] = q_redundant[i];
+        }
+        auto base_link_pose = fk(q_dummy, "base_link");
+
+        // tranfrom pose to reference frame of 6dof robot
+        tf_tool0 = base_link_pose.inverse() * tf_tool0;
+    }
 
     std::array<double, 6 * 8> sols;
     opw_kinematics::inverse(opw_parameters_, tf_tool0, sols.data());
@@ -128,6 +162,16 @@ IKSolution IndustrialRobot::ik(const Transform& pose)
         }
     }
 
+    if (is_redundant_)
+    {
+        // add fixed joint values to all solutions
+        // TODO is this inserting slow?
+        for (auto& q_sol : joint_poses)
+        {
+            q_sol.insert(q_sol.begin(), q_redundant.begin(), q_redundant.end());
+        }
+    }
+
     return joint_poses;
 }
 
@@ -135,7 +179,7 @@ void IndustrialRobot::messyHardCodedStuff()
 {
     // Find the transform between the end-effector tip link
     // and the tool0 reference for the analytical inverse kinematics solver
-    auto names = kinematic_model_->getLinkModelNames();
+    auto names = joint_model_group_->getLinkModelNames();
     std::vector<std::string> offset_chain;
     bool tool0_found{ false };
     for (const std::string& name : names)
@@ -152,7 +196,7 @@ void IndustrialRobot::messyHardCodedStuff()
     for (auto s : offset_chain)
         std::cout << s << ", ";
     std::cout << std::endl;
-    
+
     tool0_to_tcp_ = Transform::Identity();
     for (std::string name : offset_chain)
     {
