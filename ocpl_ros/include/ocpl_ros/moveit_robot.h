@@ -8,6 +8,8 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
 
+#include <ocpl_ros/threadsafe_state_storage.h>
+
 #include <Eigen/Dense>
 
 namespace ocpl
@@ -33,7 +35,7 @@ class MoveItRobot
 {
   protected:
     robot_model::RobotModelPtr kinematic_model_;
-    robot_state::RobotStatePtr kinematic_state_;
+    // robot_state::RobotStatePtr kinematic_state_;
     const robot_state::JointModelGroup* joint_model_group_;
 
     robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
@@ -45,6 +47,8 @@ class MoveItRobot
 
     std::string tcp_frame_;
     std::size_t num_dof_;
+
+    mutable TSStateStorage state_storage_;
 
   public:
     MoveItRobot(const std::string& tcp_frame = "tool0");

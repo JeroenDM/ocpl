@@ -19,9 +19,8 @@ MoveItRobot::MoveItRobot(const std::string& tcp_frame) : tcp_frame_(tcp_frame)
     kinematic_model_ = robot_model_loader_->getModel();
     ROS_INFO("Model frame: %s", kinematic_model_->getModelFrame().c_str());
 
-    // load robot state
-    kinematic_state_.reset(new robot_state::RobotState(kinematic_model_));
-    kinematic_state_->setToDefaultValues();
+    state_storage_.init(kinematic_model_);
+
     joint_model_group_ = kinematic_model_->getJointModelGroup("manipulator");
 
     // create planning scene to for collision checking
@@ -40,31 +39,35 @@ MoveItRobot::MoveItRobot(const std::string& tcp_frame) : tcp_frame_(tcp_frame)
 
 const Transform& MoveItRobot::getLinkFixedRelativeTransform(const std::string& frame) const
 {
-    return kinematic_model_->getLinkModel(frame)->getJointOriginTransform();
+    auto robot_state = state_storage_.getAState();
+    return robot_state->getLinkModel(frame)->getJointOriginTransform();
 }
 
 const Transform& MoveItRobot::fk(const std::vector<double>& q) const
 {
-    kinematic_state_->setJointGroupPositions(joint_model_group_, q);
-    return kinematic_state_->getGlobalLinkTransform(tcp_frame_);
+    auto robot_state = state_storage_.getAState();
+    robot_state->setJointGroupPositions(joint_model_group_, q);
+    return robot_state->getGlobalLinkTransform(tcp_frame_);
 }
 
 const Transform& MoveItRobot::fk(const std::vector<double>& q, const std::string& frame) const
 {
-    kinematic_state_->setJointGroupPositions(joint_model_group_, q);
-    return kinematic_state_->getGlobalLinkTransform(frame);
+    auto robot_state = state_storage_.getAState();
+    robot_state->setJointGroupPositions(joint_model_group_, q);
+    return robot_state->getGlobalLinkTransform(frame);
 }
 
 IKSolution MoveItRobot::ik(const Transform& tf)
 {
+    auto robot_state = state_storage_.getAState();
     double timeout = 0.1;
-    kinematic_state_->setToDefaultValues(); // use a deterministic state to initialize IK solver
-    bool found_ik = kinematic_state_->setFromIK(joint_model_group_, tf, timeout);
+    robot_state->setToDefaultValues(); // use a deterministic state to initialize IK solver
+    bool found_ik = robot_state->setFromIK(joint_model_group_, tf, timeout);
     IKSolution sol;
     if (found_ik)
     {
         std::vector<double> joint_values;
-        kinematic_state_->copyJointGroupPositions(joint_model_group_, joint_values);
+        robot_state->copyJointGroupPositions(joint_model_group_, joint_values);
         sol.push_back(joint_values);
     }
     else
@@ -77,21 +80,22 @@ IKSolution MoveItRobot::ik(const Transform& tf)
 IKSolution MoveItRobot::ik(const Transform& tf, const std::vector<double>& q_redundant)
 {
     double timeout = 0.1;
-    kinematic_state_->setToDefaultValues(); // use a deterministic state to initialize IK solver
+    auto robot_state = state_storage_.getAState();
+    robot_state->setToDefaultValues(); // use a deterministic state to initialize IK solver
     
     // fill out the redundant joint values that where provided as an extra argument
     static const std::vector<std::string> joint_names = joint_model_group_->getActiveJointModelNames();
     for (std::size_t i{0}; i < q_redundant.size(); ++i)
     {
-        kinematic_state_->setJointPositions(joint_names[i], {q_redundant[i]});
+        robot_state->setJointPositions(joint_names[i], {q_redundant[i]});
     }
 
-    bool found_ik = kinematic_state_->setFromIK(joint_model_group_, tf, timeout);
+    bool found_ik = robot_state->setFromIK(joint_model_group_, tf, timeout);
     IKSolution sol;
     if (found_ik)
     {
         std::vector<double> joint_values;
-        kinematic_state_->copyJointGroupPositions(joint_model_group_, joint_values);
+        robot_state->copyJointGroupPositions(joint_model_group_, joint_values);
         sol.push_back(joint_values);
     }
     else
@@ -103,9 +107,10 @@ IKSolution MoveItRobot::ik(const Transform& tf, const std::vector<double>& q_red
 
 Eigen::MatrixXd MoveItRobot::jacobian(const std::vector<double>& q)
 {
+    auto robot_state = state_storage_.getAState();
     Eigen::Vector3d reference_point(0.0, 0.0, 0.0);
-    kinematic_state_->setJointGroupPositions(joint_model_group_, q);
-    return kinematic_state_->getJacobian(joint_model_group_);
+    robot_state->setJointGroupPositions(joint_model_group_, q);
+    return robot_state->getJacobian(joint_model_group_);
 }
 
 void MoveItRobot::updatePlanningScene()
@@ -121,12 +126,13 @@ void MoveItRobot::updatePlanningScene()
 bool MoveItRobot::isInCollision(const std::vector<double>& joint_pose) const
 {
     bool in_collision = false;
+    auto robot_state = state_storage_.getAState();
 
     // ROS_INFO("Checking for collision.");
     // planning_scene_->printKnownObjects(std::cout);
 
-    kinematic_state_->setJointGroupPositions(joint_model_group_, joint_pose);
-    in_collision = planning_scene_->isStateColliding(*kinematic_state_);
+    robot_state->setJointGroupPositions(joint_model_group_, joint_pose);
+    in_collision = planning_scene_->isStateColliding(*robot_state);
 
     // ros::V_string links;
     // planning_scene_->getCollidingLinks(links, *kinematic_state_);
@@ -159,8 +165,9 @@ void MoveItRobot::plot(moveit_visual_tools::MoveItVisualToolsPtr mvt, std::vecto
                        const rviz_visual_tools::colors& color)
 {
     namespace rvt = rviz_visual_tools;
-    kinematic_state_->setJointGroupPositions(joint_model_group_, joint_pose);
-    mvt->publishRobotState(kinematic_state_, color);
+    auto robot_state = state_storage_.getAState();
+    robot_state->setJointGroupPositions(joint_model_group_, joint_pose);
+    mvt->publishRobotState(robot_state, color);
     mvt->trigger();
 }
 
