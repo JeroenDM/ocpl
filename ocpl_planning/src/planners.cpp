@@ -4,7 +4,10 @@
 #include <ocpl_planning/cost_functions.h>
 #include <ocpl_planning/factories.h>
 
+#include <algorithm>
 #include <iostream>
+#include <chrono>
+// #include <execution>
 
 namespace ocpl
 {
@@ -107,16 +110,36 @@ std::vector<std::vector<JointPositions>>
 createCSpaceGraphIncrementally(std::vector<std::function<IKSolution()>> path_samplers, const PlannerSettings& settings)
 {
     std::vector<std::vector<JointPositions>> graph_data;
-    int path_count{ 0 };
-    for (auto path_sampler : path_samplers)
+    graph_data.resize(path_samplers.size());
+
+    // std::execution::par
+
+    // std::transform(path_samplers.begin(), path_samplers.end(), graph_data.begin(), [&settings](auto f) {
+    //     int iters{ 0 };
+    //     std::vector<JointPositions> valid_samples;
+    //     while (iters < settings.max_iters && valid_samples.size() < settings.min_valid_samples)
+    //     {
+    //         std::vector<JointPositions> s = f();
+    //         // add the new joint positions to valid_samples (stl can be ugly...)
+    //         valid_samples.reserve(valid_samples.size() + std::distance(s.begin(), s.end()));
+    //         valid_samples.insert(valid_samples.end(), s.begin(), s.end());
+
+    //         iters++;
+    //     }
+    //     return valid_samples;
+    // });
+
+// #pragma omp parallel
+// #pragma omp for
+    for (std::size_t i = 0; i < path_samplers.size(); ++i)
     {
-        std::cout << "ocpl_planner: processing path point " << path_count << "...";
+        // std::cout << "ocpl_planner: processing path point " << path_count << "...";
 
         int iters{ 0 };
         std::vector<JointPositions> valid_samples;
         while (iters < settings.max_iters && valid_samples.size() < settings.min_valid_samples)
         {
-            auto s = path_sampler();
+            auto s = path_samplers[i]();
 
             // add the new joint positions to valid_samples (stl can be ugly...)
             valid_samples.reserve(valid_samples.size() + std::distance(s.begin(), s.end()));
@@ -124,14 +147,14 @@ createCSpaceGraphIncrementally(std::vector<std::function<IKSolution()>> path_sam
 
             iters++;
         }
-        graph_data.push_back(valid_samples);
+        graph_data[i] = valid_samples;
 
-        std::cout << "ocpl_planner: found " << valid_samples.size() << "\n";
+        // std::cout << "ocpl_planner: found " << valid_samples.size() << "\n";
 
-        if (iters == settings.max_iters)
-            std::cout << "ocpl_planner: maximum number of iterations reached.\n";
+        // if (iters == settings.max_iters)
+        //     std::cout << "ocpl_planner: maximum number of iterations reached.\n";
 
-        path_count++;
+        // path_count++;
     }
     return graph_data;
 }
@@ -140,13 +163,16 @@ std::vector<std::vector<JointPositions>> createCSpaceGraphGrid(std::vector<std::
 {
     std::vector<std::vector<JointPositions>> graph_data;
     graph_data.resize(path_samplers.size());
-    std::size_t path_count{ 0 };
-    for (auto sample_grid : path_samplers)
+
+    // std::transform(path_samplers.begin(), path_samplers.end(), graph_data.begin(), [](auto f) { return f(); });
+
+// #pragma omp parallel
+// #pragma omp for
+    for (std::size_t i = 0; i < path_samplers.size(); ++i)
     {
-        std::cout << "ocpl_planner: processing path point " << path_count << "...";
-        graph_data[path_count] = sample_grid();
-        std::cout << " found " << graph_data[path_count].size() << std::endl;
-        path_count++;
+        // std::cout << "ocpl_planner: processing path point " << i << "...";
+        graph_data[i] = path_samplers[i]();
+        // std::cout << " found " << graph_data[i].size() << std::endl;
     }
     return graph_data;
 }
@@ -222,7 +248,11 @@ Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& re
     }
     else
     {
+        auto start = std::chrono::steady_clock::now();
         graph_data = createCSpaceGraphIncrementally(path_samplers, settings);
+        auto stop = std::chrono::steady_clock::now();
+        std::chrono::duration<double> elapsed_seconds = stop - start;
+        std::cout << "Sampling time: " << elapsed_seconds.count() << "\n";
     }
 
     // Convert the end-effector poses to Nodes, so we can search for the shortest path
