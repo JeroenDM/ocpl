@@ -28,7 +28,8 @@ void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& 
         if (robot.isInCollision(q))
             robot.plot(rviz.visual_tools_, q, rviz_visual_tools::RED);
         else
-            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
+            // robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
+            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::DEFAULT);
         ros::Duration(dt).sleep();
     }
 }
@@ -125,6 +126,7 @@ int main(int argc, char** argv)
     spinner.start();
 
     IndustrialRobot robot("tool_tip");
+    // IndustrialRobot robot("tool0");
     Rviz rviz("base_link");
     rviz.clear();
 
@@ -136,9 +138,9 @@ int main(int argc, char** argv)
 
     // std::cout << tf_start.translation().transpose() << std::endl;
 
-    rviz.plotPose(tf_start);
-    robot.plot(rviz.visual_tools_, q_start);
-    ros::Duration(0.5).sleep();
+    // rviz.plotPose(tf_start);
+    // robot.plot(rviz.visual_tools_, q_start);
+    // ros::Duration(0.5).sleep();
 
     // std::cout << "Found " << q_start_ik.size() << " ik solutions.\n";
     // for (auto q : q_start_ik)
@@ -255,8 +257,8 @@ int main(int argc, char** argv)
 
     // keep close to robot home pose
     std::vector<double> q_home{ 0, -1.5708, 1.5708, 0, 0, 0 };
-    robot.plot(rviz.visual_tools_, q_home, rviz_visual_tools::MAGENTA);
-    ros::Duration(0.5).sleep();
+    // robot.plot(rviz.visual_tools_, q_home, rviz_visual_tools::MAGENTA);
+    // ros::Duration(0.5).sleep();
 
     auto f_state_cost = [q_home](const TSR& tsr, const JointPositions& q) { return L2NormDiff2(q, q_home); };
 

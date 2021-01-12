@@ -70,7 +70,7 @@ void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& 
         if (robot.isInCollision(q))
             robot.plot(rviz.visual_tools_, q, rviz_visual_tools::RED);
         else
-            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
+            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::DEFAULT);
         ros::Duration(0.1).sleep();
     }
 }
@@ -93,7 +93,7 @@ int main(int argc, char** argv)
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
-    IndustrialRobot robot;
+    IndustrialRobot robot("tool_tip");
     Rviz rviz;
     ros::Duration(0.2).sleep();
     rviz.clear();
@@ -105,9 +105,9 @@ int main(int argc, char** argv)
     auto tf_start = robot.fk(q_start);
     // std::cout << tf_start.translation().transpose() << std::endl;
 
-    rviz.plotPose(tf_start);
-    robot.plot(rviz.visual_tools_, q_start, rviz_visual_tools::MAGENTA);
-    ros::Duration(0.2).sleep();
+    // rviz.plotPose(tf_start);
+    // robot.plot(rviz.visual_tools_, q_start, rviz_visual_tools::MAGENTA);
+    // ros::Duration(0.2).sleep();
 
     // // for (auto q_red : sampler->getSamples())
     // // {
@@ -123,13 +123,15 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Create task
     //////////////////////////////////
-    TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
+    double da = deg2rad(10);
+    TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { -da, da }, { -da, da }, { -M_PI, M_PI } };
+    // TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
     Vector3d work(2, 0.3, 0.9027);
     Vector3d start(0.0, 1.05, 0.05);
     Vector3d stop(0.9, 1.05, 0.05);
     Isometry3d ori(AngleAxisd(deg2rad(135), Vector3d::UnitX()) * AngleAxisd(0.0, Vector3d::UnitY()) *
                    AngleAxisd(0.0, Vector3d::UnitZ()));
-    auto regions = createLineTask(bounds, start + work, stop + work, ori, 20);
+    // auto regions = createLineTask(bounds, start + work, stop + work, ori, 20);
 
     // add another line
     Vector3d start_2(0.95, 1.1, 0.05);
@@ -137,43 +139,44 @@ int main(int argc, char** argv)
     Isometry3d ori_2(AngleAxisd(0.0, Vector3d::UnitX()) * AngleAxisd(deg2rad(135), Vector3d::UnitY()) *
                      AngleAxisd(deg2rad(90), Vector3d::UnitZ()));
     auto second_line = createLineTask(bounds, start_2 + work, stop_2 + work, ori_2, 40);
+    auto regions = second_line;
 
-    // and add another line
-    Vector3d start_3(0.9, 2.95, 0.05);
-    Vector3d stop_3(0.0, 2.95, 0.05);
-    Isometry3d ori_3(AngleAxisd(deg2rad(-135), Vector3d::UnitX()) * AngleAxisd(0.0, Vector3d::UnitY()) *
-                     AngleAxisd(deg2rad(180), Vector3d::UnitZ()));
-    auto third_line = createLineTask(bounds, start_3 + work, stop_3 + work, ori_3, 20);
+    // // and add another line
+    // Vector3d start_3(0.9, 2.95, 0.05);
+    // Vector3d stop_3(0.0, 2.95, 0.05);
+    // Isometry3d ori_3(AngleAxisd(deg2rad(-135), Vector3d::UnitX()) * AngleAxisd(0.0, Vector3d::UnitY()) *
+    //                  AngleAxisd(deg2rad(180), Vector3d::UnitZ()));
+    // auto third_line = createLineTask(bounds, start_3 + work, stop_3 + work, ori_3, 20);
 
-    // connect them with a circle segment
-    Transform tf_a(ori);
-    tf_a.translation() = stop + work;
-    Vector3d centre(0.9, 1.1, 0.05);
-    centre += work;
-    auto circle_segment = createCircleSegment(bounds, tf_a, start_2 + work, centre, Eigen::Vector3d::UnitZ(), 10);
+    // // connect them with a circle segment
+    // Transform tf_a(ori);
+    // tf_a.translation() = stop + work;
+    // Vector3d centre(0.9, 1.1, 0.05);
+    // centre += work;
+    // auto circle_segment = createCircleSegment(bounds, tf_a, start_2 + work, centre, Eigen::Vector3d::UnitZ(), 10);
 
-    Transform tf_a_2(ori_2);
-    tf_a_2.translation() = stop_2 + work;
-    Vector3d centre_2(0.9, 2.9, 0.05);
-    centre_2 += work;
-    auto circle_segment_2 = createCircleSegment(bounds, tf_a_2, start_3 + work, centre_2, Eigen::Vector3d::UnitZ(), 10);
+    // Transform tf_a_2(ori_2);
+    // tf_a_2.translation() = stop_2 + work;
+    // Vector3d centre_2(0.9, 2.9, 0.05);
+    // centre_2 += work;
+    // auto circle_segment_2 = createCircleSegment(bounds, tf_a_2, start_3 + work, centre_2, Eigen::Vector3d::UnitZ(), 10);
 
-    regions.insert(regions.end(), circle_segment.begin(), circle_segment.end());
-    regions.insert(regions.end(), second_line.begin(), second_line.end());
-    regions.insert(regions.end(), circle_segment_2.begin(), circle_segment_2.end());
-    regions.insert(regions.end(), third_line.begin(), third_line.end());
+    // regions.insert(regions.end(), circle_segment.begin(), circle_segment.end());
+    // regions.insert(regions.end(), second_line.begin(), second_line.end());
+    // regions.insert(regions.end(), circle_segment_2.begin(), circle_segment_2.end());
+    // regions.insert(regions.end(), third_line.begin(), third_line.end());
 
     JointLimits joint_limits{ { 0.0, 3.0 } };
 
     EigenSTL::vector_Vector3d visual_path;
     for (TSR& tsr : regions)
     {
-        //rviz.plotPose(tsr.tf_nominal);
-        //ros::Duration(0.05).sleep();
+        rviz.plotPose(tsr.tf_nominal);
+        ros::Duration(0.05).sleep();
         visual_path.push_back(tsr.tf_nominal.translation());
     }
-    rviz.visual_tools_->publishPath(visual_path);
-    rviz.visual_tools_->trigger();
+    // rviz.visual_tools_->publishPath(visual_path);
+    // rviz.visual_tools_->trigger();
 
     //////////////////////////////////
     // Simple interface solver
@@ -192,7 +195,7 @@ int main(int argc, char** argv)
     // auto path_cost_fun = L1NormDiff2;
 
     // // try to limit joint speed
-    std::vector<double> max_joint_speed(robot.getNumDof(), 1.0);
+    std::vector<double> max_joint_speed(robot.getNumDof(), 0.5);
 
     auto path_cost_fun = [&max_joint_speed](const std::vector<double>& n1, const std::vector<double>& n2) {
         assert(n1.size() == n2.size());
@@ -215,25 +218,25 @@ int main(int argc, char** argv)
     // optionally we can set a state cost for every point along the path
     // this one tries to keep the end-effector pose close the the nominal pose
     // defined in the task space region
-    // auto state_cost_fun = [&robot](const TSR& tsr, const JointPositions& q) {
-    //     return poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
-    // };
-    auto state_cost_fun = zeroStateCost;
+    auto state_cost_fun = [&robot](const TSR& tsr, const JointPositions& q) {
+        return poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
+    };
+    // auto state_cost_fun = zeroStateCost;
 
     // settings to select a planner
     PlannerSettings ps;
     ps.is_redundant = true;
-    ps.sampler_type = SamplerType::HALTON;
-    ps.t_space_batch_size = 20;
-    ps.c_space_batch_size = 60;
-    ps.min_valid_samples = 500;
-    ps.max_iters = 500;
+    // ps.sampler_type = SamplerType::HALTON;
+    // ps.t_space_batch_size = 20;
+    // ps.c_space_batch_size = 10;
+    // ps.min_valid_samples = 3000;
+    // ps.max_iters = 100000;
 
     // ps.sampler_type = SamplerType::GRID;
-    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
-    // ps.redundant_joints_resolution = std::vector<int>{ 30 };
-    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 60 };
-    // ps.redundant_joints_resolution = std::vector<int>{ 60 };
+    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 100 };
+    // ps.redundant_joints_resolution = std::vector<int>{ 100 };
+    ps.tsr_resolution = { 1, 1, 1, 1, 1, 60 };
+    ps.redundant_joints_resolution = std::vector<int>{ 30 };
 
     // solve it!
     Solution res = solve(regions, joint_limits, ik_fun, is_valid_fun, path_cost_fun, state_cost_fun, ps);
