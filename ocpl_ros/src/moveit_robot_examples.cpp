@@ -116,7 +116,7 @@ IKSolution IndustrialRobot::ik(const Transform& tf)
     }
     else
     {
-        return ik(tf);
+        return ik(tf, {});
     }
 }
 
@@ -177,33 +177,43 @@ IKSolution IndustrialRobot::ik(const Transform& pose, const std::vector<double>&
 
 void IndustrialRobot::messyHardCodedStuff()
 {
-    // Find the transform between the end-effector tip link
-    // and the tool0 reference for the analytical inverse kinematics solver
-    auto names = joint_model_group_->getLinkModelNames();
-    std::vector<std::string> offset_chain;
-    bool tool0_found{ false };
-    for (const std::string& name : names)
+    std::cout << "tcp frame: " << tcp_frame_ << "\n";
+    if (tcp_frame_ == "tool0")
     {
-        std::cout << name << "\n";
-        if (tool0_found)
-            offset_chain.push_back(name);
-
-        if (name == "tool0")
-            tool0_found = true;
+        // no tool seems to be mounted on the robot
+        tool0_to_tcp_ = Transform::Identity();
+        tool0_to_tcp_inverse_ = Transform::Identity();
     }
-
-    std::cout << "Found offset chain with length: " << offset_chain.size() << "\n";
-    for (auto s : offset_chain)
-        std::cout << s << ", ";
-    std::cout << std::endl;
-
-    tool0_to_tcp_ = Transform::Identity();
-    for (std::string name : offset_chain)
+    else
     {
-        tool0_to_tcp_ = tool0_to_tcp_ * getLinkFixedRelativeTransform(name);
+        // Find the transform between the end-effector tip link
+        // and the tool0 reference for the analytical inverse kinematics solver
+        auto names = joint_model_group_->getLinkModelNames();
+        std::vector<std::string> offset_chain;
+        bool tool0_found{ false };
+        for (const std::string& name : names)
+        {
+            std::cout << name << "\n";
+            if (tool0_found)
+                offset_chain.push_back(name);
+
+            if (name == "tool0")
+                tool0_found = true;
+        }
+
+        std::cout << "Found offset chain with length: " << offset_chain.size() << "\n";
+        for (auto s : offset_chain)
+            std::cout << s << ", ";
+        std::cout << std::endl;
+
+        tool0_to_tcp_ = Transform::Identity();
+        for (std::string name : offset_chain)
+        {
+            tool0_to_tcp_ = tool0_to_tcp_ * getLinkFixedRelativeTransform(name);
+        }
+        tool0_to_tcp_inverse_ = tool0_to_tcp_.inverse();
+        std::cout << "Offset transform: " << tool0_to_tcp_.translation().transpose() << std::endl;
     }
-    tool0_to_tcp_inverse_ = tool0_to_tcp_.inverse();
-    std::cout << "Offset transform: " << tool0_to_tcp_.translation().transpose() << std::endl;
 }
 
 bool IndustrialRobot::setOPWParameters()
