@@ -195,6 +195,8 @@ int main(int argc, char** argv)
     // auto path_cost_fun = L1NormDiff2;
 
     // // try to limit joint speed
+    // this should actually  not be part of a path cost, but a hard constraint
+    // but it can be combined into a single function because they potentially use the same calculation
     std::vector<double> max_joint_speed(robot.getNumDof(), 0.5);
 
     auto path_cost_fun = [&max_joint_speed](const std::vector<double>& n1, const std::vector<double>& n2) {
@@ -210,8 +212,6 @@ int main(int argc, char** argv)
                 return std::nan("1");
             cost += inc;
         }
-        // if (cost > 1.0)
-        //     cost = std::numeric_limits<double>::max();
         return cost;
     };
 

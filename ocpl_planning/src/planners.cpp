@@ -256,6 +256,7 @@ Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& re
     }
 
     // Convert the end-effector poses to Nodes, so we can search for the shortest path
+    // can also be done in parallel if state cost function is heavy
     std::vector<std::vector<NodePtr>> nodes;
     nodes.resize(path_samplers.size());
     for (std::size_t pt = 0; pt < graph_data.size(); pt++)

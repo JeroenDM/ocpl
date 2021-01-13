@@ -196,6 +196,8 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
 
     // The actual graph search loop
     NodePtr current_node{ nullptr };
+
+    // TODO replace this with for loop over samples and remove priority queue for DAG case
     while (!Q.empty())
     {
         //    current_node = Q.front();
@@ -224,6 +226,8 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
 
         const std::vector<NodePtr>& neighbors = nodes.at(current_node->waypoint_index + 1);
 
+        // the costs can be calculated in parallel
+        // this can improve speed for complex cost functions
         for (auto nb : neighbors)
         {
             double dist_to_nb = cost_function(current_node, nb) + nb->cost;
