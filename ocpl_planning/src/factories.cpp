@@ -61,7 +61,6 @@ SamplerPtr createIncrementalSampler(const std::vector<Bounds> bounds, SamplerTyp
         sampler->addDimension(bounds[dim].lower, bounds[dim].upper);
     }
     return sampler;
-    return sampler;
 }
 
 }  // namespace ocpl
