@@ -133,7 +133,7 @@ createCSpaceGraphIncrementally(std::vector<std::function<IKSolution()>> path_sam
 // #pragma omp for
     for (std::size_t i = 0; i < path_samplers.size(); ++i)
     {
-        // std::cout << "ocpl_planner: processing path point " << path_count << "...";
+        std::cout << "ocpl_planner: processing path point " << i << "...";
 
         int iters{ 0 };
         std::vector<JointPositions> valid_samples;
@@ -149,12 +149,10 @@ createCSpaceGraphIncrementally(std::vector<std::function<IKSolution()>> path_sam
         }
         graph_data[i] = valid_samples;
 
-        // std::cout << "ocpl_planner: found " << valid_samples.size() << "\n";
+        std::cout << "ocpl_planner: found " << valid_samples.size() << "\n";
 
-        // if (iters == settings.max_iters)
-        //     std::cout << "ocpl_planner: maximum number of iterations reached.\n";
-
-        // path_count++;
+        if (iters == settings.max_iters)
+            std::cout << "ocpl_planner: maximum number of iterations reached.\n";
     }
     return graph_data;
 }
@@ -170,9 +168,9 @@ std::vector<std::vector<JointPositions>> createCSpaceGraphGrid(std::vector<std::
 // #pragma omp for
     for (std::size_t i = 0; i < path_samplers.size(); ++i)
     {
-        // std::cout << "ocpl_planner: processing path point " << i << "...";
+        std::cout << "ocpl_planner: processing path point " << i << "...";
         graph_data[i] = path_samplers[i]();
-        // std::cout << " found " << graph_data[i].size() << std::endl;
+        std::cout << " found " << graph_data[i].size() << std::endl;
     }
     return graph_data;
 }
