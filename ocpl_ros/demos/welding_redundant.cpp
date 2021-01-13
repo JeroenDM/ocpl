@@ -226,17 +226,17 @@ int main(int argc, char** argv)
     // settings to select a planner
     PlannerSettings ps;
     ps.is_redundant = true;
-    // ps.sampler_type = SamplerType::HALTON;
-    // ps.t_space_batch_size = 20;
-    // ps.c_space_batch_size = 10;
-    // ps.min_valid_samples = 3000;
-    // ps.max_iters = 100000;
+    ps.sampler_type = SamplerType::HALTON;
+    ps.t_space_batch_size = 20;
+    ps.c_space_batch_size = 10;
+    ps.min_valid_samples = 500;
+    ps.max_iters = 1000;
 
     // ps.sampler_type = SamplerType::GRID;
-    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 100 };
-    // ps.redundant_joints_resolution = std::vector<int>{ 100 };
-    ps.tsr_resolution = { 1, 1, 1, 1, 1, 60 };
-    ps.redundant_joints_resolution = std::vector<int>{ 30 };
+    // // ps.tsr_resolution = { 1, 1, 1, 1, 1, 100 };
+    // // ps.redundant_joints_resolution = std::vector<int>{ 100 };
+    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 60 };
+    // ps.redundant_joints_resolution = std::vector<int>{ 30 };
 
     // solve it!
     Solution res = solve(regions, joint_limits, ik_fun, is_valid_fun, path_cost_fun, state_cost_fun, ps);

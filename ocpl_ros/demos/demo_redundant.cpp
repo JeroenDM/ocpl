@@ -45,12 +45,12 @@ std::vector<TSR> createCase1()
 }
 
 /** Case 2 from my 2018 paper. **/
-std::vector<TSR> createCase2()
+std::vector<TSR> createCase2(int num_points = 5)
 {
     TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
     Eigen::Vector3d start(4.0, 0.25, 0.0);
     Eigen::Vector3d stop(5.0, 0.25, 0.0);
-    return createLineTask(bounds, start, stop, Eigen::Isometry3d::Identity(), 5);
+    return createLineTask(bounds, start, stop, Eigen::Isometry3d::Identity(), num_points);
 }
 
 /** Case 3 from my 2018 paper. **/
@@ -108,8 +108,8 @@ int main(int argc, char** argv)
     ROS_INFO_STREAM("Found " << ik_solution.size() << " ik solutions.");
     for (auto q : ik_solution)
     {
-        robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
-        ros::Duration(0.5).sleep();
+        robot.plot(rviz.visual_tools_, q, rviz_visual_tools::DEFAULT);
+        ros::Duration(0.2).sleep();
     }
 
     // for (auto q_red : sampler->getSamples())
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
     // JointLimits joint_limits{ { 2.0, 3.0 }, { 0.0, 0.9 } };  // joint limits for the redundant joints
 
     // small passage case
-    auto regions = createCase2();
+    auto regions = createCase2(20);
     JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
 
     // 8 dof zig zag case
