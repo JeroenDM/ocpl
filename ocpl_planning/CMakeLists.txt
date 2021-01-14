@@ -46,17 +46,13 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
 
-#############
-## Testing ##
-#############
+if(CATKIN_ENABLE_TESTING)
 
-# if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(${PROJECT_NAME}_test_io test/test_io.cpp)
 
-#   catkin_add_gtest(${PROJECT_NAME}_test test/test_sampling.cpp)
+  target_link_libraries(${PROJECT_NAME}_test_io
+    ${PROJECT_NAME}
+    ${catkin_LIBRARIES}
+  )
 
-#   target_link_libraries(${PROJECT_NAME}_test
-#     ${PROJECT_NAME}
-#     ${catkin_LIBRARIES}
-#   )
-
-# endif()
+endif()

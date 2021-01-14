@@ -58,4 +58,8 @@ std::ostream& operator<<(std::ostream& os, const PlannerSettings& ps)
     return os;
 }
 
+/*************************************************************
+ *  Reading a task from an irl file(Industrial Robot Format)
+ *************************************************************/
+
 }  // namespace ocpl
