@@ -27,8 +27,6 @@ if(NOT EIGEN3_INCLUDE_DIRS)
   set(EIGEN3_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR})
 endif()
 
-find_package(ompl REQUIRED)
-
 
 ###################################
 ## catkin specific configuration ##
@@ -47,7 +45,6 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
-  ${OMPL_INCLUDE_DIRS}
 )
 
 add_library(
@@ -117,7 +114,6 @@ set_target_properties(${PROJECT_NAME}_prm_demo
 target_link_libraries(${PROJECT_NAME}_prm_demo
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
-  ${OMPL_LIBRARIES}
 )
 
 

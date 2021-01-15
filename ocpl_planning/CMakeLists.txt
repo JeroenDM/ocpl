@@ -12,19 +12,19 @@ if (OPENMP_FOUND)
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
-
-
 find_package(catkin REQUIRED COMPONENTS
   ocpl_graph
   ocpl_sampling
   ocpl_tsr
 )
 
+find_package(ompl REQUIRED)
+
 catkin_package(
    INCLUDE_DIRS include
    LIBRARIES ${PROJECT_NAME}
    CATKIN_DEPENDS ocpl_graph ocpl_sampling ocpl_tsr
-#  DEPENDS system_lib
+   DEPENDS OMPL
 )
 
 ###########
@@ -34,6 +34,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${OMPL_INCLUDE_DIRS}
 )
 
 add_library(
@@ -41,9 +42,11 @@ add_library(
   src/planners.cpp
   src/factories.cpp
   src/io.cpp
+  src/prm.cpp
 )
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
+  ${OMPL_LIBRARIES}
 )
 
 #############
