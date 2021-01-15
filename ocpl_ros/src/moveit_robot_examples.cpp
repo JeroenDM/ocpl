@@ -177,7 +177,7 @@ IKSolution IndustrialRobot::ik(const Transform& pose, const std::vector<double>&
 
 void IndustrialRobot::messyHardCodedStuff()
 {
-    std::cout << "tcp frame: " << tcp_frame_ << "\n";
+    ROS_DEBUG_STREAM("tcp frame: " << tcp_frame_);
     if (tcp_frame_ == "tool0")
     {
         // no tool seems to be mounted on the robot
@@ -193,7 +193,7 @@ void IndustrialRobot::messyHardCodedStuff()
         bool tool0_found{ false };
         for (const std::string& name : names)
         {
-            std::cout << name << "\n";
+            ROS_DEBUG_STREAM(name);
             if (tool0_found)
                 offset_chain.push_back(name);
 
@@ -201,7 +201,7 @@ void IndustrialRobot::messyHardCodedStuff()
                 tool0_found = true;
         }
 
-        std::cout << "Found offset chain with length: " << offset_chain.size() << "\n";
+        ROS_DEBUG_STREAM("Found offset chain with length: " << offset_chain.size());
         for (auto s : offset_chain)
             std::cout << s << ", ";
         std::cout << std::endl;
@@ -212,7 +212,7 @@ void IndustrialRobot::messyHardCodedStuff()
             tool0_to_tcp_ = tool0_to_tcp_ * getLinkFixedRelativeTransform(name);
         }
         tool0_to_tcp_inverse_ = tool0_to_tcp_.inverse();
-        std::cout << "Offset transform: " << tool0_to_tcp_.translation().transpose() << std::endl;
+        ROS_DEBUG_STREAM("Offset transform: " << tool0_to_tcp_.translation().transpose());
     }
 }
 
