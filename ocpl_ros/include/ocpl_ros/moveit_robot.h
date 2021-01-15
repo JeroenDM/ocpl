@@ -9,6 +9,7 @@
 #include <moveit_visual_tools/moveit_visual_tools.h>
 
 #include <ocpl_ros/threadsafe_state_storage.h>
+#include <ocpl_tsr/task_space_regions.h>  // for the Bounds type
 
 #include <Eigen/Dense>
 
@@ -47,6 +48,9 @@ class MoveItRobot
 
     std::string tcp_frame_;
     std::size_t num_dof_;
+
+    std::vector<Bounds> joint_position_limits_;
+    std::vector<Bounds> joint_velocity_limits_;
 
     mutable TSStateStorage state_storage_;
 
@@ -87,6 +91,16 @@ class MoveItRobot
     std::size_t getNumDof()
     {
         return num_dof_;
+    }
+
+    const std::vector<Bounds>& getJointPositionLimits()
+    {
+        return joint_position_limits_;
+    }
+
+    const std::vector<Bounds>& getJointVelocityLimits()
+    {
+        return joint_velocity_limits_;
     }
 };
 

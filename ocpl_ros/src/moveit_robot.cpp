@@ -30,6 +30,14 @@ MoveItRobot::MoveItRobot(const std::string& tcp_frame) : tcp_frame_(tcp_frame)
 
     num_dof_ = joint_model_group_->getActiveJointModelNames().size();
 
+    for (auto jm : joint_model_group_->getActiveJointModels())
+    {
+        joint_position_limits_.push_back(
+            { jm->getVariableBounds().at(0).min_position_, jm->getVariableBounds().at(0).max_position_ });
+        joint_velocity_limits_.push_back(
+            { jm->getVariableBounds().at(0).min_velocity_, jm->getVariableBounds().at(0).max_velocity_ });
+    }
+
     // debug info
     ROS_DEBUG_STREAM("Number of DOFS: " << num_dof_);
     auto joint_names = joint_model_group_->getActiveJointModelNames();
@@ -61,7 +69,7 @@ IKSolution MoveItRobot::ik(const Transform& tf)
 {
     auto robot_state = state_storage_.getAState();
     double timeout = 0.1;
-    robot_state->setToDefaultValues(); // use a deterministic state to initialize IK solver
+    robot_state->setToDefaultValues();  // use a deterministic state to initialize IK solver
     bool found_ik = robot_state->setFromIK(joint_model_group_, tf, timeout);
     IKSolution sol;
     if (found_ik)
@@ -81,13 +89,13 @@ IKSolution MoveItRobot::ik(const Transform& tf, const std::vector<double>& q_red
 {
     double timeout = 0.1;
     auto robot_state = state_storage_.getAState();
-    robot_state->setToDefaultValues(); // use a deterministic state to initialize IK solver
-    
+    robot_state->setToDefaultValues();  // use a deterministic state to initialize IK solver
+
     // fill out the redundant joint values that where provided as an extra argument
     static const std::vector<std::string> joint_names = joint_model_group_->getActiveJointModelNames();
-    for (std::size_t i{0}; i < q_redundant.size(); ++i)
+    for (std::size_t i{ 0 }; i < q_redundant.size(); ++i)
     {
-        robot_state->setJointPositions(joint_names[i], {q_redundant[i]});
+        robot_state->setJointPositions(joint_names[i], { q_redundant[i] });
     }
 
     bool found_ik = robot_state->setFromIK(joint_model_group_, tf, timeout);
