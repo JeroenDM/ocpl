@@ -127,6 +127,8 @@ std::vector<NodePtr> shortest_path(Tree& tree, std::vector<NodePtr> start_nodes,
     NodePtr current_node{ nullptr };
     std::vector<Edge> nb;
 
+    bool goal_reached{ false };
+
     while (!Q.empty())
     {
         //    current_node = Q.front();
@@ -137,6 +139,7 @@ std::vector<NodePtr> shortest_path(Tree& tree, std::vector<NodePtr> start_nodes,
         if (std::find(goal_nodes.begin(), goal_nodes.end(), current_node) != goal_nodes.end())
         // if (current_node == dummy_goal)
         {
+            goal_reached = true;
             break;
         }
 
@@ -163,6 +166,15 @@ std::vector<NodePtr> shortest_path(Tree& tree, std::vector<NodePtr> start_nodes,
                 edge.child->visited = true;
             }
         }
+    }
+
+    if (goal_reached)
+    {
+        std::cout << "Success! Graph search reached a goal node.\n";
+    }
+    else
+    {
+        std::cout << "Graph search did not reach a goal node!\n";
     }
 
     return _extract_path(tree, current_node);
@@ -274,17 +286,16 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
 
 std::vector<NodePtr> _extract_partial_solution(const std::vector<std::vector<NodePtr>>& nodes)
 {
-    for (std::size_t pi{nodes.size()-1}; pi >= 0; --pi)
+    for (std::size_t pi{ nodes.size() - 1 }; pi >= 0; --pi)
     {
         auto pt_nodes = nodes[pi];
         auto node_iter = std::min_element(pt_nodes.begin(), pt_nodes.end(),
-                                      [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
+                                          [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
         if (node_iter != pt_nodes.end() && (*node_iter)->parent != nullptr)
         {
             std::cout << "Found partial path up until pt index: " << pi << ".\n";
             return _extract_path(*node_iter);
         }
-
     }
     std::cout << "Also could not extract partial solution.\n";
     return {};

@@ -27,6 +27,8 @@ if(NOT EIGEN3_INCLUDE_DIRS)
   set(EIGEN3_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR})
 endif()
 
+find_package(ompl REQUIRED)
+
 
 ###################################
 ## catkin specific configuration ##
@@ -45,6 +47,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
+  ${OMPL_INCLUDE_DIRS}
 )
 
 add_library(
@@ -103,6 +106,20 @@ target_link_libraries(${PROJECT_NAME}_welding_redundant
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
 )
+
+# welding demo with kuka kr5 on rail
+add_executable(${PROJECT_NAME}_prm_demo
+  demos/prm_demo.cpp
+)
+set_target_properties(${PROJECT_NAME}_prm_demo
+  PROPERTIES OUTPUT_NAME prm_demo PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_prm_demo
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+  ${OMPL_LIBRARIES}
+)
+
 
 
 add_executable(${PROJECT_NAME}_benchmark1
