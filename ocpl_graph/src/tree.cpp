@@ -27,6 +27,10 @@ std::vector<NodePtr> _extract_path(const Tree& tree, NodePtr goal)
     std::vector<NodePtr> path;
     path.push_back(goal);
     NodePtr node = goal;
+    if (goal == nullptr)
+    {
+        return {};
+    }
     while (true)
     {
         if (node->parent == nullptr)
@@ -115,13 +119,14 @@ std::vector<NodePtr> shortest_path(Tree& tree, NodePtr start, NodePtr goal)
     return _extract_path(tree, current_node);
 }
 
-std::vector<NodePtr> shortest_path(Tree& tree, std::vector<NodePtr> start_nodes, std::vector<NodePtr> goal_nodes)
+std::vector<NodePtr> shortest_path(const Tree& tree, std::vector<NodePtr>& start_nodes, std::vector<NodePtr>& goal_nodes)
 {
     std::priority_queue<NodePtr, std::vector<NodePtr>, compareNodesFunction> Q;
 
-    for (auto start_node : start_nodes)
+    for (NodePtr& start_node : start_nodes)
     {
         start_node->dist = start_node->cost;
+        start_node->visited = true;
         Q.push(start_node);
     }
     NodePtr current_node{ nullptr };
@@ -149,7 +154,7 @@ std::vector<NodePtr> shortest_path(Tree& tree, std::vector<NodePtr> start_nodes,
         }
         else
         {
-            nb = tree[current_node];
+            nb = tree.at(current_node);
         }
 
         for (auto edge : nb)

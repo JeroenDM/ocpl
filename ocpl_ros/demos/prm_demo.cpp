@@ -123,7 +123,7 @@ int main(int argc, char** argv)
         for (auto q : samples)
         {
             if (!robot.isInCollision(q))
-                valid_samples.emplace_back(q);
+                valid_samples.push_back(q);
         }
         valid_samples.shrink_to_fit();
         return valid_samples;

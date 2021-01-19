@@ -52,7 +52,7 @@ std::vector<NodePtr> _extract_path(const Tree& tree, NodePtr goal);
 std::vector<NodePtr> _extract_path(NodePtr goal);
 std::vector<NodePtr> _extract_partial_solution(const std::vector<std::vector<NodePtr>>& nodes);
 std::vector<NodePtr> shortest_path(Tree& tree, NodePtr start, NodePtr goal);
-std::vector<NodePtr> shortest_path(Tree& tree, std::vector<NodePtr> start_nodes, std::vector<NodePtr> goal_nodes);
+std::vector<NodePtr> shortest_path(const Tree& tree, std::vector<NodePtr>& start_nodes, std::vector<NodePtr>& goal_nodes);
 
 /** \brief Find shortest path in a directed acyclic graph. **/
 std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& nodes, std::function<double(const NodePtr, const NodePtr)> cost_function);
