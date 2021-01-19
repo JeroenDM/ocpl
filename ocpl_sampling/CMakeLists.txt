@@ -30,6 +30,18 @@ add_library(
   src/random_sampler.cpp
 )
 
+# a demo of the sample distribution metrics
+add_executable(${PROJECT_NAME}_discrepancy
+  demos/discrepancy.cpp
+)
+set_target_properties(${PROJECT_NAME}_discrepancy
+  PROPERTIES OUTPUT_NAME discrepancy PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_discrepancy
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
+
 #############
 ## Testing ##
 #############
