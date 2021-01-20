@@ -25,6 +25,33 @@ struct Box
     }
 };
 
+/** \brief A rectangle with the left lower corner in the origin. **/
+template <size_t SIZE>
+struct Rect
+{
+    std::array<double, SIZE> sides;
+
+    double volume() const
+    {
+        double v{ 0.0 };
+        for (double s : sides)
+            v += s;
+        return v;
+    }
+
+    bool containsPoint(const Point& p)
+    {
+        assert(p.size() == sides.size());
+
+        for (size_t d = 0; d < sides.size(); ++d)
+        {
+            if (p[d] < 0.0 || p[d] >= sides[p])  // use halfopen interval
+                return false;
+        }
+        return true;
+    }
+};
+
 /** calculate discrepancy
  *
  * Building blocks
@@ -41,7 +68,7 @@ bool isInBox(Point p, const Box& b)
     {
         double lower = b.centre[d] - b.sides[d] / 2.0;
         double upper = b.centre[d] + b.sides[d] / 2.0;
-        if (p[d] < lower || p[d] > upper)
+        if (p[d] < lower || p[d] >= upper)  // use halfopen interval
             return false;
     }
     return true;
