@@ -11,7 +11,7 @@ namespace ocpl
  * Are seeds generated using std::seed_seq better?
  * https://stackoverflow.com/questions/16841939/share-random-number-engine-between-different-methods-within-a-class-in-c11
  **/
-std::mt19937 make_random_engine()
+inline std::mt19937 make_random_engine()
 {
     std::random_device seed_generator;
     return std::mt19937(seed_generator());
