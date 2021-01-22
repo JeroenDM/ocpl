@@ -272,19 +272,101 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
     return _extract_path(*node_iter);
 }
 
+bool DFS(NodePtr current_node, const std::vector<std::vector<NodePtr>>& nodes,
+         std::function<double(const NodePtr, const NodePtr)>& cost_function)
+{
+    current_node->visited = true;
+
+    // base case, goal is reached
+    if (current_node->waypoint_index == (nodes.size() - 1))
+    {
+        return true;
+    }
+    else
+    {
+        const std::vector<NodePtr>& neighbors = nodes.at(current_node->waypoint_index + 1);
+        for (auto nb : neighbors)
+        {
+            if (!nb->visited)
+            {
+                double dist_to_nb = cost_function(current_node, nb) + nb->cost;
+                if (!std::isnan(dist_to_nb))
+                {
+                    nb->parent = current_node;
+                    nb->dist = current_node->dist;
+                    if (DFS(nb, nodes, cost_function))
+                        return true;
+                }
+            }
+        }
+        return false;
+    }
+}
+
+std::vector<NodePtr> dfs_dag(const std::vector<std::vector<NodePtr>>& nodes,
+                             std::function<double(const NodePtr, const NodePtr)> cost_function)
+{
+    for (std::size_t index{ 0 }; index < nodes.size(); ++index)
+    {
+        for (auto& n : nodes[index])
+        {
+            n->waypoint_index = index;
+            n->visited = false;  // reset nodes
+        }
+    }
+
+    const std::vector<NodePtr>& start_nodes = nodes.front();
+    const std::vector<NodePtr>& goal_nodes = nodes.back();
+
+    for (auto node : start_nodes)
+    {
+        DFS(node, nodes, cost_function);
+    }
+
+    size_t goal_nodes_reached{ 0 };
+    for (auto goal : goal_nodes)
+    {
+        if (goal->visited)
+            goal_nodes_reached++;
+    }
+
+    if (goal_nodes_reached < goal_nodes.size())
+    {
+        std::cout << "Not all goal nodes reached.\n";
+    }
+    if (goal_nodes_reached == 0)
+    {
+        std::cout << "None of the goals are reached in graph search.\n";
+        return _extract_partial_solution(nodes);
+    }
+
+    // find a a reachable goal node
+    NodePtr goal;
+    double min_dist = std::numeric_limits<double>::infinity();
+    for (auto node : goal_nodes)
+    {
+        if (node->visited && node->dist < min_dist)
+        {
+            goal = node;
+            min_dist = node->dist;
+        }
+    }
+
+    return _extract_path(goal);
+}
+
 std::vector<NodePtr> _extract_partial_solution(const std::vector<std::vector<NodePtr>>& nodes)
 {
-    for (std::size_t pi{nodes.size()-1}; pi >= 0; --pi)
+    for (std::size_t pi{ nodes.size() - 1 }; pi >= 0; --pi)
     {
         auto pt_nodes = nodes[pi];
         auto node_iter = std::min_element(pt_nodes.begin(), pt_nodes.end(),
-                                      [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
+                                          [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
         if (node_iter != pt_nodes.end() && (*node_iter)->parent != nullptr)
         {
             std::cout << "Found partial path up until pt index: " << pi << ".\n";
             return _extract_path(*node_iter);
         }
-
     }
     std::cout << "Also could not extract partial solution.\n";
     return {};

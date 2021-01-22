@@ -1,6 +1,8 @@
 #include <ros/ros.h>
 
 #include <algorithm>
+#include <stack>
+#include <functional>
 
 #include <ocpl_ros/moveit_robot_examples.h>
 #include <ocpl_ros/rviz.h>
@@ -9,9 +11,8 @@
 #include <ocpl_sampling/random_sampler.h>
 #include <ocpl_tsr/task_space_regions.h>
 
-#include <ocpl_planning/planners.h>
-#include <ocpl_planning/factories.h>
 #include <ocpl_planning/cost_functions.h>
+#include <ocpl_planning/factories.h>
 #include <ocpl_planning/settings.h>
 
 using namespace ocpl;
@@ -26,6 +27,30 @@ void showPath(const std::vector<JointPositions>& path, Rviz& rviz, PlanarRobot3R
             robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
         ros::Duration(0.5).sleep();
     }
+}
+
+auto createPathSamplers(const std::vector<TSR>& task_space_regions,
+                        std::function<IKSolution(const Transform&, const JointPositions&)> ik_fun,
+                        std::function<bool(const JointPositions&)> is_valid_fun, PlannerSettings settings)
+{
+    std::vector<std::function<IKSolution(int)>> path_samplers;
+    for (const TSR& tsr : task_space_regions)
+    {
+        SamplerPtr sampler = createSampler(tsr.bounds.asVector(), settings.sampler_type, settings.tsr_resolution);
+        path_samplers.push_back([tsr, ik_fun, is_valid_fun, &settings, sampler](int num_samples) {
+            IKSolution result;
+            for (auto tsr_values : sampler->getSamples(num_samples))
+            {
+                for (auto q : ik_fun(tsr.valuesToPose(tsr_values), {}))
+                {
+                    if (is_valid_fun(q))
+                        result.push_back(q);
+                }
+            }
+            return result;
+        });
+    }
+    return path_samplers;
 }
 
 int main(int argc, char** argv)
@@ -65,7 +90,7 @@ int main(int argc, char** argv)
     }
 
     // joint limits for the redundant joints
-    JointLimits joint_limits{};
+    // JointLimits joint_limits{};
 
     //////////////////////////////////
     // Simple interface solver
@@ -80,19 +105,7 @@ int main(int argc, char** argv)
     // specify an objective to minimize the cost along the path
     // here we use a predefined function that uses the L1 norm of the different
     // between two joint positions
-    // auto f_path_cost = L1NormDiff2;
-
-    auto f_path_cost = [](const std::vector<double>& n1, const std::vector<double>& n2) {
-        double cost{ 0.0 };
-        for (int i = 0; i < n1.size(); ++i)
-        {
-            double inc = std::abs(n1[i] - n2[i]);
-            if (inc > 0.1)
-                return std::nan("1");
-            cost += inc;
-        }
-        return cost;
-    };
+    auto f_path_cost = L1NormDiff2;
 
     // optionally we can set a state cost for every point along the path
     // this one tries to keep the end-effector pose close the the nominal pose
@@ -112,10 +125,30 @@ int main(int argc, char** argv)
     // ps.sampler_type = SamplerType::GRID;
     ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
 
-    // solve it!
-    auto solution = solve(regions, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
+    auto path_samplers = createPathSamplers(regions, f_ik, f_is_valid, ps);
 
-    showPath(solution.path, rviz, robot);
+    std::vector<NodePtr> start_nodes;
+    std::stack<NodePtr> S;
+    for (auto q : path_samplers[0](30))
+    {
+        start_nodes.push_back(std::make_shared<Node>(q, 0.0));
+        S.push(start_nodes.back());
+        std::cout << *(start_nodes.back()) << "\n";
+    }
+
+    // size_t path_index {0};
+    // while(!S.empty())
+    // {
+    //     NodePtr current = S.top();
+    //     S.pop();
+
+
+    // }
+
+    // solve it!
+    // auto solution = solve(regions, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
+
+    // showPath(solution.path, rviz, robot);
 
     return 0;
 }

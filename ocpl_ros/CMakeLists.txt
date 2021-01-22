@@ -69,6 +69,18 @@ target_link_libraries(${PROJECT_NAME}_demo
   ${PROJECT_NAME}
 )
 
+add_executable(${PROJECT_NAME}_dfs
+  demos/dfs.cpp
+)
+set_target_properties(${PROJECT_NAME}_dfs
+  PROPERTIES OUTPUT_NAME dfs PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_dfs
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
+
+
 add_executable(${PROJECT_NAME}_demo_redundant
   demos/demo_redundant.cpp
 )

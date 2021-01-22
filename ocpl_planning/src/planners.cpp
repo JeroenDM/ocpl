@@ -270,12 +270,12 @@ Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& re
 
     // Find the shortest path in this structured array of nodes
     auto path_nodes = shortest_path_dag(nodes, path_cost);
+    // auto path_nodes = dfs_dag(nodes, path_cost);
 
     std::vector<JointPositions> path;
     for (NodePtr n : path_nodes)
     {
         path.push_back(n->data);
-        std::cout << "Node: " << (*n) << " dist: " << n->dist << "\n";
     }
 
     if (path_nodes.size() < task_space_regions.size())

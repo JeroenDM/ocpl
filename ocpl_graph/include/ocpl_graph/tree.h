@@ -56,6 +56,7 @@ std::vector<NodePtr> shortest_path(Tree& tree, std::vector<NodePtr> start_nodes,
 
 /** \brief Find shortest path in a directed acyclic graph. **/
 std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& nodes, std::function<double(const NodePtr, const NodePtr)> cost_function);
+std::vector<NodePtr> dfs_dag(const std::vector<std::vector<NodePtr>>& nodes, std::function<double(const NodePtr, const NodePtr)> cost_function);
 
 std::ostream& operator<<(std::ostream& os, const Node& node);
 
