@@ -69,6 +69,17 @@ target_link_libraries(${PROJECT_NAME}_demo
   ${PROJECT_NAME}
 )
 
+add_executable(${PROJECT_NAME}_oriolo
+  demos/oriolo.cpp
+)
+set_target_properties(${PROJECT_NAME}_oriolo
+  PROPERTIES OUTPUT_NAME oriolo PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_oriolo
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
+
 add_executable(${PROJECT_NAME}_demo_redundant
   demos/demo_redundant.cpp
 )
