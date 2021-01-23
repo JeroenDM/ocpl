@@ -7,6 +7,10 @@
 #include <ocpl_sampling/random_sampler.h>
 #include <ocpl_planning/factories.h>
 
+namespace graph
+{
+}
+
 namespace oriolo
 {
 using namespace ocpl;
@@ -22,8 +26,13 @@ SamplerPtr createRedundantSampler(const size_t num_red_joints)
 }
 
 Planner::Planner(FKFun fk_fun, IKFun ik_fun, IsValidFun is_valid, std::vector<Bounds>& joint_limits,
-                 std::vector<Bounds>& tsr_bounds, size_t num_red_dof)
-  : fk_fun_(fk_fun), ik_fun_(ik_fun), is_valid_(is_valid), NUM_RED_DOF_(num_red_dof)
+                 std::vector<Bounds>& tsr_bounds, size_t num_dof, size_t num_red_dof)
+  : fk_fun_(fk_fun)
+  , ik_fun_(ik_fun)
+  , is_valid_(is_valid)
+  , NUM_DOF_(num_dof)
+  , NUM_RED_DOF_(num_red_dof)
+  , EXTEND_STEP_(magic::D * std::sqrt(num_dof))
 {
     // sampler to generate perturbations on redundant joints with max deviation d
     red_sampler_ = oriolo::createRedundantSampler(3);
@@ -221,6 +230,51 @@ std::vector<JointPositions> Planner::greedy(const std::vector<TSR>& task)
         return path;
     else
         return {};
+}
+
+std::pair<bool, size_t> Planner::extend(const std::vector<ocpl::TSR>& task, graph::Tree& tree)
+{
+    auto q_rand = randConf();
+    auto n_near = getNear(q_rand, tree);
+    auto q_extend = interpolate(n_near->data.q, q_rand, EXTEND_STEP_);
+
+    // only use redundant joint from extended config
+    JointPositions q_ext_red(q_extend.begin(), q_extend.begin() + NUM_RED_DOF_);
+
+    // solve inverse kinematics of the next waypoint with the nearest node as bias
+    size_t next_waypoint = n_near->data.waypoint + 1;
+    auto q_new = invKin(task[next_waypoint], q_ext_red, n_near->data.q);
+
+    if (!q_new.empty() && noColl(n_near->data.q, q_new))
+    {
+        graph::NodePtr new_node = std::make_shared<graph::Node>(graph::NodeData{ q_new, next_waypoint });
+        tree[new_node] = {};
+        tree[n_near].push_back(new_node);
+        return { true, next_waypoint };
+    }
+    else
+    {
+        return { false, 0};
+    }
+}
+
+graph::NodePtr Planner::getNear(const JointPositions& q, graph::Tree& tree)
+{
+    graph::NodePtr n_near;
+    double min_dist = std::numeric_limits<double>::max();
+    for (auto& pi : tree)
+    {
+        JointPositions qi = pi.first->data.q;
+        double dist = L2NormDiff2(q, qi);
+        if (dist < min_dist)
+        {
+            min_dist = dist;
+            n_near = pi.first;
+            std::cout << "found nearest node: " << n_near->data.q.at(0.0);
+            std::cout << "  with distance: " << min_dist << "\n";
+        }
+    }
+    return n_near;
 }
 
 }  // namespace oriolo

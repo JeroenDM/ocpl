@@ -3,8 +3,37 @@
 #include <functional>
 #include <vector>
 
+// graph includes
+#include <unordered_map>
+#include <limits>
+#include <memory>
+
 #include <ocpl_tsr/task_space_regions.h>
 #include <ocpl_sampling/sampler.h>
+
+namespace graph
+{
+struct NodeData
+{
+    std::vector<double> q;
+    size_t waypoint;
+};
+
+struct Node
+{
+    NodeData data;
+    bool visited{ false };
+    double distance{ std::numeric_limits<double>::max() };
+
+    Node(const NodeData& d) : data(d)
+    {
+    }
+};
+
+using NodePtr = std::shared_ptr<Node>;
+using Tree = std::unordered_map<std::shared_ptr<Node>, std::vector<NodePtr>>;
+
+}  // namespace graph
 
 namespace oriolo
 {
@@ -49,12 +78,17 @@ class Planner
     ocpl::SamplerPtr q_sampler_;
     ocpl::SamplerPtr tsr_sampler_;
     ocpl::SamplerPtr tsr_sampler_small_;
-    size_t NUM_RED_DOF_{ 0 };
     std::vector<int> has_tolerance_;
+
+    size_t NUM_DOF_{ 0 };
+    size_t NUM_RED_DOF_{ 0 };
+    double EXTEND_STEP_{ 0.0 };
+
+    graph::Tree tree_;
 
   public:
     Planner(FKFun fk_fun, IKFun ik_fun, IsValidFun is_valid, std::vector<ocpl::Bounds>& joint_limits,
-            std::vector<ocpl::Bounds>& tsr_bounds, size_t num_red_dof);
+            std::vector<ocpl::Bounds>& tsr_bounds, size_t num_dof, size_t num_red_dof);
 
     /** \brief Unbiased inverse kinematics for random samle in task space regions. **/
     JointPositions invKin(const ocpl::TSR& tsr, const JointPositions& q_red);
@@ -85,6 +119,10 @@ class Planner
     std::vector<JointPositions> step(size_t start_index, size_t stop_index, const JointPositions& q_start,
                                      const std::vector<ocpl::TSR>& task);
     std::vector<JointPositions> greedy(const std::vector<ocpl::TSR>& task);
+
+    std::pair<bool, size_t> extend(const std::vector<ocpl::TSR>& task, graph::Tree& tree);
+
+    graph::NodePtr getNear(const JointPositions& q, graph::Tree& tree);
 };
 
 }  // namespace oriolo

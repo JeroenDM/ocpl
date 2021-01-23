@@ -107,7 +107,7 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Try Oriolo algorithms
     //////////////////////////////////
-    oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof() - 3);
+    oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(), robot->getNumDof() - 3);
 
     auto solution = planner.greedy(regions);
 
