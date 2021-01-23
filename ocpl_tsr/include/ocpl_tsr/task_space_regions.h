@@ -26,7 +26,7 @@ struct TSRBounds
 
     std::vector<Bounds> asVector() const
     {
-        return {x, y, z, rx, ry, rz};
+        return { x, y, z, rx, ry, rz };
     }
 
     void fromVector(const std::vector<Bounds>& v)
@@ -71,5 +71,32 @@ struct TSR
 
 Eigen::Vector3d minNormEquivalent(const Eigen::Vector3d& angles);
 Eigen::Matrix<double, 6, 1> poseDistance(const Transform& tf_ref, const Transform& tf);
+
+inline Transform valuesToPose(const std::vector<double>& values)
+{
+    using Translation = Eigen::Translation3d;
+    using AngleAxis = Eigen::AngleAxisd;
+    using Vector = Eigen::Vector3d;
+
+    // clang-format off
+    Transform t;
+      t = Translation(values[0], values[1], values[2]) *
+          AngleAxis(values[3], Vector::UnitX()) *
+          AngleAxis(values[4], Vector::UnitY()) *
+          AngleAxis(values[5], Vector::UnitZ());
+    // clang-format on
+    return t;
+}
+
+inline std::vector<double> poseToValues(const Transform& tf)
+{
+    Eigen::Vector3d pos = tf.translation();
+    // Eigen documentation:
+    //    The returned angles are in the ranges [0:pi]x[-pi:pi]x[-pi:pi].
+    Eigen::Vector3d angles = tf.rotation().eulerAngles(0, 1, 2);
+
+    std::vector<double> values{ pos.x(), pos.y(), pos.z(), angles.x(), angles.y(), angles.z() };
+    return values;
+}
 
 }  // namespace ocpl
