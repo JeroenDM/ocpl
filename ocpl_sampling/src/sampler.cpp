@@ -25,4 +25,9 @@ double Sampler::scale(double random_value, int dim)
 {
   return (upper_bounds_[dim] - lower_bounds_[dim]) * random_value + lower_bounds_[dim];
 }
+
+std::vector<double> Sampler::getSample()
+{
+  return getSamples(1)[0];
+}
 }  // namespace ocpl
