@@ -10,13 +10,14 @@ namespace oriolo
 {
 typedef std::vector<double> JointPositions;
 typedef std::vector<JointPositions> IKSolution;
+typedef std::function<ocpl::Transform(const JointPositions&)> FKFun;
 typedef std::function<std::vector<JointPositions>(const ocpl::Transform&, const JointPositions&)> IKFun;
 typedef std::function<bool(const JointPositions&)> IsValidFun;
 
 namespace magic
 {
 // d: "maximum allowed displacement of a single joint."
-constexpr double D{ 0.1 };
+constexpr double D{ 0.2 };
 // upperbound on calls to randConf to find joint positions for a waypoint along thepath
 constexpr size_t MAX_SHOTS{ 100 };
 // maximum iterations to find a good start configuration for greedy search
@@ -40,17 +41,20 @@ inline std::vector<T> interpolate(std::vector<T> q_from, std::vector<T> q_to, T 
 class Planner
 {
   private:
+    FKFun fk_fun_;
     IKFun ik_fun_;
     IsValidFun is_valid_;
 
     ocpl::SamplerPtr red_sampler_;
     ocpl::SamplerPtr q_sampler_;
     ocpl::SamplerPtr tsr_sampler_;
+    ocpl::SamplerPtr tsr_sampler_small_;
     size_t NUM_RED_DOF_{ 0 };
+    std::vector<int> has_tolerance_;
 
   public:
-    Planner(IKFun ik_fun, IsValidFun is_valid, std::vector<ocpl::Bounds>& joint_limits,
-            std::vector<ocpl::Bounds>& tsr_bounds);
+    Planner(FKFun fk_fun, IKFun ik_fun, IsValidFun is_valid, std::vector<ocpl::Bounds>& joint_limits,
+            std::vector<ocpl::Bounds>& tsr_bounds, size_t num_red_dof);
 
     /** \brief Unbiased inverse kinematics for random samle in task space regions. **/
     JointPositions invKin(const ocpl::TSR& tsr, const JointPositions& q_red);
@@ -77,6 +81,10 @@ class Planner
     // state and path validation (collision checking)
     bool noColl(const JointPositions& q);
     bool noColl(const JointPositions& q_from, const JointPositions& q_to);
+
+    std::vector<JointPositions> step(size_t start_index, size_t stop_index, const JointPositions& q_start,
+                                     const std::vector<ocpl::TSR>& task);
+    std::vector<JointPositions> greedy(const std::vector<ocpl::TSR>& task);
 };
 
 }  // namespace oriolo

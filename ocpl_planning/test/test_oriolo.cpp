@@ -16,6 +16,7 @@ class TestPlanner : public ::testing::Test
   protected:
     void SetUp() override
     {
+        fk_ = [](const JointPositions& /* q */) { return ocpl::Transform::Identity(); };
         ik_ = [](const ocpl::Transform& tf, const JointPositions& q_red) {
             JointPositions q = q_red;
             for (size_t i = 0; i < 3; ++i)
@@ -51,6 +52,7 @@ class TestPlanner : public ::testing::Test
     const size_t num_red_dof_{ 3 };
     const size_t num_dof_{ 6 };
 
+    FKFun fk_;
     IKFun ik_;
     IsValidFun isValid_;
 
@@ -64,7 +66,7 @@ TEST_F(TestPlanner, TestInvKin)
     JointPositions q_red{ 1.0, -0.5, 0.2 };
     JointPositions q_bias{ 1.0, -0.5, 0.2, 0.01, 0.01, 0.01 };
 
-    Planner p(ik_, isValid_, joint_limits_, tsr_bounds_);
+    Planner p(fk_, ik_, isValid_, joint_limits_, tsr_bounds_, 3);
     ocpl::TSR tsr = getTSR();
 
     compareVectors(p.invKin(tsr, q_red, q_bias), { 1.0, -0.5, 0.2, 0.0, 0.0, 0.0 }, "invKind()");
@@ -95,7 +97,7 @@ TEST_F(TestPlanner, TestRandConf)
         return sol;
     };
 
-    Planner p(ik_fun, isValid_, joint_limits_, tsr_bounds_);
+    Planner p(fk_, ik_fun, isValid_, joint_limits_, tsr_bounds_, 3);
     ocpl::TSR tsr = getTSR();
 
     auto q0 = p.randRed(q_red_bias);
@@ -128,8 +130,7 @@ TEST_F(TestPlanner, TestRandConf)
     // joint should not deviate too much from bias
     for (size_t i = 0; i < num_dof_; ++i)
     {
-        ASSERT_LE(q4[i], q_bias[i] + magic::D);
-        ASSERT_GE(q4[i], q_bias[i] - magic::D);
+        ASSERT_NEAR(q4[i], q_bias[i], magic::D);
     }
     // base joints are deterministic
     for (size_t i = 3; i < num_dof_; ++i)
@@ -138,25 +139,52 @@ TEST_F(TestPlanner, TestRandConf)
     }
 }
 
-TEST(TestCollision, TestCollision1D)
+class TestRobot1D : public ::testing::Test
 {
-    auto ik = [](const ocpl::Transform& tf, const JointPositions& q_red) {
-        JointPositions q{ 0.1234 };
-        IKSolution sol{ q };
-        return sol;
-    };
+  protected:
+    void SetUp() override
+    {
+        fk_ = [](const JointPositions& q) {
+            auto tf = ocpl::Transform::Identity();
+            tf.translation().x() = q.at(0);
+            return tf;
+        };
+        ik_ = [](const ocpl::Transform& tf, const JointPositions& /* q_red */) {
+            // the x position of the robot will be samples between 0 and 1
+            // this is also the joint value for this simple robot
+            JointPositions q{ tf.translation().x() };
+            IKSolution sol{ q };
+            return sol;
+        };
 
-    auto is_valid = [](const JointPositions& q) {
-        if (q.at(0) < 0.5 || q.at(0) > 0.7)
-            return true;
-        else
-            return false;
-    };
+        isValid_ = [](const JointPositions& q) {
+            if (q.at(0) < 0.5 || q.at(0) > 0.7)
+                return true;
+            else
+                return false;
+        };
 
-    std::vector<ocpl::Bounds> jl{ { 0.0, 0.1 } };
-    std::vector<ocpl::Bounds> bnds{ { 0.0, 0.0 } };
-    Planner p(ik, is_valid, jl, bnds);
+        jl_.push_back({ 0.0, 1.0 });
+        bnds_.push_back({ 0.0, 1.0 });
 
+        for (int i = 0; i < 6; ++i)
+            bnds_6d_.push_back({ 0.0, 0.0 });
+        bnds_6d_[0] = ocpl::Bounds{ -0.02, 0.02 };
+    }
+
+    FKFun fk_;
+    IKFun ik_;
+    IsValidFun isValid_;
+    std::vector<ocpl::Bounds> jl_;
+    std::vector<ocpl::Bounds> bnds_;
+    std::vector<ocpl::Bounds> bnds_6d_;
+};
+
+TEST_F(TestRobot1D, TestCollision1D)
+{
+    Planner p(fk_, ik_, isValid_, jl_, bnds_, 0);
+
+    // the test robot position is valid outside the interval [0.5, 0.7]
     ASSERT_TRUE(p.noColl({ 0.2 }));
     ASSERT_FALSE(p.noColl({ 0.6 }));
     ASSERT_TRUE(p.noColl({ 0.8 }));
@@ -167,6 +195,50 @@ TEST(TestCollision, TestCollision1D)
     ASSERT_FALSE(p.noColl({ 0.4 }, { 0.8 }));
     // interpolated state should be 1.0, and therefore interpolation should not catch path violation
     ASSERT_TRUE(p.noColl({ 0.4 }, { 1.6 }));
+}
+
+TEST_F(TestRobot1D, TestStep1D)
+{
+    Planner p(fk_, ik_, isValid_, jl_, bnds_6d_, 0);
+
+    // create the task
+    std::vector<double> x_positions{ 0.0, 0.01, 0.02 };
+    std::vector<ocpl::TSR> task;
+    for (double xi : x_positions)
+    {
+        ocpl::TSRBounds b;
+        b.fromVector(bnds_6d_);
+        ocpl::Transform tfi = ocpl::Transform::Identity();
+        tfi.translation().x() = xi;
+        task.push_back(ocpl::TSR(tfi, b));
+    }
+
+    auto path = p.step(0, 2, { 0.0 }, task);
+    ASSERT_EQ(path.size(), task.size());
+    for (size_t i = 0; i < path.size(); ++i)
+        ASSERT_NEAR(path[i][0], x_positions[i], magic::D);
+}
+
+TEST_F(TestRobot1D, TestGreedy1D)
+{
+    Planner p(fk_, ik_, isValid_, jl_, bnds_6d_, 0);
+
+    // create the task
+    std::vector<double> x_positions{ 0.0, 0.01, 0.02 };
+    std::vector<ocpl::TSR> task;
+    for (double xi : x_positions)
+    {
+        ocpl::TSRBounds b;
+        b.fromVector(bnds_6d_);
+        ocpl::Transform tfi = ocpl::Transform::Identity();
+        tfi.translation().x() = xi;
+        task.push_back(ocpl::TSR(tfi, b));
+    }
+
+    auto path = p.greedy(task);
+    ASSERT_EQ(path.size(), task.size());
+    for (size_t i = 0; i < path.size(); ++i)
+        ASSERT_NEAR(path[i][0], x_positions[i], magic::D);
 }
 
 int main(int argc, char** argv)

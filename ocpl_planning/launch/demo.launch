@@ -1,0 +1,3 @@
+<launch>
+  <node name="demo" pkg="ocpl_planning" type="ocpl_planning_test_oriolo" output="screen"/>
+</launch>
