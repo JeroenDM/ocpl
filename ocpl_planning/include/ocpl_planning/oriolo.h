@@ -10,7 +10,8 @@ namespace oriolo
 {
 typedef std::vector<double> JointPositions;
 typedef std::vector<JointPositions> IKSolution;
-typedef std::function<std::vector<JointPositions>(const ocpl::Transform&, const JointPositions&)> IKFunction;
+typedef std::function<std::vector<JointPositions>(const ocpl::Transform&, const JointPositions&)> IKFun;
+typedef std::function<bool(const JointPositions&)> IsValidFun;
 
 namespace magic
 {
@@ -24,17 +25,32 @@ constexpr size_t MAX_ITER{ 1000 };
 
 ocpl::SamplerPtr createRedundantSampler(const size_t num_red_joints);
 
+/** \brief Simple interpolation between two vectors. Returns one vector.**/
+template <typename T>
+inline std::vector<T> interpolate(std::vector<T> q_from, std::vector<T> q_to, T s)
+{
+    std::vector<T> q(q_from.size());
+    for (std::size_t i = 0; i < q_from.size(); ++i)
+    {
+        q[i] = (1 - s) * q_from[i] + s * q_to[i];
+    }
+    return q;
+}
+
 class Planner
 {
   private:
-    IKFunction ik_fun_;
+    IKFun ik_fun_;
+    IsValidFun is_valid_;
+
     ocpl::SamplerPtr red_sampler_;
     ocpl::SamplerPtr q_sampler_;
     ocpl::SamplerPtr tsr_sampler_;
-    size_t NUM_RED_DOF_{0};
+    size_t NUM_RED_DOF_{ 0 };
 
   public:
-    Planner(IKFunction ik_fun, std::vector<ocpl::Bounds>& joint_limits, std::vector<ocpl::Bounds>& tsr_bounds);
+    Planner(IKFun ik_fun, IsValidFun is_valid, std::vector<ocpl::Bounds>& joint_limits,
+            std::vector<ocpl::Bounds>& tsr_bounds);
 
     /** \brief Unbiased inverse kinematics for random samle in task space regions. **/
     JointPositions invKin(const ocpl::TSR& tsr, const JointPositions& q_red);
@@ -51,11 +67,16 @@ class Planner
      * I interpret limited as using the maximum displacement parameter d;
      * **/
     JointPositions randRed(const JointPositions& q_bias);
+    JointPositions randRed();
 
     // all variations on randConf to get random joint positions
     JointPositions randConf();
     JointPositions randConf(const ocpl::TSR& tsr);
     JointPositions randConf(const ocpl::TSR& tsr, const JointPositions& q_bias);
+
+    // state and path validation (collision checking)
+    bool noColl(const JointPositions& q);
+    bool noColl(const JointPositions& q_from, const JointPositions& q_to);
 };
 
 }  // namespace oriolo

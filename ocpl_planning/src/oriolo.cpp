@@ -20,8 +20,8 @@ SamplerPtr createRedundantSampler(const size_t num_red_joints)
     return sampler;
 }
 
-Planner::Planner(IKFunction ik_fun, std::vector<Bounds>& joint_limits, std::vector<Bounds>& tsr_bounds)
-  : ik_fun_(ik_fun)
+Planner::Planner(IKFun ik_fun, IsValidFun is_valid, std::vector<Bounds>& joint_limits, std::vector<Bounds>& tsr_bounds)
+  : ik_fun_(ik_fun), is_valid_(is_valid)
 {
     // sampler to generate perturbations on redundant joints with max deviation d
     red_sampler_ = oriolo::createRedundantSampler(3);
@@ -69,20 +69,26 @@ JointPositions Planner::invKin(const TSR& tsr, const JointPositions& q_red, cons
 JointPositions Planner::randRed(const JointPositions& q_bias)
 {
     JointPositions q_red_random(NUM_RED_DOF_);
-    JointPositions perturbation = red_sampler_->getSamples(1)[0];
+    JointPositions perturbation = red_sampler_->getSample();
     for (size_t i{ 0 }; i < NUM_RED_DOF_; ++i)
         q_red_random[i] = q_bias[i] + perturbation[i];
     return q_red_random;
 };
 
+JointPositions Planner::randRed()
+{
+    auto q = q_sampler_->getSample();
+    return JointPositions(q.begin(), q.begin() + NUM_RED_DOF_);
+};
+
 JointPositions Planner::randConf()
 {
-    return q_sampler_->getSamples(1)[0];
+    return q_sampler_->getSample();
 }
 
 JointPositions Planner::randConf(const TSR& tsr)
 {
-    auto q_random = randConf();
+    auto q_random = randRed();
     return invKin(tsr, q_random);  // this is an emtpy vector if invKin failed
 }
 
@@ -91,5 +97,28 @@ JointPositions Planner::randConf(const TSR& tsr, const JointPositions& q_bias)
     auto q_red = randRed(q_bias);
     auto q_ik = invKin(tsr, q_red, q_bias);
     return q_ik;  // this is an emtpy vector if invKin failed
+}
+
+bool Planner::noColl(const JointPositions& q)
+{
+    return is_valid_(q);
+}
+
+bool Planner::noColl(const JointPositions& q_from, const JointPositions& q_to)
+{
+    if (!is_valid_(q_from))
+        return false;
+    // TODO figure out what they do mean in the paper
+    // now fix the number of steps
+    const int steps{ 3 };
+    for (int step = 1; step < steps; ++step)
+    {
+        auto q_step = interpolate(q_from, q_to, static_cast<double>(step) / (steps - 1));
+        if (!is_valid_(q_step))
+        {
+            return false;
+        }
+    }
+    return true;
 }
 }  // namespace oriolo
