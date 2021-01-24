@@ -56,7 +56,7 @@ class MoveItRobot
 
   public:
     MoveItRobot(const std::string& tcp_frame = "tool0");
-    ~MoveItRobot() = default;
+    virtual ~MoveItRobot() = default;
 
     const Transform& fk(const JointPositions& q) const;
     const Transform& fk(const JointPositions& q, const std::string& frame) const;
