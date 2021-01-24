@@ -22,9 +22,11 @@ class Sampler
     double scale(double random_value, int dim);
 
   public:
+    virtual ~Sampler() = default;
     virtual void addDimension(double lower_bound, double upper_bound);
     virtual void addDimension(double lower_bound, double upper_bound, int num_samples);
     virtual std::vector<std::vector<double>> getSamples(const int n = 1) = 0;
+    virtual std::vector<double> getSample();
     int getNumDimensions()
     {
         return dimensions_;
