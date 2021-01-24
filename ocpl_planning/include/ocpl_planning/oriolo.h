@@ -22,6 +22,7 @@ struct NodeData
 struct Node
 {
     NodeData data;
+    std::shared_ptr<Node> parent{ nullptr };
     bool visited{ false };
     double distance{ std::numeric_limits<double>::max() };
 
@@ -46,11 +47,13 @@ typedef std::function<bool(const JointPositions&)> IsValidFun;
 namespace magic
 {
 // d: "maximum allowed displacement of a single joint."
-constexpr double D{ 0.2 };
+constexpr double D{ 0.4 };
 // upperbound on calls to randConf to find joint positions for a waypoint along thepath
 constexpr size_t MAX_SHOTS{ 100 };
 // maximum iterations to find a good start configuration for greedy search
-constexpr size_t MAX_ITER{ 1000 };
+constexpr size_t MAX_ITER{ 100 };
+// how many times do extend before adding another start config to the tree
+constexpr size_t MAX_EXTEND{ 50000 };
 }  // namespace magic
 
 ocpl::SamplerPtr createRedundantSampler(const size_t num_red_joints);
@@ -73,6 +76,7 @@ class Planner
     FKFun fk_fun_;
     IKFun ik_fun_;
     IsValidFun is_valid_;
+    std::vector<ocpl::TSR> task_;
 
     ocpl::SamplerPtr red_sampler_;
     ocpl::SamplerPtr q_sampler_;
@@ -120,9 +124,26 @@ class Planner
                                      const std::vector<ocpl::TSR>& task);
     std::vector<JointPositions> greedy(const std::vector<ocpl::TSR>& task);
 
-    std::pair<bool, size_t> extend(const std::vector<ocpl::TSR>& task, graph::Tree& tree);
+    std::pair<bool, graph::NodeData> extend(const std::vector<ocpl::TSR>& task, graph::Tree& tree);
 
     graph::NodePtr getNear(const JointPositions& q, graph::Tree& tree);
+
+    std::vector<JointPositions> rrtLike(const std::vector<ocpl::TSR>& task);
+
+    // implement more generic interface for planners
+    void setTask(const std::vector<ocpl::TSR>& task)
+    {
+        task_ = task;
+    }
+    /** \brief Get a (random) robot configurations for a given waypoint along the path. **/
+    JointPositions sample(size_t waypoint);
+
+     /** \brief Get a (random) biased robot configurations for a given waypoint along the path.
+      * 
+      * The solution space for the given waypoint is sampled in a regions around the q_bias;
+      * 
+      * **/
+    JointPositions sample(size_t waypoint, const JointPositions& q_bias);
 };
 
 }  // namespace oriolo

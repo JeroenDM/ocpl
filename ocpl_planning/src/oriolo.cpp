@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <cmath>
+#include <algorithm>
 
 #include <ocpl_planning/cost_functions.h>
 #include <ocpl_sampling/random_sampler.h>
@@ -139,6 +140,10 @@ JointPositions Planner::randConf(const TSR& tsr, const JointPositions& q_bias)
     return q_ik;  // this is an emtpy vector if invKin failed
 }
 
+JointPositions Planner::sample(size_t waypoint)
+{
+}
+
 bool Planner::noColl(const JointPositions& q)
 {
     return is_valid_(q);
@@ -232,7 +237,7 @@ std::vector<JointPositions> Planner::greedy(const std::vector<TSR>& task)
         return {};
 }
 
-std::pair<bool, size_t> Planner::extend(const std::vector<ocpl::TSR>& task, graph::Tree& tree)
+std::pair<bool, graph::NodeData> Planner::extend(const std::vector<ocpl::TSR>& task, graph::Tree& tree)
 {
     auto q_rand = randConf();
     auto n_near = getNear(q_rand, tree);
@@ -248,13 +253,14 @@ std::pair<bool, size_t> Planner::extend(const std::vector<ocpl::TSR>& task, grap
     if (!q_new.empty() && noColl(n_near->data.q, q_new))
     {
         graph::NodePtr new_node = std::make_shared<graph::Node>(graph::NodeData{ q_new, next_waypoint });
+        new_node->parent = n_near;
         tree[new_node] = {};
         tree[n_near].push_back(new_node);
-        return { true, next_waypoint };
+        return { true, n_near->data };
     }
     else
     {
-        return { false, 0};
+        return { false, {} };
     }
 }
 
@@ -270,11 +276,88 @@ graph::NodePtr Planner::getNear(const JointPositions& q, graph::Tree& tree)
         {
             min_dist = dist;
             n_near = pi.first;
-            std::cout << "found nearest node: " << n_near->data.q.at(0.0);
-            std::cout << "  with distance: " << min_dist << "\n";
+            // std::cout << "found nearest node: " << n_near->data.q.at(0.0);
+            // std::cout << "  with distance: " << min_dist << "\n";
         }
     }
     return n_near;
+}
+
+std::vector<JointPositions> Planner::rrtLike(const std::vector<ocpl::TSR>& task)
+{
+    size_t goal_waypoint = task.size() - 1;
+    size_t current_waypoint{ 0 };
+    size_t iters{ 0 };
+
+    graph::Tree tree;
+
+    // try to build a tree to the goal waypoint
+    while (current_waypoint != goal_waypoint && iters < magic::MAX_ITER)
+    {
+        tree.clear();
+
+        // create a tree from a random start configurations
+        auto q0 = randConf(task.at(0));
+        if (q0.empty())
+        {
+            continue;
+        }
+        std::cout << "Found start config at iteration: " << iters << "\n";
+        auto n0 = std::make_shared<graph::Node>(graph::NodeData{ q0, 0 });
+        tree[n0] = {};
+
+        size_t extend_iters{ 0 };
+        do
+        {
+            auto res = extend(task, tree);
+            if (res.first)
+            {
+                current_waypoint = res.second.waypoint;
+                // here to extend step could be added for the other variations
+            }
+            extend_iters++;
+        } while (current_waypoint != goal_waypoint && extend_iters < magic::MAX_EXTEND);
+
+        std::cout << "tree reached waypoint: " << current_waypoint << " after " << extend_iters << "\n";
+
+        iters++;
+    }
+
+    std::vector<JointPositions> path;
+    if (current_waypoint == goal_waypoint)
+    {
+        std::cout << "rrtLike found a solution\n";
+        graph::NodePtr goal;
+        for (auto p : tree)
+        {
+            if (p.first->data.waypoint == goal_waypoint)
+                goal = p.first;
+        }
+        graph::NodePtr current = goal;
+        while (current->data.waypoint > 0)
+        {
+            if (current)
+            {
+                path.push_back(current->data.q);
+                current = current->parent;
+            }
+            else
+            {
+                std::cout << "stuck in graph seach.\n";
+                break;
+            }
+        }
+        if (current)
+        {
+            path.push_back(current->data.q);
+            std::reverse(path.begin(), path.end());
+        }
+    }
+    else
+    {
+        std::cout << "rrtLike only reached waypoint: " << current_waypoint;
+    }
+    return path;
 }
 
 }  // namespace oriolo

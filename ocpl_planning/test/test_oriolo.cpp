@@ -247,24 +247,24 @@ TEST_F(TestRobot1D, TestExtend)
 {
     Planner p(fk_, ik_, isValid_, jl_, bnds_6d_, 1, 0);
 
-    JointPositions q0 {0.0};
-    JointPositions q1 {2.0};
-    auto n0 = std::make_shared<graph::Node>(graph::NodeData{q0, 0});
-    auto n1 = std::make_shared<graph::Node>(graph::NodeData{q1, 1});
+    JointPositions q0{ 0.0 };
+    JointPositions q1{ 2.0 };
+    auto n0 = std::make_shared<graph::Node>(graph::NodeData{ q0, 0 });
+    auto n1 = std::make_shared<graph::Node>(graph::NodeData{ q1, 1 });
 
     graph::Tree tree;
     tree[n0] = {};
     tree[n1] = {};
 
-    auto res0 = p.getNear({0.01}, tree)->data;
+    auto res0 = p.getNear({ 0.01 }, tree)->data;
     ASSERT_EQ(res0.q.at(0), q0.at(0));
     ASSERT_EQ(res0.waypoint, 0);
 
-    auto res1 = p.getNear({1.8}, tree)->data;
+    auto res1 = p.getNear({ 1.8 }, tree)->data;
     ASSERT_EQ(res1.q.at(0), q1.at(0));
     ASSERT_EQ(res1.waypoint, 1);
 
-        // create the task
+    // create the task
     std::vector<double> x_positions{ 0.0, 0.01, 0.02 };
     std::vector<ocpl::TSR> task;
     for (double xi : x_positions)
@@ -277,7 +277,14 @@ TEST_F(TestRobot1D, TestExtend)
     }
 
     auto res = p.extend(task, tree);
-    std::cout << "Extend: " << res.first << ", " << res.second << "\n";
+    std::cout << "Extend: " << res.first << ", " << res.second.waypoint << "\n";
+
+    auto path = p.rrtLike(task);
+    std::cout << "rrtLike: " << path.size() << "\n";
+    std::cout << "path: ";
+    for (auto q : path)
+        std::cout << q[0] << ", ";
+    std::cout << "\n";
 }
 
 int main(int argc, char** argv)
