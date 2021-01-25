@@ -37,7 +37,7 @@ void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& 
 /** \brief Read the data from the puzzle piece from the Descartes tutorials.
  * code copied from:
  * https://github.com/ros-industrial-consortium/descartes_tutorials/blob/master/descartes_tutorials/src/tutorial2.cpp
- * 
+ *
  * (And the corresponding csv file is also copied from these tutorials.)
  * **/
 static EigenSTL::vector_Isometry3d makePuzzleToolPoses()
@@ -120,6 +120,9 @@ inline double deg2rad(double deg)
 
 int main(int argc, char** argv)
 {
+    using Eigen::AngleAxisd;
+    using Eigen::Vector3d;
+
     ros::init(argc, argv, "ocpl_moveit_demo");
     ros::NodeHandle node_handle;
     ros::AsyncSpinner spinner(1);
@@ -150,16 +153,10 @@ int main(int argc, char** argv)
     // }
 
     //////////////////////////////////
-    // Create task
+    // l_profile
     //////////////////////////////////
-    // 0.18 0 0.02 0 135 90
-    // TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { -0.5, 0.5 }, { 0, 0 }, { -M_PI, M_PI } };
-    TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
-    Transform tf = robot.fk(q_zero);
-    // tf.translation() << 0.8, -0.2, 0.2;
-
-    using Eigen::AngleAxisd;
-    using Eigen::Vector3d;
+    // TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
+    // Transform tf = robot.fk(q_zero);
 
     // Eigen::Isometry3d ori(AngleAxisd(0.0, Vector3d::UnitX()) * AngleAxisd(deg2rad(135), Vector3d::UnitY()) *
     //                       AngleAxisd(deg2rad(90), Vector3d::UnitZ()));
@@ -178,31 +175,72 @@ int main(int argc, char** argv)
     // }
     // ros::Duration(0.5).sleep();
 
-    auto task_tfs = makePuzzleToolPoses();
-    std::size_t num_points = task_tfs.size();
-    EigenSTL::vector_Vector3d visual_path;
+    //////////////////////////////////
+    // glass of water
+    //////////////////////////////////
+    TSRBounds bounds{ { -0.2, 0.2 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0.0, 0.0 } };
+
+    Eigen::Isometry3d ori(AngleAxisd(deg2rad(90), Vector3d::UnitY()) * AngleAxisd(deg2rad(-90), Vector3d::UnitX()));
+    Eigen::Vector3d start(0.98, 0.0, 0.8);
+
+    Transform tf(ori);
+    tf.translation() = start;
+
+    const std::size_t num_points{ 30 };
+    const double total_distance = 1.1;
+    double step = total_distance / num_points;
+
     std::vector<TSR> task;
-    for (auto& pose : task_tfs)
+    for (int i{ 0 }; i < num_points; ++i)
     {
-        pose.translation().x() += 0.8;
-        task.push_back({ pose, bounds });
-        visual_path.push_back(pose.translation());
-    }
-    double total_distance{0.0};
-    for (std::size_t i{1}; i < task_tfs.size(); ++i)
-    {
-        total_distance += (task_tfs[i].translation() - task_tfs[i-1].translation()).norm();
+        tf = tf * Eigen::AngleAxisd(step, Eigen::Vector3d::UnitY());
+        task.push_back(TSR{ tf, bounds });
     }
 
-    rviz.visual_tools_->publishPath(visual_path);
-    ros::Duration(1.0).sleep();
+    EigenSTL::vector_Vector3d visual_path;
+    int skipper{ 0 };
+    for (auto tsr : task)
+    {
+        if (skipper % 3 == 0)
+        {
+            rviz.plotPose(tsr.tf_nominal);
+            visual_path.push_back(tsr.tf_nominal.translation());
+            ros::Duration(0.1).sleep();
+        }
+        skipper++;
+    }
+    ros::Duration(0.5).sleep();
 
-    // joint limits for the redundant joints
-    JointLimits joint_limits{};
+    //////////////////////////////////
+    // Puzzle
+    //////////////////////////////////
+    // TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
+    // Transform tf = robot.fk(q_zero);
+    // auto task_tfs = makePuzzleToolPoses();
+    // std::size_t num_points = task_tfs.size();
+    // EigenSTL::vector_Vector3d visual_path;
+    // std::vector<TSR> task;
+    // for (auto& pose : task_tfs)
+    // {
+    //     pose.translation().x() += 0.8;
+    //     task.push_back({ pose, bounds });
+    //     visual_path.push_back(pose.translation());
+    // }
+    // double total_distance{0.0};
+    // for (std::size_t i{1}; i < task_tfs.size(); ++i)
+    // {
+    //     total_distance += (task_tfs[i].translation() - task_tfs[i-1].translation()).norm();
+    // }
+
+    // rviz.visual_tools_->publishPath(visual_path);
+    // ros::Duration(1.0).sleep();
 
     //////////////////////////////////
     // Simple interface solver
     //////////////////////////////////
+    // joint limits for the redundant joints
+    JointLimits joint_limits{};
+
     // function that tells you whether a state is valid (collision free)
     auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
     // auto f_is_valid = [&robot](const JointPositions& q) { return true; };
