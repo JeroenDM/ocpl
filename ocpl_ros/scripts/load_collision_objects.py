@@ -72,12 +72,36 @@ def create_case_3_2018():
         [(5, 0.2, 1), (5, 0.2, 1), (0.2, 2.5, 1), (0.2, 2, 1), (0.2, 2.5, 1)],
     )
 
+def create_case_teapot():
+    names = ["box"] * 4
+    poses = [PoseStamped(), PoseStamped(), PoseStamped(), PoseStamped()]
+    for pose in poses:
+        pose.header.frame_id = "world"
+
+    poses[0].pose = Pose(position=Vector3(0.9, 0.0, 1.1), orientation=Quaternion(w=1))
+    poses[1].pose = Pose(position=Vector3(0.9, 0.0, 0.25), orientation=Quaternion(w=1))
+    poses[2].pose = Pose(position=Vector3(0.9, -0.475, 0.8), orientation=Quaternion(w=1))
+    poses[3].pose = Pose(position=Vector3(0.9, 0.475, 0.8), orientation=Quaternion(w=1))
+
+    sizes = [None] * 4
+    sizes[0] = (0.4, 1.0, 0.05)
+    sizes[1] = (0.4, 1.0, 0.5)
+    sizes[2] = (0.4, 0.05, 0.6)
+    sizes[3] = (0.4, 0.05, 0.6)
+
+    return (
+        names,
+        poses,
+        sizes,
+    )
+
 
 factories = {
     "3r_spheres": create_3r_spheres,
     "case_1_2018": create_case_1_2018,
     "case_2_2018": create_case_2_2018,
     "case_3_2018": create_case_3_2018,
+    "teapot": create_case_teapot,
 }
 
 if __name__ == "__main__":
