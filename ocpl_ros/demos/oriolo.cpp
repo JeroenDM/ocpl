@@ -95,11 +95,37 @@ int main(int argc, char** argv)
     EigenSTL::vector_Vector3d path_pos;
     for (TSR& tsr : regions)
     {
-        //rviz.plotPose(tsr.tf_nominal);
+        // rviz.plotPose(tsr.tf_nominal);
         // ros::Duration(0.05).sleep();
         path_pos.push_back(tsr.tf_nominal.translation());
     }
     rviz.visual_tools_->publishPath(path_pos, rviz_visual_tools::RED, 0.1);
+
+    //////////////////////////////////
+    // Create another task
+    //////////////////////////////////
+    std::vector<TSR> task2;
+    {
+        Eigen::Vector3d start(4.0, 0.25, 0.0);
+        TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } };
+        Transform tf = Eigen::Isometry3d::Identity();
+        tf.translation() = start;
+
+        size_t num_points = 30;
+
+        double step = 1.2 / num_points;
+        for (int i{ 0 }; i < num_points; ++i)
+        {
+            tf = tf * Eigen::AngleAxisd(step, Eigen::Vector3d::UnitZ());
+            task2.push_back(TSR{ tf, bounds });
+        }
+    }
+    std::vector<Bounds> tsr_bounds_2 = task2.front().bounds.asVector();
+    for (auto tsr : task2)
+        rviz.plotPose(tsr.tf_nominal);
+    //////////////////////////////////
+    // Describe the robot
+    //////////////////////////////////
 
     auto fkFun = [&robot](const JointPositions& q) { return robot->fk(q); };
 
@@ -110,9 +136,15 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Try Oriolo algorithms
     //////////////////////////////////
-    oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(), robot->getNumDof() - 3);
+    // oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(),
+    //                         robot->getNumDof() - 3);
 
-    planner.setTask(regions);
+    // planner.setTask(regions);
+
+    oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds_2, robot->getNumDof(),
+                            robot->getNumDof() - 3);
+
+    planner.setTask(task2);
 
     // auto solution = planner.greedy(regions);
     // auto solution = planner.rrtLike(regions);
