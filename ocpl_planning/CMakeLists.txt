@@ -41,22 +41,24 @@ add_library(
   src/planners.cpp
   src/factories.cpp
   src/io.cpp
+  src/oriolo.cpp
 )
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
 
+
 #############
 ## Testing ##
 #############
 
-# if(CATKIN_ENABLE_TESTING)
+if(CATKIN_ENABLE_TESTING)
 
-#   catkin_add_gtest(${PROJECT_NAME}_test test/test_sampling.cpp)
+  catkin_add_gtest(${PROJECT_NAME}_test_oriolo test/test_oriolo.cpp)
 
-#   target_link_libraries(${PROJECT_NAME}_test
-#     ${PROJECT_NAME}
-#     ${catkin_LIBRARIES}
-#   )
+  target_link_libraries(${PROJECT_NAME}_test_oriolo
+    ${PROJECT_NAME}
+    ${catkin_LIBRARIES}
+  )
 
-# endif()
+endif()

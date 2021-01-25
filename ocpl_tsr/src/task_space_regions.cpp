@@ -23,7 +23,17 @@ Transform TSR::valuesToPose(const std::vector<double>& values) const
           AngleAxis(values[4], Vector::UnitY()) *
           AngleAxis(values[5], Vector::UnitZ());
     // clang-format on
-    return tf_nominal * t;
+    if (local_)
+    {
+        return tf_nominal * t;  // post-multiply = local frame transformation
+    }
+    else
+    {
+        Transform tf_pos(Translation(values[0], values[1], values[2]));
+        Transform tf_rot(AngleAxis(values[3], Vector::UnitX()) * AngleAxis(values[4], Vector::UnitY()) *
+                         AngleAxis(values[5], Vector::UnitZ()));
+        return tf_pos * tf_nominal * tf_rot;  // pre-multiply = global frame transformation
+    }
 }
 
 std::vector<double> TSR::poseToValues(const Transform& tf) const

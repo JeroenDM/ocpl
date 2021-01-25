@@ -57,6 +57,20 @@ inline double L1NormDiff2(const std::vector<double>& n1, const std::vector<doubl
     return cost;
 }
 
+inline double LInfNormDiff2(const std::vector<double>& n1, const std::vector<double>& n2)
+{
+    assert(n1.size() == n2.size());
+
+    double cost{0.0};
+    for (int i = 0; i < n1.size(); ++i)
+    {
+        cost  = std::max(std::abs(n1[i] - n2[i]), cost);
+    }
+    // if (cost > 1.0)
+    //     cost = std::numeric_limits<double>::max();
+    return cost;
+}
+
 inline double zeroStateCost(const TSR& /* tsr */, const std::vector<double>& /* q */)
 {
     return 0.0;
