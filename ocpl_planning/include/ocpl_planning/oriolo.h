@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <vector>
+#include <queue>
 
 // graph includes
 #include <unordered_map>
@@ -69,6 +70,9 @@ inline std::vector<T> interpolate(std::vector<T> q_from, std::vector<T> q_to, T 
     }
     return q;
 }
+
+using PriorityQueue = std::priority_queue<JointPositions, std::vector<JointPositions>,
+                                          std::function<bool(const JointPositions&, const JointPositions&)>>;
 
 class Planner
 {
@@ -138,12 +142,18 @@ class Planner
     /** \brief Get a (random) robot configurations for a given waypoint along the path. **/
     JointPositions sample(size_t waypoint);
 
-     /** \brief Get a (random) biased robot configurations for a given waypoint along the path.
-      * 
-      * The solution space for the given waypoint is sampled in a regions around the q_bias;
-      * 
-      * **/
+    /** \brief Get a (random) biased robot configurations for a given waypoint along the path.
+     *
+     * The solution space for the given waypoint is sampled in a regions around the q_bias;
+     *
+     * **/
     JointPositions sample(size_t waypoint, const JointPositions& q_bias);
+
+    PriorityQueue getLocalSamples(size_t waypoint, const JointPositions& q_bias, int num_samples);
+
+    JointPositions findChildren(size_t waypoint, const JointPositions& q_bias, int num_samples = 1);
+
+    std::vector<JointPositions> greedy2();
 };
 
 }  // namespace oriolo

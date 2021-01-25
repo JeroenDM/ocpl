@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <cmath>
 #include <algorithm>
+#include <queue>
 
 #include <ocpl_planning/cost_functions.h>
 #include <ocpl_sampling/random_sampler.h>
@@ -142,6 +143,126 @@ JointPositions Planner::randConf(const TSR& tsr, const JointPositions& q_bias)
 
 JointPositions Planner::sample(size_t waypoint)
 {
+    // sample c-space for redundant joints
+    auto q_red = randRed();
+
+    // sample t-space tolerance
+    Transform tf = task_.at(waypoint).valuesToPose(tsr_sampler_->getSample());
+
+    // solve inverse kinematics te calculate base joints
+    IKSolution sol = ik_fun_(tf, q_red);
+
+    // now select a random ik_solution if tf was reachable
+    if (sol.empty())
+    {
+        return {};
+    }
+    else
+    {
+        // TODO select a random one with proper random number generator?
+        return sol[rand() % sol.size()];
+    }
+}
+
+JointPositions Planner::sample(size_t waypoint, const JointPositions& q_bias)
+{
+    // get a biased sample for the redundant joints
+    auto q_red = randRed(q_bias);
+
+    // // now comes a trickier part, get a biased sample for the end-effector pose
+    std::vector<double> v_prev = task_[waypoint].poseToValues(fk_fun_(q_bias));
+    std::vector<double> v_bias = tsr_sampler_small_->getSample();
+    // assume the variable that changes between two poses has no tolerance
+    for (size_t dim{ 0 }; dim < has_tolerance_.size(); ++dim)
+    {
+        if (has_tolerance_[dim] == 1)
+        {
+            v_bias.at(dim) += v_prev.at(dim);
+        }
+    }
+    Transform tf = task_[waypoint].valuesToPose(v_bias);
+
+    // solve inverse kinematics te calculate base joints
+    IKSolution sol = ik_fun_(tf, q_red);
+    for (auto q_sol : sol)
+    {
+        if (LInfNormDiff2(q_sol, q_bias) < magic::D)
+        {
+            return q_sol;
+        }
+    }
+    return {};
+}
+
+PriorityQueue Planner::getLocalSamples(size_t waypoint, const JointPositions& q_bias, int num_samples)
+{
+    // get a biased sample for the redundant joints
+    std::vector<JointPositions> q_red_samples;
+    auto red_samples = red_sampler_->getSamples(num_samples);
+    for (auto perturbation : red_samples)
+    {
+        JointPositions q_red_random(NUM_RED_DOF_);
+        for (size_t i{ 0 }; i < NUM_RED_DOF_; ++i)
+            q_red_random[i] = q_bias[i] + perturbation[i];
+        q_red_samples.push_back(q_red_random);
+    }
+
+    std::vector<double> v_prev = task_[waypoint].poseToValues(fk_fun_(q_bias));
+    std::vector<Transform> tf_samples;
+    auto tsr_samples = tsr_sampler_small_->getSamples(num_samples);
+    for (auto tsr_sample : tsr_samples)
+    {
+        // // now comes a trickier part, get a biased sample for the end-effector pose
+        std::vector<double> v_bias = tsr_sample;
+        // assume the variable that changes between two poses has no tolerance
+        for (size_t dim{ 0 }; dim < has_tolerance_.size(); ++dim)
+        {
+            if (has_tolerance_[dim] == 1)
+            {
+                v_bias.at(dim) += v_prev.at(dim);
+            }
+        }
+        Transform tf = task_[waypoint].valuesToPose(v_bias);
+        tf_samples.push_back(tf);
+    }
+
+    // compare function
+    auto cmp = [q_bias](const JointPositions& left, const JointPositions& right) {
+        double d_left = LInfNormDiff2(left, q_bias);
+        double d_right = LInfNormDiff2(right, q_bias);
+        return d_left > d_right;
+    };
+
+    // solve inverse kinematics te calculate base joints
+    PriorityQueue samples(cmp);
+    for (size_t i{ 0 }; i < tf_samples.size(); ++i)
+    {
+        IKSolution sol = ik_fun_(tf_samples[i], q_red_samples[i]);
+        for (auto q_sol : sol)
+        {
+            if (LInfNormDiff2(q_sol, q_bias) < magic::D)
+            {
+                samples.push(q_sol);
+            }
+        }
+    }
+    return samples;
+}
+
+JointPositions Planner::findChildren(size_t waypoint, const JointPositions& q_bias, int num_samples)
+{
+    JointPositions q_child{};
+    size_t iters{ 0 };
+    bool success{ false };
+    while (!success && iters < magic::MAX_SHOTS)
+    {
+        q_child = sample(waypoint, q_bias);
+        if (!q_child.empty())
+        {
+            success = true;
+        }
+    }
+    return q_child;
 }
 
 bool Planner::noColl(const JointPositions& q)
@@ -167,6 +288,65 @@ bool Planner::noColl(const JointPositions& q_from, const JointPositions& q_to)
     return true;
 }
 
+std::vector<JointPositions> Planner::greedy2()
+{
+    std::vector<JointPositions> path;
+    size_t iters{ 0 };
+    bool success{ false };
+    JointPositions q_start{}, q_current{};
+
+    // try for different start configs until success
+    while (!success && iters < magic::MAX_ITER)
+    {
+        std::cout << "Start config iterations " << iters << "\n";
+        q_start = sample(0);
+        if (!q_start.empty())
+        {
+            path = { q_start };
+            q_current = q_start;
+
+            // depth first with only a single child for every node
+            for (size_t i{ 1 }; i < task_.size(); ++i)
+            {
+                size_t iters_2{ 0 };
+                bool success_2{ false };
+                while (!success_2 && iters_2 < magic::MAX_SHOTS)
+                {
+                    std::cout << "Find next config iteration " << iters_2 << "\n";
+                    auto local_samples = getLocalSamples(i, path.back(), 1000);
+                    if (!local_samples.empty())
+                    {
+                        // find a collision free connection
+                        while (!success_2 && !local_samples.empty())
+                        {
+                            std::cout << "Local samples collision checking left: " << local_samples.size() << "\n";
+                            auto q_try = local_samples.top();
+                            local_samples.pop();
+                            if (noColl(path.back(), q_try))
+                            {
+                                path.push_back(q_try);
+                                std::cout << "cost: " << LInfNormDiff2(path[i], path[i - 1]) << "\n";
+                                success_2 = true;
+                            }
+                        }
+                    }
+                    iters_2++;
+                }
+                if (!success_2)
+                {
+                    break;
+                }
+            }
+            if (path.size() == task_.size())
+            {
+                success = true;
+            }
+        }
+        iters++;
+    }
+    return path;
+}
+
 std::vector<JointPositions> Planner::step(size_t start_index, size_t stop_index, const JointPositions& q_start,
                                           const std::vector<TSR>& task)
 {
@@ -188,7 +368,8 @@ std::vector<JointPositions> Planner::step(size_t start_index, size_t stop_index,
         // inner loop that tries to find a valid new configurations at j+1
         while (l < magic::MAX_SHOTS && !success)
         {
-            q_new = randConf(task.at(j + 1), q_current);
+            // q_new = randConf(task.at(j + 1), q_current);
+            q_new = sample(j + 1, q_current);
             if (!q_new.empty() && noColl(q_current, q_new))
             {
                 path.push_back(q_new);
@@ -200,6 +381,8 @@ std::vector<JointPositions> Planner::step(size_t start_index, size_t stop_index,
         // give up if this is reached for any path point
         if (l == magic::MAX_SHOTS)
         {
+            // TODO add backtracking here?
+            // j--; j >= start_index
             return {};
         }
         else
@@ -218,7 +401,7 @@ std::vector<JointPositions> Planner::greedy(const std::vector<TSR>& task)
     bool success{ false };
     while (iters < magic::MAX_ITER && !success)
     {
-        JointPositions q_start = randConf(task[0]);
+        JointPositions q_start = sample(0);
         if (!q_start.empty())
         {
             std::cout << "Found a good start configurations at iter: " << iters << "\n";

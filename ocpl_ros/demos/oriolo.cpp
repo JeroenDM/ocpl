@@ -92,11 +92,14 @@ int main(int argc, char** argv)
 
     std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
 
-    // for (TSR& tsr : regions)
-    // {
-    //     rviz.plotPose(tsr.tf_nominal);
-    //     // ros::Duration(0.05).sleep();
-    // }
+    EigenSTL::vector_Vector3d path_pos;
+    for (TSR& tsr : regions)
+    {
+        //rviz.plotPose(tsr.tf_nominal);
+        // ros::Duration(0.05).sleep();
+        path_pos.push_back(tsr.tf_nominal.translation());
+    }
+    rviz.visual_tools_->publishPath(path_pos, rviz_visual_tools::RED, 0.1);
 
     auto fkFun = [&robot](const JointPositions& q) { return robot->fk(q); };
 
@@ -109,8 +112,11 @@ int main(int argc, char** argv)
     //////////////////////////////////
     oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(), robot->getNumDof() - 3);
 
+    planner.setTask(regions);
+
     // auto solution = planner.greedy(regions);
-    auto solution = planner.rrtLike(regions);
+    // auto solution = planner.rrtLike(regions);
+    auto solution = planner.greedy2();
 
     if (solution.empty())
     {
