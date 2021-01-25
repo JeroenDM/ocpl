@@ -178,7 +178,7 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // glass of water
     //////////////////////////////////
-    TSRBounds bounds{ { -0.2, 0.2 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0.0, 0.0 } };
+    TSRBounds bounds{ { 0.0, 0.0 }, { 0, 0 }, { -0.05, 0.05 }, { -1.3, 1.3 }, { 0, 0 }, { 0.0, 0.0 } };
 
     Eigen::Isometry3d ori(AngleAxisd(deg2rad(90), Vector3d::UnitY()) * AngleAxisd(deg2rad(-90), Vector3d::UnitX()));
     Eigen::Vector3d start(0.98, 0.0, 0.8);
@@ -195,6 +195,7 @@ int main(int argc, char** argv)
     {
         tf = tf * Eigen::AngleAxisd(step, Eigen::Vector3d::UnitY());
         task.push_back(TSR{ tf, bounds });
+        task.back().local_ = false;
     }
 
     EigenSTL::vector_Vector3d visual_path;
@@ -267,7 +268,7 @@ int main(int argc, char** argv)
     // specify an objective to minimize the cost along the path
     // here we use a predefined function that uses the L1 norm of the different
     // between two joint positions
-    auto f_path_cost = L1NormDiff2;
+    auto f_path_cost = L2NormDiff2;
     // auto f_path_cost = [&max_joint_speed, dt](const std::vector<double>& n1, const std::vector<double>& n2) {
     //     assert(n1.size() == n2.size());
     //     assert(max_joint_speed.size() == n1.size());
@@ -288,9 +289,9 @@ int main(int argc, char** argv)
     // optionally we can set a state cost for every point along the path
     // this one tries to keep the end-effector pose close the the nominal pose
     // defined in the task space region
-    // auto f_state_cost = [&robot](const TSR& tsr, const JointPositions& q) {
-    //     return 10.0 * poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
-    // };
+    auto f_state_cost = [&robot](const TSR& tsr, const JointPositions& q) {
+        return 1.0 * poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
+    };
     // auto f_state_cost = zeroStateCost;
 
     // keep close to robot home pose
@@ -298,14 +299,15 @@ int main(int argc, char** argv)
     // robot.plot(rviz.visual_tools_, q_home, rviz_visual_tools::MAGENTA);
     // ros::Duration(0.5).sleep();
 
-    auto f_state_cost = [q_home](const TSR& tsr, const JointPositions& q) { return L2NormDiff2(q, q_home); };
+    // auto f_state_cost = [q_home](const TSR& tsr, const JointPositions& q) { return L2NormDiff2(q, q_home); };
 
     // settings to select a planner
     PlannerSettings ps;
     ps.sampler_type = SamplerType::HALTON;
     ps.t_space_batch_size = 100;
-    ps.min_valid_samples = 10;
-    ps.max_iters = 200;
+    // ps.c_space_batch_size = 100;
+    ps.min_valid_samples = 100;
+    ps.max_iters = 500;
 
     // ps.sampler_type = SamplerType::GRID;
     // ps.tsr_resolution = { 1, 1, 1, 1, 1, 10 };

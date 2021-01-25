@@ -45,6 +45,7 @@ struct TSR
 {
     Eigen::Isometry3d tf_nominal;
     TSRBounds bounds;
+    bool local_{ true };
 
     TSR(Transform tf, TSRBounds bounds);
     ~TSR() = default;
