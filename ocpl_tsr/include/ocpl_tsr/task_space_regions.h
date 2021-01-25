@@ -39,17 +39,6 @@ struct TSRBounds
         ry = v.at(4);
         rz = v.at(5);
     }
-
-    void fromVector(const std::vector<Bounds>& v)
-    {
-        assert(v.size() == 6);
-        x = v.at(0);
-        y = v.at(1);
-        z = v.at(2);
-        rx = v.at(3);
-        ry = v.at(4);
-        rz = v.at(5);
-    }
 };
 
 struct TSR
