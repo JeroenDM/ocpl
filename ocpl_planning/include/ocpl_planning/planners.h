@@ -29,7 +29,7 @@ struct Solution
 {
     bool success;
     std::vector<JointPositions> path;
-    double cost{0.0};
+    double cost{ 0.0 };
 };
 
 std::vector<JointPositions> sampleTSR(const TSR& tsr, std::function<bool(const JointPositions&)> is_valid,

@@ -61,4 +61,11 @@ if(CATKIN_ENABLE_TESTING)
     ${catkin_LIBRARIES}
   )
 
+  catkin_add_gtest(${PROJECT_NAME}_test_generic_planner test/test_generic_planner.cpp)
+
+  target_link_libraries(${PROJECT_NAME}_test_generic_planner
+    ${PROJECT_NAME}
+    ${catkin_LIBRARIES}
+  )
+
 endif()
