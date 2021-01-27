@@ -4,6 +4,8 @@
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/robot_state/robot_state.h>
 #include <moveit/robot_model/link_model.h>
+// #include <moveit/collision_distance_field/collision_detector_allocator_hybrid.h>
+// #include <cmath>
 
 #include <Eigen/Dense>
 #include <string>
@@ -28,6 +30,9 @@ MoveItRobot::MoveItRobot(const std::string& tcp_frame) : tcp_frame_(tcp_frame)
     planning_scene_monitor_.reset(new planning_scene_monitor::PlanningSceneMonitor("robot_description"));
     updatePlanningScene();
 
+    // initDistanceFields();
+    // testDistanceFields();
+
     num_dof_ = joint_model_group_->getActiveJointModelNames().size();
 
     for (auto jm : joint_model_group_->getActiveJointModels())
@@ -44,6 +49,71 @@ MoveItRobot::MoveItRobot(const std::string& tcp_frame) : tcp_frame_(tcp_frame)
     for (const std::string& name : joint_names)
         ROS_DEBUG_STREAM("Joint name: " << name);
 }
+
+// void MoveItRobot::initDistanceFields()
+// {
+//     //
+//     //  ps->setActiveCollisionDetector(collision_detection::CollisionDetectorAllocatorHybrid::create(), true);
+//     planning_scene_->setActiveCollisionDetector(collision_detection::CollisionDetectorAllocatorHybrid::create(), true);
+
+//     // CHOMP code
+//     std::vector<std::string> cd_names;
+//     planning_scene_->getCollisionDetectorNames(cd_names);
+
+//     ROS_INFO_STREAM("The following collision detectors are available in the planning scene.");
+//     for (std::size_t i = 0; i < cd_names.size(); i++)
+//     {
+//         ROS_INFO_STREAM(cd_names[i]);
+//     }
+
+//     ROS_INFO_STREAM("Active collision detector is: " + planning_scene_->getActiveCollisionDetectorName());
+
+//     hy_world_ = dynamic_cast<const collision_detection::CollisionWorldHybrid*>(
+//         planning_scene_->getCollisionWorld(planning_scene_->getActiveCollisionDetectorName()).get());
+//     if (!hy_world_)
+//     {
+//         ROS_WARN_STREAM("Could not initialize hybrid collision world from planning scene");
+//         return;
+//     }
+
+//     hy_robot_ = dynamic_cast<const collision_detection::CollisionRobotHybrid*>(
+//         planning_scene_->getCollisionRobot(planning_scene_->getActiveCollisionDetectorName()).get());
+//     if (!hy_robot_)
+//     {
+//         ROS_WARN_STREAM("Could not initialize hybrid collision robot from planning scene");
+//         return;
+//     }
+
+//     // END CHOMP CODE
+// }
+
+// void MoveItRobot::testDistanceFields()
+// {
+//     auto state = state_storage_.getAState();
+//     state->setToDefaultValues();
+
+//     collision_detection::GroupStateRepresentationPtr gsr_;
+
+//     collision_detection::CollisionRequest req;
+//     collision_detection::CollisionResult res;
+//     req.group_name = joint_model_group_->getName();
+//     ros::WallTime wt = ros::WallTime::now();
+//     hy_world_->getCollisionGradients(req, res, *hy_robot_->getCollisionRobotDistanceField().get(), *state,
+//                                      &planning_scene_->getAllowedCollisionMatrix(), gsr_);
+//     ROS_INFO_STREAM("First coll check took " << (ros::WallTime::now() - wt));
+//     // num_collision_points_ = 0;
+//     for (size_t i = 0; i < gsr_->gradients_.size(); i++)
+//     {
+//         collision_detection::GradientInfo& info = gsr_->gradients_[i];
+//         std::cout << "value: " << info.joint_name << "\n";
+//         std::cout << "value: " << info.collision << "\n";
+//         std::cout << "value: " << info.distances.size() << "\n";
+//         for (size_t j{ 0 }; j < std::max(info.distances.size(), (size_t)5); ++j)
+//         {
+//             std::cout << "value: " << info.distances[j] << " and r: " << info.sphere_radii[j] << "\n";
+//         }
+//     }
+// }
 
 const Transform& MoveItRobot::getLinkFixedRelativeTransform(const std::string& frame) const
 {
@@ -133,14 +203,32 @@ void MoveItRobot::updatePlanningScene()
 
 bool MoveItRobot::isInCollision(const std::vector<double>& joint_pose) const
 {
-    bool in_collision = false;
     auto robot_state = state_storage_.getAState();
+    robot_state->setJointGroupPositions(joint_model_group_, joint_pose);
+    // No distance
+    // ***********
+    bool in_collision = false;
 
     // ROS_INFO("Checking for collision.");
     // planning_scene_->printKnownObjects(std::cout);
 
     robot_state->setJointGroupPositions(joint_model_group_, joint_pose);
     in_collision = planning_scene_->isStateColliding(*robot_state);
+    return in_collision;
+
+    // With distance calculation
+    // *************************
+    // collision_detection::CollisionRequest req;
+    // req.verbose = false;
+    // req.group_name = joint_model_group_->getName();
+    // req.distance = true;
+    // collision_detection::CollisionResult res;
+
+    // planning_scene_->checkCollision(req, res, *robot_state);
+
+    // std::cout << "CC: " << res.collision << ", dist: " << res.distance << "\n";
+
+    // return res.collision;
 
     // ros::V_string links;
     // planning_scene_->getCollidingLinks(links, *kinematic_state_);
@@ -148,7 +236,6 @@ bool MoveItRobot::isInCollision(const std::vector<double>& joint_pose) const
     // {
     //     std::cout << l << "\n";
     // }
-    return in_collision;
 }
 
 bool MoveItRobot::isPathColliding(const JointPositions& q_from, const JointPositions& q_to, int steps) const

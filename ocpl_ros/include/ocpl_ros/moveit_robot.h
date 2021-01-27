@@ -7,6 +7,8 @@
 #include <moveit/robot_state/robot_state.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
+// #include <moveit/collision_distance_field/collision_robot_hybrid.h>
+// #include <moveit/collision_distance_field/collision_world_hybrid.h>
 
 #include <ocpl_ros/threadsafe_state_storage.h>
 #include <ocpl_tsr/task_space_regions.h>  // for the Bounds type
@@ -53,6 +55,12 @@ class MoveItRobot
     std::vector<Bounds> joint_velocity_limits_;
 
     mutable TSStateStorage state_storage_;
+
+    // const collision_detection::CollisionWorldHybrid* hy_world_;
+    // const collision_detection::CollisionRobotHybrid* hy_robot_;
+
+    // void initDistanceFields();
+    // void testDistanceFields();
 
   public:
     MoveItRobot(const std::string& tcp_frame = "tool0");
