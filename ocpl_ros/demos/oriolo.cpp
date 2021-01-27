@@ -104,25 +104,25 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Create another task
     //////////////////////////////////
-    std::vector<TSR> task2;
-    {
-        Eigen::Vector3d start(4.0, 0.25, 0.0);
-        TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } };
-        Transform tf = Eigen::Isometry3d::Identity();
-        tf.translation() = start;
+    // std::vector<TSR> task2;
+    // {
+    //     Eigen::Vector3d start(4.0, 0.25, 0.0);
+    //     TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } };
+    //     Transform tf = Eigen::Isometry3d::Identity();
+    //     tf.translation() = start;
 
-        size_t num_points = 30;
+    //     size_t num_points = 30;
 
-        double step = 1.2 / num_points;
-        for (int i{ 0 }; i < num_points; ++i)
-        {
-            tf = tf * Eigen::AngleAxisd(step, Eigen::Vector3d::UnitZ());
-            task2.push_back(TSR{ tf, bounds });
-        }
-    }
-    std::vector<Bounds> tsr_bounds_2 = task2.front().bounds.asVector();
-    for (auto tsr : task2)
-        rviz.plotPose(tsr.tf_nominal);
+    //     double step = 1.2 / num_points;
+    //     for (int i{ 0 }; i < num_points; ++i)
+    //     {
+    //         tf = tf * Eigen::AngleAxisd(step, Eigen::Vector3d::UnitZ());
+    //         task2.push_back(TSR{ tf, bounds });
+    //     }
+    // }
+    // std::vector<Bounds> tsr_bounds_2 = task2.front().bounds.asVector();
+    // for (auto tsr : task2)
+    //     rviz.plotPose(tsr.tf_nominal);
     //////////////////////////////////
     // Describe the robot
     //////////////////////////////////
@@ -141,10 +141,10 @@ int main(int argc, char** argv)
 
     // planner.setTask(regions);
 
-    oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds_2, robot->getNumDof(),
+    oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(),
                             robot->getNumDof() - 3);
 
-    planner.setTask(task2);
+    planner.setTask(regions);
 
     // auto solution = planner.greedy(regions);
     // auto solution = planner.rrtLike(regions);
