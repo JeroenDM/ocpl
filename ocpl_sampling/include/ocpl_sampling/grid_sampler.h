@@ -20,6 +20,7 @@ class GridSampler : public Sampler
     void addDimension(double lower_bound, double upper_bound) override;
     void addDimension(double lower_bound, double upper_bound, int num_samples) override;
     std::vector<std::vector<double>> getSamples(const int n = 1) override;
+    std::vector<Eigen::VectorXd> getSamplesV(const int n = 1) override;
 
     static std::vector<double> range(double lower_bound, double upper_bound, int num_samples);
 };

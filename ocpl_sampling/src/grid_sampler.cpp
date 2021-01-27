@@ -58,6 +58,11 @@ std::vector<std::vector<double>> GridSampler::getSamples(const int /* n */)
     return grid;
 }
 
+std::vector<Eigen::VectorXd> getSamplesV(const int /* n */)
+{
+    
+}
+
 void GridSampler::addDimension(double lower_bound, double upper_bound)
 {
     throw std::runtime_error("You should supply a number of samples for dimensions when creating grid samplers.");

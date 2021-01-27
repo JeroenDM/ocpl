@@ -14,12 +14,18 @@ catkin_package(
 #  DEPENDS system_lib
 )
 
+find_package(Eigen3 REQUIRED)
+if(NOT EIGEN3_INCLUDE_DIRS)
+  set(EIGEN3_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR})
+endif()
+
 ###########
 ## Build ##
 ###########
 
 include_directories(
   include
+  ${EIGEN3_INCLUDE_DIRS}
 )
 
 add_library(

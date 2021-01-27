@@ -29,5 +29,6 @@ class RandomSampler : public Sampler
     }
     ~RandomSampler() = default;
     std::vector<std::vector<double>> getSamples(const int n = 1) override;
+    std::vector<Eigen::VectorXd> getSamplesV(const int n = 1) override;
 };
 }  // namespace ocpl
