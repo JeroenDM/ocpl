@@ -11,19 +11,19 @@ TEST(Testbasics, Test1)
     // dummy path sampler
     LocalSampler sampler = [](size_t i, const JointPositions& q_bias) {
         std::vector<JointPositions> s;
-        if (q_bias.x() == 2 && q_bias.y() == 2)
+        if (q_bias.at(0) == 2 && q_bias.at(1) == 2)
         {
             return s;
         }
-        s.push_back(Eigen::Vector2d((double)(i), 1, q_bias.x() + 2, 0.0));
-        s.push_back(Eigen::Vector2d((double)(i), 2, q_bias.x(), 0.0));
+        s.push_back({ (double)(i), 1, q_bias.at(0) + 2 });
+        s.push_back({ (double)(i), 2, q_bias.at(0) });
         return s;
     };
 
     // auto comp = [](const Vertice& a, const Vertice& b){ return a.q.back() > b.q.back();};
-    auto cost_fun = [](const JointPositions& from, const JointPositions& to) { return 1.0; };
+    auto cost_fun = [](const JointPositions& from, const JointPositions& to) { return to.back(); };
 
-    auto samples = sampler(3, Eigen::Vector3d( 9, 8, 7 ));
+    auto samples = sampler(3, { 9, 8, 7 });
     for (auto sample : samples)
         std::cout << sample << "\n";
 
@@ -44,29 +44,37 @@ TEST(Testbasics, Test1)
 TEST(Test2DGrid, TestGrid1)
 {
     size_t N{ 6 }, M{ 3 };
+    std::vector<std::vector<JointPositions>> states;
+    states.resize(M);
 
-    LocalSampler sampler = [N, M](size_t i, const JointPositions& q_bias) {
-        std::vector<JointPositions> samples;
-
-        if (i < M)
+    for (size_t way_pt{ 0 }; way_pt < M; ++way_pt)
+    {
+        for (size_t i{ 0 }; i < N; ++i)
         {
-            samples.push_back(Eigen::Vector2d((double)i, q_bias[1]));
-            if (q_bias[1] > 0)
-                samples.push_back(Eigen::Vector2d((double)i, q_bias[1] - 1));
-            if (q_bias[1] < N - 1)
-                samples.push_back(Eigen::Vector2d((double)i, q_bias[1] + 1));
+            states[way_pt].push_back({ (double)way_pt, (double)i, 0.0 });
         }
-        return samples;
-    };
-    DistanceMetric cost_fun = [](const JointPositions& from, const JointPositions& to) { return 1.0; };
+    }
 
-    JointPositions q_start;
-    q_start << 0.0, 3.0;
+    states[1][0].back() = 3.0;
+
+    LocalSampler sampler = [&states](size_t i, const JointPositions& q_bias) { return states.at(i); };
+    DistanceMetric cost_fun = [](const JointPositions& from, const JointPositions& to) { return to.back(); };
+
+    JointPositions q_start = sampler(0, { 0.0, 0.0, 0.0 }).at(0);
     // StackContainer container;
     QueueContainer container;
     // PriorityQueueContainer container(M);
     // PriorityStackContainer container(M);
     auto sol = search(q_start, sampler, M, container, cost_fun);
+
+    for (auto row : states)
+    {
+        for (auto state : row)
+        {
+            std::cout << "|" << state << "|";
+        }
+        std::cout << "\n";
+    }
 
     std::cout << "--- solution ---\n";
     for (auto q : sol)

@@ -7,11 +7,9 @@
 #include <iostream>
 #include <stdexcept>
 
-#include <Eigen/Dense>
-
 namespace planner
 {
-typedef Eigen::VectorXd JointPositions;
+typedef std::vector<double> JointPositions;
 
 struct Vertice
 {
@@ -38,9 +36,20 @@ struct VerticeCompare
 
 using VPriorityQueue = std::priority_queue<Vertice, std::deque<Vertice>, VerticeCompare>;
 
+std::ostream& operator<<(std::ostream& os, const JointPositions& q)
+{
+    for (auto qi : q)
+        os << qi << ", ";
+    return os;
+}
+
 std::ostream& operator<<(std::ostream& os, const Vertice& v)
 {
-    os << "{ (" << v.q.transpose();
+    os << "{ (";
+    for (auto a : v.q)
+    {
+        os << a << ", ";
+    }
     os << ") " << v.waypoint << " d: " << v.distance << " }";
     return os;
 }
