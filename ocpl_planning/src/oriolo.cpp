@@ -8,15 +8,16 @@
 #include <ocpl_planning/cost_functions.h>
 #include <ocpl_sampling/random_sampler.h>
 #include <ocpl_planning/factories.h>
+#include <ocpl_planning/math.h>
 
 namespace graph
 {
 }
 
+namespace ocpl
+{
 namespace oriolo
 {
-using namespace ocpl;
-
 OrioloPlanner::OrioloPlanner(const std::string& name, const Robot& robot, const OrioloSpecificSettings& settings)
   : Planner(name, robot), settings_(settings), EXTEND_STEP_(settings_.D * std::sqrt(robot.num_dof))
 {
@@ -156,7 +157,7 @@ JointPositions OrioloPlanner::randConf(const TSR& tsr, const JointPositions& q_b
     return q_ik;  // this is an emtpy vector if invKin failed
 }
 
-JointPositions OrioloPlanner::sample(size_t waypoint)
+JointPositions OrioloPlanner::sample(const TSR& tsr)
 {
     assert(tsr_sampler_ != nullptr);
 
@@ -164,7 +165,7 @@ JointPositions OrioloPlanner::sample(size_t waypoint)
     auto q_red = randRed();
 
     // sample t-space tolerance
-    Transform tf = task_.at(waypoint).valuesToPose(tsr_sampler_->getSample());
+    Transform tf = tsr.valuesToPose(tsr_sampler_->getSample());
 
     // solve inverse kinematics te calculate base joints
     IKSolution sol = robot_.ik(tf, q_red);
@@ -181,16 +182,15 @@ JointPositions OrioloPlanner::sample(size_t waypoint)
     }
 }
 
-JointPositions OrioloPlanner::sample(size_t waypoint, const JointPositions& q_bias)
+JointPositions OrioloPlanner::sample(const TSR& tsr, const JointPositions& q_bias)
 {
     assert(tsr_local_sampler_ != nullptr);
-    assert(waypoint < task_.size());
 
     // get a biased sample for the redundant joints
     auto q_red = randRed(q_bias);
 
     // // now comes a trickier part, get a biased sample for the end-effector pose
-    std::vector<double> v_prev = task_[waypoint].poseToValues(robot_.fk(q_bias));
+    std::vector<double> v_prev = tsr.poseToValues(robot_.fk(q_bias));
     std::vector<double> v_bias = tsr_local_sampler_->getSample();
 
     assert(v_prev.size() == has_tolerance_.size());
@@ -204,7 +204,7 @@ JointPositions OrioloPlanner::sample(size_t waypoint, const JointPositions& q_bi
             v_bias[dim] += v_prev[dim];
         }
     }
-    Transform tf = task_[waypoint].valuesToPose(v_bias);
+    Transform tf = tsr.valuesToPose(v_bias);
 
     // solve inverse kinematics te calculate base joints
     IKSolution sol = robot_.ik(tf, q_red);
@@ -218,7 +218,7 @@ JointPositions OrioloPlanner::sample(size_t waypoint, const JointPositions& q_bi
     return {};
 }
 
-PriorityQueue OrioloPlanner::getLocalSamples(size_t waypoint, const JointPositions& q_bias, int num_samples)
+PriorityQueue OrioloPlanner::getLocalSamples(const TSR& tsr, const JointPositions& q_bias, int num_samples)
 {
     assert(tsr_local_sampler_ != nullptr);
 
@@ -233,7 +233,7 @@ PriorityQueue OrioloPlanner::getLocalSamples(size_t waypoint, const JointPositio
         q_red_samples.push_back(q_red_random);
     }
 
-    std::vector<double> v_prev = task_[waypoint].poseToValues(robot_.fk(q_bias));
+    std::vector<double> v_prev = tsr.poseToValues(robot_.fk(q_bias));
     std::vector<Transform> tf_samples;
     auto tsr_samples = tsr_local_sampler_->getSamples(num_samples);
     for (auto tsr_sample : tsr_samples)
@@ -248,7 +248,7 @@ PriorityQueue OrioloPlanner::getLocalSamples(size_t waypoint, const JointPositio
                 v_bias.at(dim) += v_prev.at(dim);
             }
         }
-        Transform tf = task_[waypoint].valuesToPose(v_bias);
+        Transform tf = tsr.valuesToPose(v_bias);
         tf_samples.push_back(tf);
     }
 
@@ -275,14 +275,14 @@ PriorityQueue OrioloPlanner::getLocalSamples(size_t waypoint, const JointPositio
     return samples;
 }
 
-JointPositions OrioloPlanner::findChildren(size_t waypoint, const JointPositions& q_bias, int num_samples)
+JointPositions OrioloPlanner::findChildren(const TSR& tsr, const JointPositions& q_bias, int num_samples)
 {
     JointPositions q_child{};
     size_t iters{ 0 };
     bool success{ false };
     while (!success && iters < settings_.MAX_SHOTS)
     {
-        q_child = sample(waypoint, q_bias);
+        q_child = sample(tsr, q_bias);
         if (!q_child.empty())
         {
             success = true;
@@ -314,9 +314,9 @@ bool OrioloPlanner::noColl(const JointPositions& q_from, const JointPositions& q
     return true;
 }
 
-std::vector<JointPositions> OrioloPlanner::greedy2()
+std::vector<JointPositions> OrioloPlanner::greedy2(const std::vector<TSR>& task)
 {
-    initializeTaskSpaceSamplers(task_[0].bounds.asVector());
+    initializeTaskSpaceSamplers(task[0].bounds.asVector());
     std::vector<JointPositions> path;
     size_t iters{ 0 };
     bool success{ false };
@@ -326,21 +326,21 @@ std::vector<JointPositions> OrioloPlanner::greedy2()
     while (!success && iters < settings_.MAX_ITER)
     {
         std::cout << "Start config iterations " << iters << "\n";
-        q_start = sample(0);
+        q_start = sample(task[0]);
         if (!q_start.empty())
         {
             path = { q_start };
             q_current = q_start;
 
             // depth first with only a single child for every node
-            for (size_t i{ 1 }; i < task_.size(); ++i)
+            for (size_t i{ 1 }; i < task.size(); ++i)
             {
                 size_t iters_2{ 0 };
                 bool success_2{ false };
                 while (!success_2 && iters_2 < settings_.MAX_SHOTS)
                 {
                     std::cout << "Find next config iteration " << iters_2 << "\n";
-                    auto local_samples = getLocalSamples(i, path.back(), 1000);
+                    auto local_samples = getLocalSamples(task[i], path.back(), 1000);
                     if (!local_samples.empty())
                     {
                         // find a collision free connection
@@ -364,7 +364,7 @@ std::vector<JointPositions> OrioloPlanner::greedy2()
                     break;
                 }
             }
-            if (path.size() == task_.size())
+            if (path.size() == task.size())
             {
                 success = true;
             }
@@ -396,7 +396,7 @@ std::vector<JointPositions> OrioloPlanner::step(size_t start_index, size_t stop_
         while (l < settings_.MAX_SHOTS && !success)
         {
             // q_new = randConf(task.at(j + 1), q_current);
-            q_new = sample(j + 1, q_current);
+            q_new = sample(task[j + 1], q_current);
             if (!q_new.empty() && noColl(q_current, q_new))
             {
                 path.push_back(q_new);
@@ -429,7 +429,7 @@ std::vector<JointPositions> OrioloPlanner::greedy(const std::vector<TSR>& task)
     bool success{ false };
     while (iters < settings_.MAX_ITER && !success)
     {
-        JointPositions q_start = sample(0);
+        JointPositions q_start = sample(task[0]);
         if (!q_start.empty())
         {
             std::cout << "Found a good start configurations at iter: " << iters << "\n";
@@ -572,3 +572,4 @@ std::vector<JointPositions> OrioloPlanner::rrtLike(const std::vector<ocpl::TSR>&
 }
 
 }  // namespace oriolo
+}  // namespace ocpl

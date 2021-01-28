@@ -7,7 +7,8 @@
 
 #include <gtest/gtest.h>
 
-using namespace oriolo;
+using namespace ocpl;
+using namespace ocpl::oriolo;
 
 const double TOLERANCE = 1e-8;
 void compareVectors(const std::vector<double>& v1, const std::vector<double>& v2, const std::string& info);
@@ -39,16 +40,16 @@ class TestPlanner : public ::testing::Test
             joint_limits_.push_back({ -1.5, 1.5 });
             tsr_bounds_.push_back({ 0.0, 0.0 });
         }
-        tsr_bounds_.back() = ocpl::Bounds{ 0.0, M_PI };
+        tsr_bounds_.back() = Bounds{ 0.0, M_PI };
     }
 
     // TSR has no default constructor
-    ocpl::TSR getTSR()
+    TSR getTSR()
     {
         // create dummy TSR
-        ocpl::TSRBounds bnds;
-        bnds.fromVector(tsr_bounds_);
-        return ocpl::TSR(ocpl::Transform::Identity(), bnds);
+        TSRBounds bounds;
+        bounds.fromVector(tsr_bounds_);
+        return TSR(Transform::Identity(), bounds);
     }
 
     const size_t num_red_dof_{ 3 };
@@ -68,13 +69,16 @@ TEST_F(TestPlanner, TestInvKin)
     JointPositions q_red{ 1.0, -0.5, 0.2 };
     JointPositions q_bias{ 1.0, -0.5, 0.2, 0.01, 0.01, 0.01 };
 
-    Planner p(fk_, ik_, isValid_, joint_limits_, tsr_bounds_, num_dof_, num_red_dof_);
-    ocpl::TSR tsr = getTSR();
+    Robot bot{num_dof_, num_red_dof_, joint_limits_, fk_, ik_, isValid_};
+    OrioloSpecificSettings set;
+    OrioloPlanner p("oriolo", bot, set);
+    TSR tsr = getTSR();
+    p.initializeTaskSpaceSamplers(tsr.bounds.asVector());
 
     compareVectors(p.invKin(tsr, q_red, q_bias), { 1.0, -0.5, 0.2, 0.0, 0.0, 0.0 }, "invKind()");
 
     // the ik solution is too far off from the biased solution
-    JointPositions q_bias2{ 1.0, -0.5, 0.2, 0.01, 0.01, 0.01 + magic::D };
+    JointPositions q_bias2{ 1.0, -0.5, 0.2, 0.01, 0.01, 0.01 + set.D };
     ASSERT_TRUE(p.invKin(tsr, q_red, q_bias2).empty());
 
     ASSERT_TRUE(true);
@@ -99,15 +103,18 @@ TEST_F(TestPlanner, TestRandConf)
         return sol;
     };
 
-    Planner p(fk_, ik_fun, isValid_, joint_limits_, tsr_bounds_, num_dof_, num_red_dof_);
+    Robot bot{num_dof_, num_red_dof_, joint_limits_, fk_, ik_fun, isValid_};
+    OrioloSpecificSettings set;
+    OrioloPlanner p("oriolo", bot, set);
     ocpl::TSR tsr = getTSR();
+    p.initializeTaskSpaceSamplers(tsr.bounds.asVector());
 
     auto q0 = p.randRed(q_red_bias);
     ASSERT_EQ(q0.size(), num_red_dof_);
     for (size_t i = 0; i < num_red_dof_; ++i)
     {
-        ASSERT_LE(q0[i], q_red_bias[i] + magic::D);
-        ASSERT_GE(q0[i], q_red_bias[i] - magic::D);
+        ASSERT_LE(q0[i], q_red_bias[i] + set.D);
+        ASSERT_GE(q0[i], q_red_bias[i] - set.D);
     }
 
     auto q1 = p.randConf();
@@ -132,7 +139,7 @@ TEST_F(TestPlanner, TestRandConf)
     // joint should not deviate too much from bias
     for (size_t i = 0; i < num_dof_; ++i)
     {
-        ASSERT_NEAR(q4[i], q_bias[i], magic::D);
+        ASSERT_NEAR(q4[i], q_bias[i], set.D);
     }
     // base joints are deterministic
     for (size_t i = 3; i < num_dof_; ++i)
@@ -184,7 +191,10 @@ class TestRobot1D : public ::testing::Test
 
 TEST_F(TestRobot1D, TestCollision1D)
 {
-    Planner p(fk_, ik_, isValid_, jl_, bnds_, 1, 0);
+    Robot bot{1, 0, jl_, fk_, ik_, isValid_};
+    OrioloSpecificSettings set;
+    OrioloPlanner p("oriolo", bot, set);
+    p.initializeTaskSpaceSamplers(bnds_);
 
     // the test robot position is valid outside the interval [0.5, 0.7]
     ASSERT_TRUE(p.noColl({ 0.2 }));
@@ -201,7 +211,10 @@ TEST_F(TestRobot1D, TestCollision1D)
 
 TEST_F(TestRobot1D, TestStep1D)
 {
-    Planner p(fk_, ik_, isValid_, jl_, bnds_6d_, 1, 0);
+    Robot bot{1, 0, jl_, fk_, ik_, isValid_};
+    OrioloSpecificSettings set;
+    OrioloPlanner p("oriolo", bot, set);
+    p.initializeTaskSpaceSamplers(bnds_6d_);
 
     // create the task
     std::vector<double> x_positions{ 0.0, 0.01, 0.02 };
@@ -223,7 +236,10 @@ TEST_F(TestRobot1D, TestStep1D)
 
 TEST_F(TestRobot1D, TestGreedy1D)
 {
-    Planner p(fk_, ik_, isValid_, jl_, bnds_6d_, 1, 0);
+    Robot bot{1, 0, jl_, fk_, ik_, isValid_};
+    OrioloSpecificSettings set;
+    OrioloPlanner p("oriolo", bot, set);
+    p.initializeTaskSpaceSamplers(bnds_6d_);
 
     // create the task
     std::vector<double> x_positions{ 0.0, 0.01, 0.02 };
@@ -245,7 +261,10 @@ TEST_F(TestRobot1D, TestGreedy1D)
 
 TEST_F(TestRobot1D, TestExtend)
 {
-    Planner p(fk_, ik_, isValid_, jl_, bnds_6d_, 1, 0);
+    Robot bot{1, 0, jl_, fk_, ik_, isValid_};
+    OrioloSpecificSettings set;
+    OrioloPlanner p("oriolo", bot, set);
+    p.initializeTaskSpaceSamplers(bnds_6d_);
 
     JointPositions q0{ 0.0 };
     JointPositions q1{ 2.0 };

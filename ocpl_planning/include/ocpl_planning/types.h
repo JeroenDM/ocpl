@@ -16,6 +16,10 @@ typedef std::vector<std::vector<JointPositions>> GraphData;
 
 typedef std::vector<Bounds> JointLimits;
 
+typedef std::function<Transform(const JointPositions&)> FKFun;
+typedef std::function<std::vector<JointPositions>(const Transform&, const JointPositions&)> IKFun;
+typedef std::function<bool(const JointPositions&)> IsValidFun;
+
 /** Kinematics, state validation and joint limits for a robot. **/
 struct Robot
 {
