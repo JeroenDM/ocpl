@@ -3,7 +3,7 @@
 #include <vector>
 
 #include <ocpl_tsr/task_space_regions.h>
-#include <ocpl_planning/settings.h>
+#include <ocpl_planning/types.h>
 #include <ocpl_planning/planners.h>
 
 namespace ocpl

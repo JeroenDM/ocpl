@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include <ocpl_planning/settings.h>
+#include <ocpl_planning/types.h>
 
 namespace ocpl
 {

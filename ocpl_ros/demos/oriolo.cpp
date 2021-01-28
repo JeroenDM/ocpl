@@ -123,40 +123,43 @@ int main(int argc, char** argv)
     // std::vector<Bounds> tsr_bounds_2 = task2.front().bounds.asVector();
     // for (auto tsr : task2)
     //     rviz.plotPose(tsr.tf_nominal);
+
     //////////////////////////////////
     // Describe the robot
     //////////////////////////////////
-
-    auto fkFun = [&robot](const JointPositions& q) { return robot->fk(q); };
-
-    auto ikFun = [&robot](const ocpl::Transform& tf, const JointPositions& q_red) { return robot->ik(tf, q_red); };
-
-    auto isValidFun = [&robot](const JointPositions& q) { return !robot->isInCollision(q); };
+    Robot bot{ robot->getNumDof(),
+               robot->getNumDof() - 3,
+               joint_limits,
+               [&robot](const JointPositions& q) { return robot->fk(q); },
+               [&robot](const ocpl::Transform& tf, const JointPositions& q_red) { return robot->ik(tf, q_red); },
+               [&robot](const JointPositions& q) { return !robot->isInCollision(q); } };
 
     //////////////////////////////////
     // Try Oriolo algorithms
     //////////////////////////////////
+    oriolo::OrioloSpecificSettings ps;
+    oriolo::OrioloPlanner planner("oriolo", bot, ps);
+    // oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(),
+    //                         robot->getNumDof() - 3);
+
+    planner.setTask(regions);
+
     // oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(),
     //                         robot->getNumDof() - 3);
 
     // planner.setTask(regions);
 
-    oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(),
-                            robot->getNumDof() - 3);
-
-    planner.setTask(regions);
-
-    // auto solution = planner.greedy(regions);
+    auto solution = planner.solve(regions);
     // auto solution = planner.rrtLike(regions);
-    auto solution = planner.greedy2();
+    // auto solution = planner.greedy2();
 
-    if (solution.empty())
+    if (solution.path.empty())
     {
         std::cout << "No solution found.\n";
     }
     {
-        std::cout << "Found solution of length: " << solution.size() << "\n";
-        showPath(solution, rviz, robot);
+        std::cout << "Found solution of length: " << solution.path.size() << "\n";
+        showPath(solution.path, rviz, robot);
     }
 
     // auto solution = planner.step(0, 2, q1, regions);

@@ -1,5 +1,5 @@
 #pragma once
-#include "ocpl_planning/settings.h"
+#include "ocpl_planning/types.h"
 
 #include <ocpl_tsr/task_space_regions.h>
 #include <ocpl_sampling/sampler.h>
@@ -11,4 +11,6 @@ SamplerPtr createSampler(const std::vector<Bounds> bounds, SamplerType type, con
 SamplerPtr createGridSampler(const std::vector<Bounds> bounds, const std::vector<int>& num_samples);
 
 SamplerPtr createIncrementalSampler(const std::vector<Bounds> bounds, SamplerType type);
+
+ocpl::SamplerPtr createLocalSampler(size_t dimensions, double max_deviation, SamplerType type);
 }  // namespace ocpl

@@ -183,6 +183,9 @@ int main(int argc, char** argv)
     ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
     ps.redundant_joints_resolution = std::vector<int>(robot.getNumDof(), 6);
 
+    //////////////////////////////////
+    // Planners
+    //////////////////////////////////
     // case 1
     // ps.tsr_resolution = { 5, 1, 1, 1, 1, 32 };
     // ps.redundant_joints_resolution = { 10, 9 };

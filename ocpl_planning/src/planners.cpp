@@ -11,6 +11,10 @@
 
 namespace ocpl
 {
+Planner::Planner(const std::string& name, const Robot& robot) : name_(name), robot_(robot)
+{
+}
+
 std::vector<JointPositions> sampleTSR(const TSR& tsr, std::function<bool(const JointPositions&)> is_valid,
                                       std::function<IKSolution(const TSR&)> generic_inverse_kinematics)
 {
@@ -129,8 +133,8 @@ createCSpaceGraphIncrementally(std::vector<std::function<IKSolution()>> path_sam
     //     return valid_samples;
     // });
 
-// #pragma omp parallel
-// #pragma omp for
+    // #pragma omp parallel
+    // #pragma omp for
     for (std::size_t i = 0; i < path_samplers.size(); ++i)
     {
         std::cout << "ocpl_planner: processing path point " << i << "...";
@@ -164,8 +168,8 @@ std::vector<std::vector<JointPositions>> createCSpaceGraphGrid(std::vector<std::
 
     // std::transform(path_samplers.begin(), path_samplers.end(), graph_data.begin(), [](auto f) { return f(); });
 
-// #pragma omp parallel
-// #pragma omp for
+    // #pragma omp parallel
+    // #pragma omp for
     for (std::size_t i = 0; i < path_samplers.size(); ++i)
     {
         std::cout << "ocpl_planner: processing path point " << i << "...";

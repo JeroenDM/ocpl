@@ -8,9 +8,11 @@
 #include <unordered_map>
 #include <limits>
 #include <memory>
+#include <exception>
 
 #include <ocpl_tsr/task_space_regions.h>
 #include <ocpl_sampling/sampler.h>
+#include <ocpl_planning/planners.h>
 
 namespace graph
 {
@@ -45,19 +47,17 @@ typedef std::function<ocpl::Transform(const JointPositions&)> FKFun;
 typedef std::function<std::vector<JointPositions>(const ocpl::Transform&, const JointPositions&)> IKFun;
 typedef std::function<bool(const JointPositions&)> IsValidFun;
 
-namespace magic
-{
-// d: "maximum allowed displacement of a single joint."
-constexpr double D{ 0.4 };
-// upperbound on calls to randConf to find joint positions for a waypoint along thepath
-constexpr size_t MAX_SHOTS{ 100 };
-// maximum iterations to find a good start configuration for greedy search
-constexpr size_t MAX_ITER{ 100 };
-// how many times do extend before adding another start config to the tree
-constexpr size_t MAX_EXTEND{ 50000 };
-}  // namespace magic
-
-ocpl::SamplerPtr createRedundantSampler(const size_t num_red_joints);
+// namespace magic
+// {
+// // d: "maximum allowed displacement of a single joint."
+// constexpr double D{ 0.4 };
+// // upperbound on calls to randConf to find joint positions for a waypoint along thepath
+// constexpr size_t MAX_SHOTS{ 100 };
+// // maximum iterations to find a good start configuration for greedy search
+// constexpr size_t MAX_ITER{ 100 };
+// // how many times do extend before adding another start config to the tree
+// constexpr size_t MAX_EXTEND{ 50000 };
+// }  // namespace magic
 
 /** \brief Simple interpolation between two vectors. Returns one vector.**/
 template <typename T>
@@ -74,29 +74,42 @@ inline std::vector<T> interpolate(std::vector<T> q_from, std::vector<T> q_to, T 
 using PriorityQueue = std::priority_queue<JointPositions, std::vector<JointPositions>,
                                           std::function<bool(const JointPositions&, const JointPositions&)>>;
 
-class Planner
+struct OrioloSpecificSettings
+{
+    const std::string METHOD{ "greedy" };
+    // d: "maximum allowed displacement of a single joint."
+    const double D{ 0.4 };
+    // upperbound on calls to randConf to find joint positions for a waypoint along thepath
+    const size_t MAX_SHOTS{ 100 };
+    // maximum iterations to find a good start configuration for greedy search
+    const size_t MAX_ITER{ 100 };
+    // how many times do extend before adding another start config to the tree
+    const size_t MAX_EXTEND{ 50000 };
+};
+
+class OrioloPlanner : public ocpl::Planner
 {
   private:
-    FKFun fk_fun_;
-    IKFun ik_fun_;
-    IsValidFun is_valid_;
     std::vector<ocpl::TSR> task_;
 
-    ocpl::SamplerPtr red_sampler_;
+    ocpl::SamplerPtr q_red_local_sampler_;
     ocpl::SamplerPtr q_sampler_;
     ocpl::SamplerPtr tsr_sampler_;
-    ocpl::SamplerPtr tsr_sampler_small_;
+    ocpl::SamplerPtr tsr_local_sampler_;
     std::vector<int> has_tolerance_;
 
-    size_t NUM_DOF_{ 0 };
-    size_t NUM_RED_DOF_{ 0 };
+    OrioloSpecificSettings settings_;
+
     double EXTEND_STEP_{ 0.0 };
 
     graph::Tree tree_;
 
   public:
-    Planner(FKFun fk_fun, IKFun ik_fun, IsValidFun is_valid, std::vector<ocpl::Bounds>& joint_limits,
-            std::vector<ocpl::Bounds>& tsr_bounds, size_t num_dof, size_t num_red_dof);
+    OrioloPlanner(const std::string& name, const ocpl::Robot& robot, const OrioloSpecificSettings& settings);
+
+    ocpl::Solution solve(const std::vector<ocpl::TSR>& task) override;
+
+    void initializeTaskSpaceSamplers(const std::vector<ocpl::Bounds> tsr_bounds);
 
     /** \brief Unbiased inverse kinematics for random samle in task space regions. **/
     JointPositions invKin(const ocpl::TSR& tsr, const JointPositions& q_red);
