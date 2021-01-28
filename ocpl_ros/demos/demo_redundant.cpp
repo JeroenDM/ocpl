@@ -181,7 +181,7 @@ int main(int argc, char** argv)
 
     ps.sampler_type = SamplerType::GRID;
     ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
-    ps.redundant_joints_resolution = std::vector<int>(robot.getNumDof(), 6);
+    ps.redundant_joints_resolution = std::vector<int>(redundant_joint_limits.size(), 6);
 
     //////////////////////////////////
     // Planners

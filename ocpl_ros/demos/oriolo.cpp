@@ -142,8 +142,6 @@ int main(int argc, char** argv)
     // oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(),
     //                         robot->getNumDof() - 3);
 
-    planner.setTask(regions);
-
     // oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(),
     //                         robot->getNumDof() - 3);
 

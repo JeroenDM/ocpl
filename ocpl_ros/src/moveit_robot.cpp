@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include <ocpl_planning/math.h> // interpolate
+
 namespace ocpl
 {
 MoveItRobot::MoveItRobot(const std::string& tcp_frame) : tcp_frame_(tcp_frame)
