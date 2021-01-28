@@ -7,10 +7,27 @@
 #include <algorithm>
 #include <iostream>
 #include <chrono>
+#include <mutex>
 // #include <execution>
 
 namespace ocpl
 {
+class TSLogger
+{
+    std::mutex mutex_;
+
+  public:
+    TSLogger() = default;
+    ~TSLogger() = default;
+
+    template <typename T>
+    void log(const T& message)
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        std::cout << message;
+    }
+};
+
 Planner::Planner(const std::string& name, const Robot& robot) : name_(name), robot_(robot)
 {
 }
@@ -168,13 +185,20 @@ std::vector<std::vector<JointPositions>> createCSpaceGraphGrid(std::vector<std::
 
     // std::transform(path_samplers.begin(), path_samplers.end(), graph_data.begin(), [](auto f) { return f(); });
 
-    // #pragma omp parallel
-    // #pragma omp for
+    TSLogger logger;
+
+#pragma omp parallel
+#pragma omp for
     for (std::size_t i = 0; i < path_samplers.size(); ++i)
     {
-        std::cout << "ocpl_planner: processing path point " << i << "...";
+        // std::cout << "ocpl_planner: processing path point " << i << "...";
+        logger.log("ocpl_planner: processing path point ");
+        logger.log(i);
         graph_data[i] = path_samplers[i]();
-        std::cout << " found " << graph_data[i].size() << std::endl;
+        // std::cout << " found " << graph_data[i].size() << std::endl;
+        logger.log(" found ");
+        logger.log(graph_data[i].size());
+        logger.log("\n");
     }
     return graph_data;
 }
