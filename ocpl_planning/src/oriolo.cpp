@@ -66,6 +66,11 @@ Solution OrioloPlanner::solve(const std::vector<ocpl::TSR>& task)
         sol.path = rrtLike(task);
         sol.success = sol.path.size() == task.size();
     }
+    else if (settings_.METHOD == "quispe")
+    {
+        sol.path = greedy2(task);
+        sol.success = sol.path.size() == task.size();
+    }
     else
     {
         throw std::runtime_error("Unkown planning method in OrioliPlanner");
@@ -254,8 +259,9 @@ PriorityQueue OrioloPlanner::getLocalSamples(const TSR& tsr, const JointPosition
 
     // compare function
     auto cmp = [q_bias](const JointPositions& left, const JointPositions& right) {
-        double d_left = LInfNormDiff2(left, q_bias);
-        double d_right = LInfNormDiff2(right, q_bias);
+        // std::cout << "cmp: " << q_bias.back() << "\n";
+        double d_left = norm2Diff(left, q_bias);
+        double d_right = norm2Diff(right, q_bias);
         return d_left > d_right;
     };
 
@@ -422,7 +428,7 @@ std::vector<JointPositions> OrioloPlanner::step(size_t start_index, size_t stop_
 
 std::vector<JointPositions> OrioloPlanner::greedy(const std::vector<TSR>& task)
 {
-    std::cout << "Started Orioli greedy planner\n";
+    std::cout << "Started Oriolo greedy planner\n";
 
     std::vector<JointPositions> path;
     size_t iters{ 0 };
