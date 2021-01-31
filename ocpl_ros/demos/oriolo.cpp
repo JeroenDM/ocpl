@@ -41,6 +41,30 @@ std::vector<TSR> createLineTask(TSRBounds bounds, Eigen::Vector3d start, Eigen::
     return task;
 }
 
+/** Case 1 modification**/
+std::vector<TSR> createCase1()
+{
+    TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, 0.0 } };
+    Eigen::Vector3d start(0.5, 2.0, 0.0);
+    Eigen::Vector3d stop(0.5, 2.7, 0.0);
+    auto line1 = createLineTask(bounds, start, stop, Eigen::Isometry3d::Identity(), 10);
+
+    Eigen::Vector3d start2(0.5, 2.7, 0.0);
+    Eigen::Vector3d stop2(2.5, 2.7, 0.0);
+    auto line2 = createLineTask(bounds, start2, stop2, Eigen::Isometry3d::Identity(), 30);
+
+    Eigen::Vector3d start3(2.5, 2.7, 0.0);
+    Eigen::Vector3d stop3(2.5, 2.0, 0.0);
+    auto line3 = createLineTask(bounds, start3, stop3, Eigen::Isometry3d::Identity(), 10);
+
+    line1.insert(line1.end(), line2.begin(), line2.end());
+    line1.insert(line1.end(), line3.begin(), line3.end());
+
+    // std::reverse(line1.begin(), line1.end());
+
+    return line1;
+}
+
 /** Case 2 from my 2018 paper. **/
 std::vector<TSR> createCase2(int num_points = 5)
 {
@@ -48,6 +72,15 @@ std::vector<TSR> createCase2(int num_points = 5)
     Eigen::Vector3d start(4.0, 0.25, 0.0);
     Eigen::Vector3d stop(5.0, 0.25, 0.0);
     return createLineTask(bounds, start, stop, Eigen::Isometry3d::Identity(), num_points);
+}
+
+/** Case 3 from my 2018 paper. **/
+std::vector<TSR> createCase3()
+{
+    TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI_2, M_PI_2 } };
+    Eigen::Vector3d start(5.0, 1.3, 0.0);
+    Eigen::Vector3d stop(5.0, 2.5, 0.0);
+    return createLineTask(bounds, start, stop, Eigen::Isometry3d::Identity(), 10);
 }
 
 void showPath(const std::vector<JointPositions>& path, Rviz& rviz, std::shared_ptr<MoveItRobot> robot)
@@ -84,22 +117,34 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Create task
     //////////////////////////////////
-    // small passage case
-    auto regions = createCase2(30);
-    // JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
-    std::vector<Bounds> joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 },
-                                      { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for all joints
+    // 2P 3R robot case
+    auto regions = createCase1();
+    JointLimits joint_limits{ { 2.0, 3.0 }, { -2.0, 1.0 }, { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };
+    std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, 0.0 } };
 
-    std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
+    // small passage case
+    // auto regions = createCase2(30);
+    // // JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
+    // std::vector<Bounds> joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 },
+    //                                   { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for all joints
+    // std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
+
+    // 8 dof zig zag case
+    // auto regions = createCase3();
+    // JointLimits joint_limits{};
+    // for (int i = 0; i < robot->getNumDof(); ++i)
+    //     joint_limits.push_back({ -1.5, 1.5 });
+    // std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
 
     EigenSTL::vector_Vector3d path_pos;
     for (TSR& tsr : regions)
     {
-        // rviz.plotPose(tsr.tf_nominal);
+        rviz.plotPose(tsr.tf_nominal);
         // ros::Duration(0.05).sleep();
         path_pos.push_back(tsr.tf_nominal.translation());
     }
     rviz.visual_tools_->publishPath(path_pos, rviz_visual_tools::RED, 0.1);
+    ros::Duration(0.1).sleep();
 
     //////////////////////////////////
     // Create another task
@@ -138,6 +183,8 @@ int main(int argc, char** argv)
     // Try Oriolo algorithms
     //////////////////////////////////
     oriolo::OrioloSpecificSettings ps;
+    // ps.MAX_SHOTS = 2000;
+    ps.MAX_ITER = 2000;
     oriolo::OrioloPlanner planner("oriolo", bot, ps);
     // oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(),
     //                         robot->getNumDof() - 3);

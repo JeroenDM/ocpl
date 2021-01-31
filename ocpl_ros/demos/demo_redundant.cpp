@@ -14,6 +14,7 @@
 #include <ocpl_planning/planners.h>
 #include <ocpl_planning/factories.h>
 #include <ocpl_planning/cost_functions.h>
+#include <ocpl_planning/jdm.h>
 
 using namespace ocpl;
 
@@ -42,6 +43,30 @@ std::vector<TSR> createCase1()
     Eigen::Vector3d start(0.5, 2.0, 0.0);
     Eigen::Vector3d stop(0.5, 2.5, 0.0);
     return createLineTask(bounds, start, stop, Eigen::Isometry3d::Identity(), 5);
+}
+
+/** Case 1 modification**/
+std::vector<TSR> createCase1bis()
+{
+    TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
+    Eigen::Vector3d start(0.5, 2.0, 0.0);
+    Eigen::Vector3d stop(0.5, 2.7, 0.0);
+    auto line1 = createLineTask(bounds, start, stop, Eigen::Isometry3d::Identity(), 10);
+
+    Eigen::Vector3d start2(0.5, 2.7, 0.0);
+    Eigen::Vector3d stop2(2.5, 2.7, 0.0);
+    auto line2 = createLineTask(bounds, start2, stop2, Eigen::Isometry3d::Identity(), 30);
+
+    Eigen::Vector3d start3(2.5, 2.7, 0.0);
+    Eigen::Vector3d stop3(2.5, 2.0, 0.0);
+    auto line3 = createLineTask(bounds, start3, stop3, Eigen::Isometry3d::Identity(), 10);
+
+    line1.insert(line1.end(), line2.begin(), line2.end());
+    line1.insert(line1.end(), line3.begin(), line3.end());
+
+    // std::reverse(line1.begin(), line1.end());
+
+    return line1;
 }
 
 /** Case 2 from my 2018 paper. **/
@@ -127,12 +152,13 @@ int main(int argc, char** argv)
     // Create task
     //////////////////////////////////
     // 2P 3R robot case
-    // auto regions = createCase1();
+    auto regions = createCase1bis();
     // JointLimits joint_limits{ { 2.0, 3.0 }, { 0.0, 0.9 } };  // joint limits for the redundant joints
+    JointLimits joint_limits{ { 2.0, 3.0 }, { -2.0, 1.0 } };  // joint limits for the redundant joints
 
     // small passage case
-    auto regions = createCase2(20);
-    JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
+    // auto regions = createCase2(20);
+    // JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
 
     // 8 dof zig zag case
     // auto regions = createCase3();
@@ -170,6 +196,13 @@ int main(int argc, char** argv)
     };
     // auto state_cost_fun = zeroStateCost;
 
+    Robot bot{ robot.getNumDof(),
+               robot.getNumDof() - 3,
+               joint_limits,
+               [&robot](const JointPositions& q) { return robot.fk(q); },
+               ik_fun,
+               is_valid_fun };
+
     // settings to select a planner
     PlannerSettings ps;
     ps.is_redundant = true;
@@ -180,8 +213,8 @@ int main(int argc, char** argv)
     // ps.max_iters = 200;
 
     ps.sampler_type = SamplerType::GRID;
-    ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
-    ps.redundant_joints_resolution = std::vector<int>(redundant_joint_limits.size(), 6);
+    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
+    // ps.redundant_joints_resolution = std::vector<int>(redundant_joint_limits.size(), 6);
 
     //////////////////////////////////
     // Planners
@@ -189,9 +222,15 @@ int main(int argc, char** argv)
     // case 1
     // ps.tsr_resolution = { 5, 1, 1, 1, 1, 32 };
     // ps.redundant_joints_resolution = { 10, 9 };
+    ps.tsr_resolution = { 1, 1, 1, 1, 1, 100 };
+    ps.redundant_joints_resolution = { 10, 50 };
 
     // solve it!
-    Solution solution = solve(regions, joint_limits, ik_fun, is_valid_fun, path_cost_fun, state_cost_fun, ps);
+    // Solution solution = solve(regions, joint_limits, ik_fun, is_valid_fun, path_cost_fun, state_cost_fun, ps);
+
+    jdm::JdmPlanner planner("grid_search", bot, ps);
+    Solution solution = planner.solve(regions);
+
     if (solution.success)
     {
         std::cout << "A solution is found with a cost of " << solution.cost << "\n";
