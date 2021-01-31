@@ -54,6 +54,11 @@ inline double normInfDiff(const std::vector<double>& n1, const std::vector<doubl
     return cost;
 }
 
-
+/** \Brief Return a value clipped to an interval if it fall's outside this range. **/
+template<typename Scalar>
+Scalar clip(Scalar value, Scalar lower, Scalar upper)
+{
+    return std::min(std::max(lower, value), upper);
+}
 
 }  // namespace ocpl

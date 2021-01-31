@@ -128,7 +128,7 @@ JointPositions OrioloPlanner::randRed(const JointPositions& q_bias)
     JointPositions q_red_random(robot_.num_red_dof);
     JointPositions perturbation = q_red_local_sampler_->getSample();
     for (size_t i{ 0 }; i < robot_.num_red_dof; ++i)
-        q_red_random[i] = q_bias[i] + perturbation[i];
+        q_red_random[i] = clip(q_bias[i] + perturbation[i], robot_.joint_limits[i].lower, robot_.joint_limits[i].upper);
     return q_red_random;
 };
 
@@ -229,7 +229,7 @@ PriorityQueue OrioloPlanner::getLocalSamples(const TSR& tsr, const JointPosition
     {
         JointPositions q_red_random(robot_.num_red_dof);
         for (size_t i{ 0 }; i < robot_.num_red_dof; ++i)
-            q_red_random[i] = q_bias[i] + perturbation[i];
+            q_red_random[i] = clip(q_bias[i] + perturbation[i], robot_.joint_limits[i].lower, robot_.joint_limits[i].upper);
         q_red_samples.push_back(q_red_random);
     }
 
