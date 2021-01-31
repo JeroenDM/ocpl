@@ -54,15 +54,15 @@ using PriorityQueue = std::priority_queue<JointPositions, std::vector<JointPosit
 
 struct OrioloSpecificSettings
 {
-    const std::string METHOD{ "greedy" };
+    std::string METHOD{ "greedy" };
     // d: "maximum allowed displacement of a single joint."
-    const double D{ 0.4 };
+    double D{ 0.4 };
     // upperbound on calls to randConf to find joint positions for a waypoint along thepath
-    const size_t MAX_SHOTS{ 100 };
+    size_t MAX_SHOTS{ 100 };
     // maximum iterations to find a good start configuration for greedy search
-    const size_t MAX_ITER{ 100 };
+    size_t MAX_ITER{ 100 };
     // how many times do extend before adding another start config to the tree
-    const size_t MAX_EXTEND{ 50000 };
+    size_t MAX_EXTEND{ 50000 };
 };
 
 class OrioloPlanner : public Planner
