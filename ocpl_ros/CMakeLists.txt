@@ -80,6 +80,17 @@ target_link_libraries(${PROJECT_NAME}_oriolo
   ${PROJECT_NAME}
 )
 
+add_executable(${PROJECT_NAME}_play_path
+  demos/play_path.cpp
+)
+set_target_properties(${PROJECT_NAME}_play_path
+  PROPERTIES OUTPUT_NAME play PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_play_path
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
+
 add_executable(${PROJECT_NAME}_demo_redundant
   demos/demo_redundant.cpp
 )

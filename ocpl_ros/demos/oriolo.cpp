@@ -13,6 +13,7 @@
 
 #include <ocpl_planning/cost_functions.h>
 #include <ocpl_planning/oriolo.h>
+#include <ocpl_planning/io.h>
 
 using namespace ocpl;
 
@@ -183,6 +184,7 @@ int main(int argc, char** argv)
     // Try Oriolo algorithms
     //////////////////////////////////
     oriolo::OrioloSpecificSettings ps;
+    ps.METHOD = "greedy";
     // ps.MAX_SHOTS = 2000;
     ps.MAX_ITER = 2000;
     oriolo::OrioloPlanner planner("oriolo", bot, ps);
@@ -205,6 +207,7 @@ int main(int argc, char** argv)
     {
         std::cout << "Found solution of length: " << solution.path.size() << "\n";
         showPath(solution.path, rviz, robot);
+        savePath("latest_path.npy", solution.path);
     }
 
     // auto solution = planner.step(0, 2, q1, regions);

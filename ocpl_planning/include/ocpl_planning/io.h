@@ -16,4 +16,11 @@ std::string format(const SamplerType& t);
 
 /** \brief Pretty printing of planner settings. **/
 std::ostream& operator<<(std::ostream& os, const PlannerSettings& ps);
+
+/** \brief Write the path to a simple csv file. **/
+void savePath(const std::string& filename, const std::vector<JointPositions>& path);
+
+/** \brief Read a path that was saved as a numpy 2D array (num_pts x num_dof). **/
+std::vector<JointPositions> loadPath(const std::string& filename);
+
 }  // namespace ocpl
