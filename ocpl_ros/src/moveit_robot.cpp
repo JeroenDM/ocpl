@@ -35,6 +35,24 @@ MoveItRobot::MoveItRobot(const std::string& tcp_frame) : tcp_frame_(tcp_frame)
     // initDistanceFields();
     // testDistanceFields();
 
+    planning_scene_->printKnownObjects();
+
+    // planning_scene_->getAllowedCollisionMatrixNonConst().setEntry("box_1", "link_3", true);
+    // planning_scene_->getAllowedCollisionMatrixNonConst().setEntry("box_1", "link_4", true);
+    // planning_scene_->getAllowedCollisionMatrixNonConst().setEntry("box_1", "link_5", true);
+    // planning_scene_->getAllowedCollisionMatrixNonConst().setEntry("box_1", "tool", true);
+
+    // auto acm = planning_scene_->getAllowedCollisionMatrix();
+    // moveit_msgs::AllowedCollisionMatrix acm_msg;
+    // acm.getMessage(acm_msg);
+
+    // ROS_INFO_STREAM("--- Allowed collision matrix ---");
+    // std::cout << acm_msg << "\n";
+    // // for (auto name : acm.getAllEntryNames())
+    // // {
+    // //     std::cout << "name: " << name << "\n";
+    // // }
+
     num_dof_ = joint_model_group_->getActiveJointModelNames().size();
 
     for (auto jm : joint_model_group_->getActiveJointModels())
