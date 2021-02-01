@@ -8,26 +8,9 @@
 #include <iostream>
 #include <chrono>
 #include <mutex>
-// #include <execution>
 
 namespace ocpl
 {
-class TSLogger
-{
-    std::mutex mutex_;
-
-  public:
-    TSLogger() = default;
-    ~TSLogger() = default;
-
-    template <typename T>
-    void log(const T& message)
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-        std::cout << message;
-    }
-};
-
 Planner::Planner(const std::string& name, const Robot& robot) : name_(name), robot_(robot)
 {
 }
@@ -127,35 +110,38 @@ std::vector<JointPositions> findPath(const std::vector<std::function<IKSolution(
     return path;
 }
 
+/** Quick and dirty attempt at thread save logging.
+ *
+ * Only a single instance can exist at the time (google how to do singleton in C++).
+ * **/
+class TSLogger
+{
+    std::mutex mutex_;
+
+  public:
+    TSLogger() = default;
+    ~TSLogger() = default;
+
+    template <typename T>
+    void log(const T& message)
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        std::cout << message;
+    }
+};
+
 std::vector<std::vector<JointPositions>>
 createCSpaceGraphIncrementally(std::vector<std::function<IKSolution()>> path_samplers, const PlannerSettings& settings)
 {
     std::vector<std::vector<JointPositions>> graph_data;
     graph_data.resize(path_samplers.size());
 
-    // std::execution::par
+    TSLogger logger;  // Thread save logging
 
-    // std::transform(path_samplers.begin(), path_samplers.end(), graph_data.begin(), [&settings](auto f) {
-    //     int iters{ 0 };
-    //     std::vector<JointPositions> valid_samples;
-    //     while (iters < settings.max_iters && valid_samples.size() < settings.min_valid_samples)
-    //     {
-    //         std::vector<JointPositions> s = f();
-    //         // add the new joint positions to valid_samples (stl can be ugly...)
-    //         valid_samples.reserve(valid_samples.size() + std::distance(s.begin(), s.end()));
-    //         valid_samples.insert(valid_samples.end(), s.begin(), s.end());
-
-    //         iters++;
-    //     }
-    //     return valid_samples;
-    // });
-
-    // #pragma omp parallel
-    // #pragma omp for
+#pragma omp parallel
+#pragma omp for
     for (std::size_t i = 0; i < path_samplers.size(); ++i)
     {
-        std::cout << "ocpl_planner: processing path point " << i << "...";
-
         int iters{ 0 };
         std::vector<JointPositions> valid_samples;
         while (iters < settings.max_iters && valid_samples.size() < settings.min_valid_samples)
@@ -170,10 +156,17 @@ createCSpaceGraphIncrementally(std::vector<std::function<IKSolution()>> path_sam
         }
         graph_data[i] = valid_samples;
 
-        std::cout << "ocpl_planner: found " << valid_samples.size() << "\n";
+        // Technically the logging is still not really thread save
+        // because of the multiple calles to log, which could be interuppter
+        // by call's from other threads.
+        logger.log("ocpl_planner: processing path point ");
+        logger.log(i);
+        logger.log(" found ");
+        logger.log(valid_samples.size());
+        logger.log("\n");
 
         if (iters == settings.max_iters)
-            std::cout << "ocpl_planner: maximum number of iterations reached.\n";
+            logger.log("ocpl_planner: maximum number of iterations reached.\n");
     }
     return graph_data;
 }
@@ -183,19 +176,19 @@ std::vector<std::vector<JointPositions>> createCSpaceGraphGrid(std::vector<std::
     std::vector<std::vector<JointPositions>> graph_data;
     graph_data.resize(path_samplers.size());
 
-    // std::transform(path_samplers.begin(), path_samplers.end(), graph_data.begin(), [](auto f) { return f(); });
-
-    TSLogger logger;
+    TSLogger logger;  // Thread save logging
 
 #pragma omp parallel
 #pragma omp for
     for (std::size_t i = 0; i < path_samplers.size(); ++i)
     {
-        // std::cout << "ocpl_planner: processing path point " << i << "...";
+        graph_data[i] = path_samplers[i]();
+
+        // Technically the logging is still not really thread save
+        // because of the multiple calles to log, which could be interuppter
+        // by call's from other threads.
         logger.log("ocpl_planner: processing path point ");
         logger.log(i);
-        graph_data[i] = path_samplers[i]();
-        // std::cout << " found " << graph_data[i].size() << std::endl;
         logger.log(" found ");
         logger.log(graph_data[i].size());
         logger.log("\n");
