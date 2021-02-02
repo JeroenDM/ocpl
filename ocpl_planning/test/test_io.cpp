@@ -37,6 +37,13 @@ TEST(TestFileParser, TestParseVariable)
     EXPECT_TRUE(true);
 }
 
+TEST(TestCompleteFile, LProfile)
+{
+    ocpl::parseIrlTask(L_PROFILE);
+
+    EXPECT_TRUE(true);
+}
+
 int main(int argc, char** argv)
 {
     testing::InitGoogleTest(&argc, argv);
