@@ -13,6 +13,7 @@
 #include <ocpl_tsr/task_space_regions.h>
 #include <ocpl_sampling/sampler.h>
 #include <ocpl_planning/planners.h>
+#include <mutex>
 
 namespace ocpl
 {
@@ -79,6 +80,8 @@ class OrioloPlanner : public Planner
     double EXTEND_STEP_{ 0.0 };
 
     graph::Tree tree_;
+
+    std::mutex priority_queue_mutex_;
 
   public:
     OrioloPlanner(const std::string& name, const Robot& robot, const OrioloSpecificSettings& settings);

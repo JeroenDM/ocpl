@@ -234,7 +234,8 @@ PriorityQueue OrioloPlanner::getLocalSamples(const TSR& tsr, const JointPosition
     {
         JointPositions q_red_random(robot_.num_red_dof);
         for (size_t i{ 0 }; i < robot_.num_red_dof; ++i)
-            q_red_random[i] = clip(q_bias[i] + perturbation[i], robot_.joint_limits[i].lower, robot_.joint_limits[i].upper);
+            q_red_random[i] =
+                clip(q_bias[i] + perturbation[i], robot_.joint_limits[i].lower, robot_.joint_limits[i].upper);
         q_red_samples.push_back(q_red_random);
     }
 
@@ -267,6 +268,8 @@ PriorityQueue OrioloPlanner::getLocalSamples(const TSR& tsr, const JointPosition
 
     // solve inverse kinematics te calculate base joints
     PriorityQueue samples(cmp);
+    // #pragma omp parallel
+    // #pragma omp for
     for (size_t i{ 0 }; i < tf_samples.size(); ++i)
     {
         IKSolution sol = robot_.ik(tf_samples[i], q_red_samples[i]);
@@ -274,7 +277,11 @@ PriorityQueue OrioloPlanner::getLocalSamples(const TSR& tsr, const JointPosition
         {
             if (LInfNormDiff2(q_sol, q_bias) < settings_.D)
             {
-                samples.push(q_sol);
+                if (noColl(q_bias, q_sol))
+                {
+                    // std::unique_lock<std::mutex> lock(priority_queue_mutex_);
+                    samples.push(q_sol);
+                }
             }
         }
     }
@@ -350,18 +357,19 @@ std::vector<JointPositions> OrioloPlanner::greedy2(const std::vector<TSR>& task)
                     if (!local_samples.empty())
                     {
                         // find a collision free connection
-                        while (!success_2 && !local_samples.empty())
-                        {
-                            std::cout << "Local samples collision checking left: " << local_samples.size() << "\n";
-                            auto q_try = local_samples.top();
-                            local_samples.pop();
-                            if (noColl(path.back(), q_try))
-                            {
-                                path.push_back(q_try);
-                                std::cout << "cost: " << LInfNormDiff2(path[i], path[i - 1]) << "\n";
-                                success_2 = true;
-                            }
-                        }
+                        path.push_back(local_samples.top());
+                        // while (!success_2 && !local_samples.empty())
+                        // {
+                        //     std::cout << "Local samples collision checking left: " << local_samples.size() << "\n";
+                        //     auto q_try = local_samples.top();
+                        //     local_samples.pop();
+                        //     if (noColl(path.back(), q_try))
+                        //     {
+                        //         path.push_back(q_try);
+                        //         std::cout << "cost: " << LInfNormDiff2(path[i], path[i - 1]) << "\n";
+                        //         success_2 = true;
+                        //     }
+                        // }
                     }
                     iters_2++;
                 }
