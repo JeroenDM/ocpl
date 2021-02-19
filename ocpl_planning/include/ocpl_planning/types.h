@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <memory>
 
 #include <ocpl_sampling/sampler.h>
 #include <ocpl_tsr/task_space_regions.h>  // Bounds, Transform typedef, TSR
@@ -19,6 +20,18 @@ typedef std::vector<Bounds> JointLimits;
 typedef std::function<Transform(const JointPositions&)> FKFun;
 typedef std::function<std::vector<JointPositions>(const Transform&, const JointPositions&)> IKFun;
 typedef std::function<bool(const JointPositions&)> IsValidFun;
+
+struct Vertice
+{
+    JointPositions q;
+    size_t waypoint;
+    double distance{ 0.0 };
+    Vertice(const JointPositions& qi, size_t waypointi, double distancei)
+      : q(qi), waypoint(waypointi), distance(distancei)
+    {
+    }
+};
+typedef std::shared_ptr<Vertice> VerticePtr;
 
 /** Kinematics, state validation and joint limits for a robot. **/
 struct Robot

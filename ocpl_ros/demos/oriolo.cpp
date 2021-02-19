@@ -13,6 +13,7 @@
 
 #include <ocpl_planning/cost_functions.h>
 #include <ocpl_planning/oriolo.h>
+#include <ocpl_planning/planner2.h>
 #include <ocpl_planning/io.h>
 
 #include <ocpl_benchmark/benchmark.h>
@@ -185,25 +186,34 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Try Oriolo algorithms
     //////////////////////////////////
-    oriolo::OrioloSpecificSettings ps;
-    ps.METHOD = "bigreedy";
-    // ps.METHOD = "quispe";
-    // ps.MAX_SHOTS = 2000;
-    ps.MAX_ITER = 2000;
-    oriolo::OrioloPlanner planner("oriolo", bot, ps);
-    // oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(),
-    //                         robot->getNumDof() - 3);
+    // oriolo::OrioloSpecificSettings ps;
+    // ps.METHOD = "bigreedy";
+    // // ps.METHOD = "quispe";
+    // // ps.MAX_SHOTS = 2000;
+    // ps.MAX_ITER = 2000;
+    // oriolo::OrioloPlanner planner("oriolo", bot, ps);
+    // // oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(),
+    // //                         robot->getNumDof() - 3);
 
-    // oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(),
-    //                         robot->getNumDof() - 3);
+    // // oriolo::Planner planner(fkFun, ikFun, isValidFun, joint_limits, tsr_bounds, robot->getNumDof(),
+    // //                         robot->getNumDof() - 3);
 
-    // planner.setTask(regions);
+    // // planner.setTask(regions);
 
-    // std::reverse(regions.begin(), regions.end());
+    // // std::reverse(regions.begin(), regions.end());
 
-    auto solution = planner.solve(regions);
-    // auto solution = planner.rrtLike(regions);
-    // auto solution = planner.greedy2();
+    // auto solution = planner.solve(regions);
+    // // auto solution = planner.rrtLike(regions);
+    // // auto solution = planner.greedy2();
+
+    //////////////////////////////////
+    // Try new generic algorithms
+    //////////////////////////////////
+    Planner2Settings settings{};
+    settings.method = "local_priority_stack";
+    Planner2 planner("planner2", bot, settings);
+
+    Solution solution = planner.solve(regions);
 
     if (solution.path.empty())
     {
@@ -211,8 +221,9 @@ int main(int argc, char** argv)
     }
     {
         std::cout << "Found solution of length: " << solution.path.size() << "\n";
+        std::cout << "Path cost: " << solution.cost << "\n";
         showPath(solution.path, rviz, robot);
-        savePath("latest_path.npy", solution.path);
+        // savePath("latest_path.npy", solution.path);
     }
 
     // auto solution = planner.step(0, 2, q1, regions);
@@ -225,20 +236,33 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Some quick benchmarking
     //////////////////////////////////
-    oriolo::OrioloSpecificSettings set1;
-    set1.METHOD = "greedy";
-    set1.MAX_ITER = 2000;
-    set1.name = set1.METHOD;
+    // oriolo::OrioloSpecificSettings set1;
+    // set1.METHOD = "greedy";
+    // set1.MAX_ITER = 2000;
+    // set1.name = set1.METHOD;
 
-    oriolo::OrioloSpecificSettings set2;
-    set2.METHOD = "bigreedy";
-    set2.MAX_ITER = 2000;
-    set2.name = set2.METHOD;
+    // oriolo::OrioloSpecificSettings set2;
+    // set2.METHOD = "bigreedy";
+    // set2.MAX_ITER = 2000;
+    // set2.name = set2.METHOD;
 
-    runBenchmark("oriolo_red_1.csv", bot, regions, { set1, set2 }, 50);
+    // runBenchmark("oriolo_red_1.csv", bot, regions, { set1, set2 }, 50);
 
-    std::reverse(regions.begin(), regions.end());
-    runBenchmark("oriolo_red_1_reversed.csv", bot, regions, { set1, set2 }, 50);
+    // std::reverse(regions.begin(), regions.end());
+    // runBenchmark("oriolo_red_1_reversed.csv", bot, regions, { set1, set2 }, 50);
+
+    // Planner2Settings set1{};
+    // set1.name = "set1";
+    // set1.method = "local_stack";
+
+    // Planner2Settings set2{};
+    // set2.name = "set2";
+    // set2.method = "local_priority_stack";
+
+    // runBenchmark("planner2_1_ptr.csv", bot, regions, { set1, set2 }, 50);
+
+    // std::reverse(regions.begin(), regions.end());
+    // runBenchmark("oriolo_red_1_reversed.csv", bot, regions, { set1, set2 }, 50);
 
     return 0;
 }
