@@ -64,6 +64,7 @@ struct OrioloSpecificSettings
     size_t MAX_ITER{ 100 };
     // how many times do extend before adding another start config to the tree
     size_t MAX_EXTEND{ 50000 };
+    std::string name{};
 };
 
 class OrioloPlanner : public Planner

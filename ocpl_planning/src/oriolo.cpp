@@ -501,6 +501,7 @@ std::vector<JointPositions> OrioloPlanner::bidirectionalGreedy(const std::vector
                 if (!path.empty())
                 {
                     std::cout << "Reversed solution found after iters: " << iters << "\n";
+                    std::reverse(path.begin(), path.end());
                     success = true;
                 }
             }

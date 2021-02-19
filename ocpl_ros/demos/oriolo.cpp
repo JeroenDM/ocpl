@@ -15,6 +15,8 @@
 #include <ocpl_planning/oriolo.h>
 #include <ocpl_planning/io.h>
 
+#include <ocpl_benchmark/benchmark.h>
+
 using namespace ocpl;
 
 std::ostream& operator<<(std::ostream& os, const JointPositions& q)
@@ -119,16 +121,16 @@ int main(int argc, char** argv)
     // Create task
     //////////////////////////////////
     // 2P 3R robot case
-    // auto regions = createCase1();
-    // JointLimits joint_limits{ { 2.0, 3.0 }, { -2.0, 1.0 }, { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };
-    // std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, 0.0 } };
+    auto regions = createCase1();
+    JointLimits joint_limits{ { 2.0, 3.0 }, { -2.0, 1.0 }, { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };
+    std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, 0.0 } };
 
     // small passage case
-    auto regions = createCase2(30);
-    // JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
-    std::vector<Bounds> joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 },
-                                      { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for all joints
-    std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
+    // auto regions = createCase2(30);
+    // // JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
+    // std::vector<Bounds> joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 },
+    //                                   { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for all joints
+    // std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
 
     // 8 dof zig zag case
     // auto regions = createCase3();
@@ -184,7 +186,7 @@ int main(int argc, char** argv)
     // Try Oriolo algorithms
     //////////////////////////////////
     oriolo::OrioloSpecificSettings ps;
-    ps.METHOD = "greedy";
+    ps.METHOD = "bigreedy";
     // ps.METHOD = "quispe";
     // ps.MAX_SHOTS = 2000;
     ps.MAX_ITER = 2000;
@@ -219,6 +221,24 @@ int main(int argc, char** argv)
 
     // solution = planner.greedy(regions);
     // std::cout << "greedy() sol size " << solution.size() << "\n";
+
+    //////////////////////////////////
+    // Some quick benchmarking
+    //////////////////////////////////
+    oriolo::OrioloSpecificSettings set1;
+    set1.METHOD = "greedy";
+    set1.MAX_ITER = 2000;
+    set1.name = set1.METHOD;
+
+    oriolo::OrioloSpecificSettings set2;
+    set2.METHOD = "bigreedy";
+    set2.MAX_ITER = 2000;
+    set2.name = set2.METHOD;
+
+    runBenchmark("oriolo_red_1.csv", bot, regions, { set1, set2 }, 50);
+
+    std::reverse(regions.begin(), regions.end());
+    runBenchmark("oriolo_red_1_reversed.csv", bot, regions, { set1, set2 }, 50);
 
     return 0;
 }
