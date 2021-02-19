@@ -1,5 +1,7 @@
 #include <ocpl_planning/planner2.h>
 
+#include <limits>
+
 #include <ocpl_planning/factories.h>
 #include <ocpl_planning/math.h>
 #include <ocpl_planning/containers.h>
@@ -204,7 +206,7 @@ std::vector<JointPositions> Planner2::search(BaseContainer& A)
     // A.reserve(qs_start.size());
     for (JointPositions q : qs_start)
     {
-        A.push(std::make_shared<Vertice>( q, 0, 0.0 ));
+        A.push(std::make_shared<Vertice>(q, 0, 0.0));
     }
 
     VerticePtr current;
@@ -230,44 +232,68 @@ std::vector<JointPositions> Planner2::search(BaseContainer& A)
     return {};
 }
 
-// std::vector<JointPositions> Planner2::search_global(BaseContainer& A)
-// {
-//     auto qs_start = sample(0, settings_.MAX_SHOTS);
-//     if (qs_start.empty())
-//     {
-//         return {};
-//     }
-//     std::cout << "Planner found " << qs_start.size() << " start states.\n";
+std::vector<JointPositions> Planner2::search_global(BaseContainer& A)
+{
+    //
+    auto qs_start = sample(0, settings_.MAX_SHOTS);
+    if (qs_start.empty())
+    {
+        return {};
+    }
 
-//     // std::vector<Vertice> A;
-//     // A.reserve(qs_start.size());
-//     for (JointPositions q : qs_start)
-//     {
-//         A.push(Vertice{ q, 0 });
-//     }
+    std::vector<std::vector<VerticePtr>> vertices(task_.size());
+    for (size_t k{ 0 }; k < task_.size(); ++k)
+    {
+        auto qsamples = sample(k, settings_.MAX_SHOTS);
+        std::cout << "Found " << qsamples.size() << " samples for point " << k << "\n";
+        vertices[k].reserve(qsamples.size());
+        for (auto q : qsamples)
+        {
+            vertices[k].push_back(std::make_shared<Vertice>(q, k, std::numeric_limits<double>::max()));
+        }
+    }
 
-//     Vertice current;
-//     size_t k{ 0 }, k_prev{ 0 };
-//     std::vector<JointPositions> path;
-//     while (!A.empty())
-//     {
-//         current = A.pop();
-//         k = current.waypoint;
+    // add start nodes to the container
+    for (auto& v : vertices[0])
+    {
+        v->distance = 0.0;
+        A.push(v);
+    }
 
-//         path = updatePath(path, current.q, k, k_prev);
-//         if (k == (task_.size() - 1))
-//         {
-//             return path;
-//         }
+    VerticePtr current;
+    size_t k{ 0 }, k_prev{ 0 };
+    std::vector<JointPositions> path;
+    while (!A.empty())
+    {
+        current = A.pop();
+        k = current->waypoint;
 
-//         for (auto q : sample(k + 1, current.q, settings_.MAX_SHOTS))
-//         {
-//             A.push(Vertice{ q, k + 1, norm2Diff(q, current.q) });
-//         }
-//         k_prev = k;
-//     }
-//     return {};
-// }
+        path = updatePath(path, current->q, k, k_prev);
+        if (k == (task_.size() - 1))
+        {
+            return path;
+        }
+
+        for (auto& v : vertices[k + 1])
+        {
+            if (norm1Diff(v->q, current->q) < settings_.DQ_MAX && noColl(current->q, v->q))
+            {
+                if (v->visited)
+                {
+                    v->distance = std::min(v->distance, current->distance + norm2Diff(current->q, v->q));
+                }
+                else
+                {
+                    v->visited = true;
+                    A.push(v);
+                }
+            }
+        }
+        k_prev = k;
+    }
+
+    return {};
+}
 
 Solution Planner2::solve(const std::vector<TSR>& task)
 {
@@ -275,21 +301,25 @@ Solution Planner2::solve(const std::vector<TSR>& task)
     initializeTaskSpaceSamplers(task[0].bounds.asVector());
 
     Solution solution;
-    if (settings_.method == "local_stack")
-    {
-        StackContainer container;
-        solution.path = search(container);
-    }
-    else if (settings_.method == "local_priority_stack")
-    {
-        PriorityStackContainer container(task.size());
-        solution.path = search(container);
-    }
-    else
-    {
-        std::cout << "Planner settings method: " << settings_.method << "\n";
-        throw std::runtime_error("Unkown planning method in PlannerSettings");
-    }
+    // if (settings_.method == "local_stack")
+    // {
+    //     StackContainer container;
+    //     solution.path = search(container);
+    // }
+    // else if (settings_.method == "local_priority_stack")
+    // {
+    //     PriorityStackContainer container(task.size());
+    //     solution.path = search(container);
+    // }
+    // else
+    // {
+    //     std::cout << "Planner settings method: " << settings_.method << "\n";
+    //     throw std::runtime_error("Unkown planning method in PlannerSettings");
+    // }
+    // StackContainer container;
+    settings_.MAX_SHOTS = 50000;
+    QueueContainer container;
+    solution.path = search_global(container);
 
     solution.success = solution.path.size() == task.size();
     solution.cost = calculatePathCost(solution.path);

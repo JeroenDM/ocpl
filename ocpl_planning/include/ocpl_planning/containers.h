@@ -37,6 +37,30 @@ class StackContainer : public BaseContainer
     }
     virtual void push(const VerticePtr& v) override
     {
+        data.emplace_back(v);
+    }
+    virtual bool empty() override
+    {
+        return data.empty();
+    }
+};
+
+/** \brief First in first out container. **/
+class QueueContainer : public BaseContainer
+{
+    std::deque<VerticePtr> data;
+
+  public:
+    QueueContainer() = default;
+    ~QueueContainer() = default;
+    virtual VerticePtr pop() override
+    {
+        VerticePtr v = data.front();
+        data.pop_front();
+        return v;
+    }
+    virtual void push(const VerticePtr& v) override
+    {
         data.push_back(v);
     }
     virtual bool empty() override
@@ -101,7 +125,7 @@ class PriorityStackContainer : public BaseContainer
         if (v->waypoint < max_waypoints_)
         {
             current_waypoint_ = v->waypoint;
-            data_[current_waypoint_].push(v);
+            data_[current_waypoint_].emplace(v);
         }
         else
         {

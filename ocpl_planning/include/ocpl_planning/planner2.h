@@ -49,7 +49,7 @@ class Planner2
     std::vector<JointPositions> updatePath(const std::vector<JointPositions>& path, const JointPositions& q, size_t k,
                                            size_t k_prev);
     std::vector<JointPositions> search(BaseContainer& A);
-    // std::vector<JointPositions> search_global(BaseContainer& A);
+    std::vector<JointPositions> search_global(BaseContainer& A);
 
     Solution solve(const std::vector<TSR>& task);
 };

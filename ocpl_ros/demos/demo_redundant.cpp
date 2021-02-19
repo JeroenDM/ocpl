@@ -224,6 +224,7 @@ int main(int argc, char** argv)
     // ps.redundant_joints_resolution = { 10, 9 };
     ps.tsr_resolution = { 1, 1, 1, 1, 1, 100 };
     ps.redundant_joints_resolution = { 10, 50 };
+    // ps.redundant_joints_resolution = { 6, 6, 6 };
 
     // solve it!
     // Solution solution = solve(regions, joint_limits, ik_fun, is_valid_fun, path_cost_fun, state_cost_fun, ps);

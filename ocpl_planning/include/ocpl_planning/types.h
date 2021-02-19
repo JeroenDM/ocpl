@@ -26,6 +26,7 @@ struct Vertice
     JointPositions q;
     size_t waypoint;
     double distance{ 0.0 };
+    bool visited{ false };
     Vertice(const JointPositions& qi, size_t waypointi, double distancei)
       : q(qi), waypoint(waypointi), distance(distancei)
     {
