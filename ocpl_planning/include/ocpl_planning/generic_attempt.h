@@ -54,6 +54,11 @@ std::ostream& operator<<(std::ostream& os, const Vertice& v)
     return os;
 }
 
+/** \brief Generic interface for a set of vertices.
+ *
+ * Create a common interfaces for different types of vertice containers,
+ * independent of how the underlying standard library container works. *
+ * **/
 class BaseContainer
 {
   public:
@@ -63,6 +68,7 @@ class BaseContainer
     virtual bool empty() = 0;
 };
 
+/** \brief Last in first out container. **/
 class StackContainer : public BaseContainer
 {
     std::vector<Vertice> data;
@@ -86,6 +92,7 @@ class StackContainer : public BaseContainer
     }
 };
 
+/** \brief First in first out container. **/
 class QueueContainer : public BaseContainer
 {
     std::deque<Vertice> data;
@@ -203,7 +210,7 @@ class PriorityStackContainer : public BaseContainer
             }
             else
             {
-                throw std::out_of_range("Trying to pop an element from an empty PriorityQueueContainer");
+                throw std::out_of_range("Trying to pop an element from an empty PriorityStackContainer");
             }
         }
         else
@@ -231,6 +238,28 @@ class PriorityStackContainer : public BaseContainer
     }
 };
 
+std::vector<JointPositions> updatePath(const std::vector<JointPositions>& path, const JointPositions& q, size_t k,
+                                       size_t k_prev)
+{
+    std::vector<JointPositions> new_path = path;
+    if (k > k_prev)
+    {
+        new_path.push_back(q);
+    }
+    else
+    {
+        for (size_t i{ 0 }; i < (k_prev - k + 1); ++i)
+        {
+            if (path.empty())
+                break;
+            else
+                new_path.pop_back();  // TODO
+        }
+        new_path.push_back(q);
+    }
+    return new_path;
+}
+
 std::vector<JointPositions> search(const JointPositions& q_start, LocalSampler local_sampler, size_t num_points,
                                    BaseContainer& con, DistanceMetric distFun)
 {
@@ -246,29 +275,15 @@ std::vector<JointPositions> search(const JointPositions& q_start, LocalSampler l
         k = current.waypoint;
 
         std::cout << "Current v: " << current << "\n";
-        if (k > k_prev)
+        path = updatePath(path, current.q, k, k_prev);
+        if (path.size() == num_points)
         {
-            path.push_back(current.q);
-            if (k == (num_points - 1))
-            {
-                return path;  // Success!
-            }
-        }
-        else
-        {
-            for (size_t i{ 0 }; i < (k_prev - k + 1); ++i)
-            {
-                if (path.empty())
-                    break;
-                else
-                    path.pop_back();  // TODO
-            }
-            path.push_back(current.q);
+            return path;
         }
 
         for (auto q : local_sampler(k + 1, current.q))
         {
-            con.push(Vertice{ q, k + 1, current.distance + distFun(current.q, q)});
+            con.push(Vertice{ q, k + 1, current.distance + distFun(current.q, q) });
             std::cout << "Added vertice: " << q << " | " << k + 1 << "\n";
         }
         k_prev = k;
