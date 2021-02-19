@@ -61,6 +61,11 @@ Solution OrioloPlanner::solve(const std::vector<ocpl::TSR>& task)
         sol.path = greedy(task);
         sol.success = sol.path.size() == task.size();
     }
+    else if (settings_.METHOD == "bigreedy")
+    {
+        sol.path = bidirectionalGreedy(task);
+        sol.success = sol.path.size() == task.size();
+    }
     else if (settings_.METHOD == "rrtlike")
     {
         sol.path = rrtLike(task);
@@ -452,6 +457,52 @@ std::vector<JointPositions> OrioloPlanner::greedy(const std::vector<TSR>& task)
             {
                 std::cout << "Solution found after iters: " << iters << "\n";
                 success = true;
+            }
+        }
+        iters++;
+    }
+    if (success)
+        return path;
+    else
+        return {};
+}
+
+std::vector<JointPositions> OrioloPlanner::bidirectionalGreedy(const std::vector<TSR>& task)
+{
+    std::cout << "Started Oriolo bidirectional greedy planner\n";
+
+    std::vector<TSR> reversed_task = task;
+    std::reverse(reversed_task.begin(), reversed_task.end());
+
+    std::vector<JointPositions> path;
+    size_t iters{ 0 };
+    bool success{ false };
+    while (iters < settings_.MAX_ITER && !success)
+    {
+        JointPositions q_start = sample(task[0]);
+        if (!q_start.empty())
+        {
+            std::cout << "Found a good start configurations at iter: " << iters << "\n";
+            path = step(0, task.size() - 1, q_start, task);
+            if (!path.empty())
+            {
+                std::cout << "Solution found after iters: " << iters << "\n";
+                success = true;
+            }
+        }
+
+        if (!success)
+        {
+            JointPositions q_start = sample(reversed_task[0]);
+            if (!q_start.empty())
+            {
+                std::cout << "Found a good reversed start configurations at iter: " << iters << "\n";
+                path = step(0, reversed_task.size() - 1, q_start, reversed_task);
+                if (!path.empty())
+                {
+                    std::cout << "Reversed solution found after iters: " << iters << "\n";
+                    success = true;
+                }
             }
         }
         iters++;

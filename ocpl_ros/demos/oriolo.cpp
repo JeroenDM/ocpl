@@ -119,16 +119,16 @@ int main(int argc, char** argv)
     // Create task
     //////////////////////////////////
     // 2P 3R robot case
-    auto regions = createCase1();
-    JointLimits joint_limits{ { 2.0, 3.0 }, { -2.0, 1.0 }, { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };
-    std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, 0.0 } };
+    // auto regions = createCase1();
+    // JointLimits joint_limits{ { 2.0, 3.0 }, { -2.0, 1.0 }, { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };
+    // std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, 0.0 } };
 
     // small passage case
-    // auto regions = createCase2(30);
-    // // JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
-    // std::vector<Bounds> joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 },
-    //                                   { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for all joints
-    // std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
+    auto regions = createCase2(30);
+    // JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
+    std::vector<Bounds> joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 },
+                                      { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for all joints
+    std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
 
     // 8 dof zig zag case
     // auto regions = createCase3();
@@ -185,6 +185,7 @@ int main(int argc, char** argv)
     //////////////////////////////////
     oriolo::OrioloSpecificSettings ps;
     ps.METHOD = "greedy";
+    // ps.METHOD = "quispe";
     // ps.MAX_SHOTS = 2000;
     ps.MAX_ITER = 2000;
     oriolo::OrioloPlanner planner("oriolo", bot, ps);
@@ -195,6 +196,8 @@ int main(int argc, char** argv)
     //                         robot->getNumDof() - 3);
 
     // planner.setTask(regions);
+
+    // std::reverse(regions.begin(), regions.end());
 
     auto solution = planner.solve(regions);
     // auto solution = planner.rrtLike(regions);

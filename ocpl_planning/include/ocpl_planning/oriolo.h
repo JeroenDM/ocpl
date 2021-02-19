@@ -119,6 +119,7 @@ class OrioloPlanner : public Planner
     std::vector<JointPositions> step(size_t start_index, size_t stop_index, const JointPositions& q_start,
                                      const std::vector<TSR>& task);
     std::vector<JointPositions> greedy(const std::vector<TSR>& task);
+    std::vector<JointPositions> bidirectionalGreedy(const std::vector<TSR>& task);
 
     std::pair<bool, graph::NodeData> extend(const std::vector<TSR>& task, graph::Tree& tree);
 
