@@ -44,6 +44,7 @@ class Planner2
     bool noColl(const JointPositions& q_from, const JointPositions& q_to);
 
     std::vector<JointPositions> sample(size_t waypoint, size_t num_samples);
+    std::vector<JointPositions> sampleIncrementally(size_t waypoint, size_t min_num_samples, size_t batch_size);
     std::vector<JointPositions> sample(size_t waypoint, const JointPositions& q_bias, size_t num_samples);
 
     std::vector<JointPositions> updatePath(const std::vector<JointPositions>& path, const JointPositions& q, size_t k,

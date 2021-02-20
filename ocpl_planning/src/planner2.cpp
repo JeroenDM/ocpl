@@ -95,6 +95,43 @@ std::vector<JointPositions> Planner2::sample(size_t waypoint, size_t num_samples
     return samples;
 }
 
+std::vector<JointPositions> Planner2::sampleIncrementally(size_t waypoint, size_t min_num_samples, size_t batch_size)
+{
+    assert(!task_.empty());
+    assert(tsr_sampler_ != nullptr);
+    assert(tsr_local_sampler_ != nullptr);
+
+    std::vector<JointPositions> samples;
+    samples.reserve(min_num_samples + batch_size);
+
+    size_t iter{ 0 };
+    while (samples.size() < min_num_samples && iter < settings_.MAX_SHOTS)
+    {
+        auto q_samples = q_sampler_->getSamples(batch_size);
+        auto tsr_samples = tsr_sampler_->getSamples(batch_size);
+
+        // solve inverse kinematics te calculate base joints
+        // #pragma omp parallel
+        // #pragma omp for
+        for (size_t i{ 0 }; i < batch_size; ++i)
+        {
+            Transform tf = task_[waypoint].valuesToPose(tsr_samples[i]);
+            JointPositions q_red_sample(q_samples[i].begin(), q_samples[i].begin() + robot_.num_red_dof);
+            IKSolution sol = robot_.ik(tf, q_red_sample);
+            for (auto q_sol : sol)
+            {
+                if (robot_.isValid(q_sol))
+                {
+                    samples.push_back(q_sol);
+                }
+            }
+        }
+    }
+
+    samples.shrink_to_fit();
+    return samples;
+}
+
 std::vector<JointPositions> Planner2::sample(size_t waypoint, const JointPositions& q_bias, size_t num_samples)
 {
     assert(!task_.empty());
@@ -244,7 +281,7 @@ std::vector<JointPositions> Planner2::search_global(BaseContainer& A)
     std::vector<std::vector<VerticePtr>> vertices(task_.size());
     for (size_t k{ 0 }; k < task_.size(); ++k)
     {
-        auto qsamples = sample(k, settings_.MAX_SHOTS);
+        auto qsamples = sampleIncrementally(k, 2000, 100);
         std::cout << "Found " << qsamples.size() << " samples for point " << k << "\n";
         vertices[k].reserve(qsamples.size());
         for (auto q : qsamples)
@@ -316,9 +353,12 @@ Solution Planner2::solve(const std::vector<TSR>& task)
     //     std::cout << "Planner settings method: " << settings_.method << "\n";
     //     throw std::runtime_error("Unkown planning method in PlannerSettings");
     // }
-    // StackContainer container;
-    settings_.MAX_SHOTS = 50000;
-    QueueContainer container;
+    settings_.MAX_SHOTS = 1000;
+    settings_.DQ_MAX = 0.5;
+
+    // QueueContainer container;
+    //   StackContainer container;
+    PriorityStackContainer container(task.size());
     solution.path = search_global(container);
 
     solution.success = solution.path.size() == task.size();
