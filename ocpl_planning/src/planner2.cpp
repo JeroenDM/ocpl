@@ -42,7 +42,7 @@ void Planner2::initializeTaskSpaceSamplers(const std::vector<Bounds> tsr_bounds)
     tsr_local_sampler_ = createIncrementalSampler(tsr_perturbations, SamplerType::RANDOM);
 }
 
-bool Planner2::noColl(const JointPositions& q_from, const JointPositions& q_to)
+bool Planner2::noColl(const JointPositions& q_from, const JointPositions& q_to) const
 {
     // assume q_from is collision free
     // first check goal and quit early if this is in collision
@@ -63,7 +63,7 @@ bool Planner2::noColl(const JointPositions& q_from, const JointPositions& q_to)
     return true;
 }
 
-std::vector<JointPositions> Planner2::sample(size_t waypoint, size_t num_samples)
+std::vector<JointPositions> Planner2::sample(size_t waypoint, size_t num_samples) const
 {
     assert(!task_.empty());
     assert(tsr_sampler_ != nullptr);
@@ -95,7 +95,8 @@ std::vector<JointPositions> Planner2::sample(size_t waypoint, size_t num_samples
     return samples;
 }
 
-std::vector<JointPositions> Planner2::sampleIncrementally(size_t waypoint, size_t min_num_samples, size_t batch_size)
+std::vector<JointPositions> Planner2::sampleIncrementally(size_t waypoint, size_t min_num_samples,
+                                                          size_t batch_size) const
 {
     assert(!task_.empty());
     assert(tsr_sampler_ != nullptr);
@@ -132,7 +133,7 @@ std::vector<JointPositions> Planner2::sampleIncrementally(size_t waypoint, size_
     return samples;
 }
 
-std::vector<JointPositions> Planner2::sample(size_t waypoint, const JointPositions& q_bias, size_t num_samples)
+std::vector<JointPositions> Planner2::sample(size_t waypoint, const JointPositions& q_bias, size_t num_samples) const
 {
     assert(!task_.empty());
     assert(tsr_sampler_ != nullptr);
@@ -209,7 +210,7 @@ std::vector<JointPositions> Planner2::sample(size_t waypoint, const JointPositio
 }
 
 std::vector<JointPositions> Planner2::updatePath(const std::vector<JointPositions>& path, const JointPositions& q,
-                                                 size_t k, size_t k_prev)
+                                                 size_t k, size_t k_prev) const
 {
     std::vector<JointPositions> new_path = path;
     if (k > k_prev || path.size() == 0)
@@ -269,20 +270,33 @@ std::vector<JointPositions> Planner2::search(BaseContainer& A)
     return {};
 }
 
+std::vector<std::vector<JointPositions>> Planner2::createRoadMap() const
+{
+    std::vector<std::vector<JointPositions>> graph_data;
+    graph_data.resize(task_.size());
+
+    TSLogger logger;  // Thread save logging
+
+#pragma omp parallel
+#pragma omp for
+    for (std::size_t k = 0; k < task_.size(); ++k)
+    {
+        graph_data[k] = sampleIncrementally(k, settings_.MIN_VALID_SAMPLES, 100);
+        logger.logWaypoint(k, graph_data[k].size());
+    }
+    return graph_data;
+}
+
 std::vector<JointPositions> Planner2::search_global(BaseContainer& A)
 {
-    //
-    auto qs_start = sample(0, settings_.MAX_SHOTS);
-    if (qs_start.empty())
-    {
-        return {};
-    }
+    auto graph_data = createRoadMap();
 
+    // convert graph_data into roadmap with vertices
     std::vector<std::vector<VerticePtr>> vertices(task_.size());
     for (size_t k{ 0 }; k < task_.size(); ++k)
     {
-        auto qsamples = sampleIncrementally(k, 2000, 100);
-        std::cout << "Found " << qsamples.size() << " samples for point " << k << "\n";
+        auto qsamples = graph_data[k];
+        // std::cout << "Found " << qsamples.size() << " samples for point " << k << "\n";
         vertices[k].reserve(qsamples.size());
         for (auto q : qsamples)
         {
@@ -338,31 +352,32 @@ Solution Planner2::solve(const std::vector<TSR>& task)
     initializeTaskSpaceSamplers(task[0].bounds.asVector());
 
     Solution solution;
-    // if (settings_.method == "local_stack")
-    // {
-    //     StackContainer container;
-    //     solution.path = search(container);
-    // }
-    // else if (settings_.method == "local_priority_stack")
-    // {
-    //     PriorityStackContainer container(task.size());
-    //     solution.path = search(container);
-    // }
-    // else
-    // {
-    //     std::cout << "Planner settings method: " << settings_.method << "\n";
-    //     throw std::runtime_error("Unkown planning method in PlannerSettings");
-    // }
-    settings_.MAX_SHOTS = 1000;
-    settings_.DQ_MAX = 0.5;
+    if (settings_.method == "local_stack")
+    {
+        StackContainer container;
+        solution.path = search(container);
+    }
+    else if (settings_.method == "local_priority_stack")
+    {
+        PriorityStackContainer container(task.size());
+        solution.path = search(container);
+    }
+    else
+    {
+        std::cout << "Planner settings method: " << settings_.method << "\n";
+        throw std::runtime_error("Unkown planning method in PlannerSettings");
+    }
+    // settings_.MAX_SHOTS = 1000;
+    // settings_.MIN_VALID_SAMPLES = 2000;
+    // settings_.DQ_MAX = 0.5;
 
-    // QueueContainer container;
-    //   StackContainer container;
-    PriorityStackContainer container(task.size());
-    solution.path = search_global(container);
+    // // QueueContainer container;
+    // //   StackContainer container;
+    // PriorityStackContainer container(task.size());
+    // solution.path = search_global(container);
 
-    solution.success = solution.path.size() == task.size();
-    solution.cost = calculatePathCost(solution.path);
+    // solution.success = solution.path.size() == task.size();
+    // solution.cost = calculatePathCost(solution.path);
     return solution;
 }
 
