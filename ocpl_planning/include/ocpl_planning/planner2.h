@@ -30,9 +30,9 @@ class TSLogger
 
     void logWaypoint(size_t waypoint, size_t num_samples)
     {
-      std::unique_lock<std::mutex> lock(mutex_);
-      std::cout << "ocpl_planner_2: processing path point " << waypoint;
-      std::cout << " found " << num_samples << " samples\n";
+        std::unique_lock<std::mutex> lock(mutex_);
+        std::cout << "ocpl_planner_2: processing path point " << waypoint;
+        std::cout << " found " << num_samples << " samples\n";
     }
 };
 
@@ -46,6 +46,8 @@ struct Planner2Settings
     size_t MIN_VALID_SAMPLES{ 500 };
     // std::string method{ "local_stack" };
 };
+
+constexpr double INF{ std::numeric_limits<double>::max() };
 
 class Planner2
 {

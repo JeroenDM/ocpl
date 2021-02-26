@@ -34,6 +34,14 @@ struct Vertice
 };
 typedef std::shared_ptr<Vertice> VerticePtr;
 
+typedef std::vector<std::vector<VerticePtr>> DAGraph;
+
+inline const std::vector<VerticePtr>& getNeighbors(const DAGraph& graph, const VerticePtr& vertice)
+{
+    assert(vertice->waypoint + 1 < graph.size());
+    return graph[vertice->waypoint + 1];
+}
+
 /** Kinematics, state validation and joint limits for a robot. **/
 struct Robot
 {

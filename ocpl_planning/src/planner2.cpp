@@ -289,23 +289,20 @@ std::vector<std::vector<JointPositions>> Planner2::createRoadMap() const
 
 std::vector<JointPositions> Planner2::search_global(BaseContainer& A)
 {
+    // Sample valid states for all waypoints
     auto graph_data = createRoadMap();
 
     // convert graph_data into roadmap with vertices
-    std::vector<std::vector<VerticePtr>> vertices(task_.size());
+    DAGraph graph(task_.size());
     for (size_t k{ 0 }; k < task_.size(); ++k)
     {
-        auto qsamples = graph_data[k];
-        // std::cout << "Found " << qsamples.size() << " samples for point " << k << "\n";
-        vertices[k].reserve(qsamples.size());
-        for (auto q : qsamples)
-        {
-            vertices[k].push_back(std::make_shared<Vertice>(q, k, std::numeric_limits<double>::max()));
-        }
+        graph[k].resize(graph_data[k].size());
+        std::transform(graph_data[k].begin(), graph_data[k].end(), graph[k].begin(),
+                       [k](const JointPositions& q) { return std::make_shared<Vertice>(q, k, INF); });
     }
 
-    // add start nodes to the container
-    for (auto& v : vertices[0])
+    // prepare graph traversal
+    for (auto& v : graph[0])
     {
         v->distance = 0.0;
         A.push(v);
@@ -322,10 +319,11 @@ std::vector<JointPositions> Planner2::search_global(BaseContainer& A)
         path = updatePath(path, current->q, k, k_prev);
         if (k == (task_.size() - 1))
         {
+            std::cout << "### Found path in planner 2\n";
             return path;
         }
 
-        for (auto& v : vertices[k + 1])
+        for (auto& v : getNeighbors(graph, current))
         {
             if (norm1Diff(v->q, current->q) < settings_.DQ_MAX && noColl(current->q, v->q))
             {
@@ -343,6 +341,7 @@ std::vector<JointPositions> Planner2::search_global(BaseContainer& A)
         k_prev = k;
     }
 
+    std::cout << "### Planner 2 failed.\n";
     return {};
 }
 
@@ -362,22 +361,24 @@ Solution Planner2::solve(const std::vector<TSR>& task)
         PriorityStackContainer container(task.size());
         solution.path = search(container);
     }
+    else if (settings_.method == "global_priority_queue")
+    {
+        QueueContainer container;  // (task.size());
+        solution.path = search_global(container);
+    }
+    else if (settings_.method == "global_priority_stack")
+    {
+        PriorityStackContainer container(task.size());
+        solution.path = search_global(container);
+    }
     else
     {
         std::cout << "Planner settings method: " << settings_.method << "\n";
         throw std::runtime_error("Unkown planning method in PlannerSettings");
     }
-    // settings_.MAX_SHOTS = 1000;
-    // settings_.MIN_VALID_SAMPLES = 2000;
-    // settings_.DQ_MAX = 0.5;
 
-    // // QueueContainer container;
-    // //   StackContainer container;
-    // PriorityStackContainer container(task.size());
-    // solution.path = search_global(container);
-
-    // solution.success = solution.path.size() == task.size();
-    // solution.cost = calculatePathCost(solution.path);
+    solution.success = solution.path.size() == task.size();
+    solution.cost = calculatePathCost(solution.path);
     return solution;
 }
 
