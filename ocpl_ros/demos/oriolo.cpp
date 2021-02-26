@@ -122,16 +122,16 @@ int main(int argc, char** argv)
     // Create task
     //////////////////////////////////
     // 2P 3R robot case
-    auto regions = createCase1();
-    JointLimits joint_limits{ { 2.0, 3.0 }, { -2.0, 1.0 }, { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };
-    std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, 0.0 } };
+    // auto regions = createCase1();
+    // JointLimits joint_limits{ { 2.0, 3.0 }, { -2.0, 1.0 }, { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };
+    // std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, 0.0 } };
 
     // small passage case
-    // auto regions = createCase2(30);
-    // // JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
-    // std::vector<Bounds> joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 },
-    //                                   { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for all joints
-    // std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
+    auto regions = createCase2(20);
+    // JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
+    std::vector<Bounds> joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 },
+                                      { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for all joints
+    std::vector<Bounds> tsr_bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
 
     // 8 dof zig zag case
     // auto regions = createCase3();
