@@ -1,0 +1,4 @@
+name: settings1
+method: local
+somedouble: 0.1
+someint: 8

@@ -137,3 +137,18 @@ target_link_libraries(${PROJECT_NAME}_benchmark1
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
 )
+
+############# 
+## Testing ##
+#############
+
+if(CATKIN_ENABLE_TESTING)
+
+  catkin_add_gtest(${PROJECT_NAME}_test_io test/test_io.cpp)
+
+  target_link_libraries(${PROJECT_NAME}_test_io
+    ${PROJECT_NAME}
+    ${catkin_LIBRARIES}
+  )
+
+endif()
