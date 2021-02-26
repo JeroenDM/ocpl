@@ -210,9 +210,18 @@ int main(int argc, char** argv)
     // Try new generic algorithms
     //////////////////////////////////
     Planner2Settings settings{};
-    settings.method = "local_priority_stack";
+    // settings.method = "local_priority_stack";
+    // settings.MAX_SHOTS = 1000;
+
+    // settings.method = "global_priority_stack";
+    settings.method = "global_priority_queue";
+    settings.MAX_SHOTS = 1000;
+    settings.MIN_VALID_SAMPLES = 500;
+    settings.DQ_MAX = 1.5;
+
     Planner2 planner("planner2", bot, settings);
 
+    std::reverse(regions.begin(), regions.end());
     Solution solution = planner.solve(regions);
 
     if (solution.path.empty())
