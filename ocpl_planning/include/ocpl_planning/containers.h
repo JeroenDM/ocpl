@@ -87,12 +87,6 @@ class PriorityStackContainer : public BaseContainer
     size_t current_waypoint_{ 0 };
 
   public:
-    // PriorityStackContainer(size_t max_waypoints, VerticePtrCompare compare_fun) : max_waypoints_(max_waypoints)
-    // {
-    //     for (size_t i{ 0 }; i < max_waypoints; ++i)
-    //         data_.push_back(VPriorityQueue(compare_fun));
-    // }
-
     PriorityStackContainer(size_t max_waypoints) : max_waypoints_(max_waypoints), data_(max_waypoints)
     {
     }
@@ -137,4 +131,85 @@ class PriorityStackContainer : public BaseContainer
         return (current_waypoint_ == 0 && data_[current_waypoint_].empty());
     }
 };
+
+class PriorityQueueContainer : public BaseContainer
+{
+    VPriorityQueue data;
+
+  public:
+    PriorityQueueContainer() = default;
+    ~PriorityQueueContainer() = default;
+    virtual VerticePtr pop() override
+    {
+        VerticePtr v = data.top();
+        data.pop();
+        return v;
+    }
+    virtual void push(const VerticePtr& v) override
+    {
+        data.push(v);
+    }
+    virtual bool empty() override
+    {
+        return data.empty();
+    }
+};
+
+
+// class PriorityQueueContainer : public BaseContainer
+// {
+//     size_t max_waypoints_;
+//     std::vector<VPriorityQueue> data_;
+
+//     size_t pop_waypoint_{ 0 };
+
+//   public:
+//     PriorityQueueContainer(size_t max_waypoints) : max_waypoints_(max_waypoints), data_(max_waypoints)
+//     {
+//     }
+
+//     ~PriorityQueueContainer() = default;
+
+//     virtual VerticePtr pop() override
+//     {
+//         if (data_[pop_waypoint_].empty())
+//         {
+//             if (pop_waypoint_ < max_waypoints_ - 1)
+//             {
+//                 pop_waypoint_++;
+//                 return pop();
+//             }
+//             else
+//             {
+//                 throw std::out_of_range("Trying to pop an element from an empty PriorityQueueContainer");
+//             }
+//         }
+//         else
+//         {
+//             VerticePtr v = data_[pop_waypoint_].top();
+//             data_[pop_waypoint_].pop();
+//             return v;
+//         }
+//     }
+//     virtual void push(const VerticePtr& v) override
+//     {
+//         if (v->waypoint < max_waypoints_)
+//         {
+//             data_[v->waypoint].push(v);
+//             // potentially move the pop waypoint back
+//             if (v->waypoint < pop_waypoint_)
+//             {
+//                 pop_waypoint_ = v->waypoint;
+//             }
+//         }
+//         else
+//         {
+//             throw std::out_of_range("Trying to push an element past the waypoint size of this PriorityQueueContainer");
+//         }
+//     }
+//     virtual bool empty() override
+//     {
+//         return (pop_waypoint_ == (max_waypoints_ - 1) && data_[pop_waypoint_].empty());
+//     }
+// };
 }  // namespace ocpl

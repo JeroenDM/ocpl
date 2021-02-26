@@ -1,56 +1,83 @@
 #pragma once
 
+#include <ocpl_graph/containers.h>
+
+#include <functional>
 #include <limits>
-#include <vector>
 #include <memory>
+#include <vector>
 
 namespace ocpl
 {
+namespace tree
+{
+constexpr double INF{ std::numeric_limits<double>::max() };
 
-const double INF = std::numeric_limits<double>::infinity();
+template <typename Data>
+struct Node;
 
-typedef std::vector<double> JointPositions;
-typedef std::vector<std::vector<JointPositions>> GraphData;
-
+template <typename Data>
 struct Node
 {
-  int path_index;
-  int sample_index;
-  JointPositions* jv = nullptr;
-  double shortest_distance = INF;
-  Node* parent = nullptr;
-  bool visited = false;
+    Data data;
+    size_t waypoint;
+    double distance{ INF };
+    bool visited{ false };
+    std::shared_ptr<Node<Data>> parent{ nullptr };
+
+    Node(const Data& d, const size_t wp) : data(d), waypoint(wp)
+    {
+    }
 };
 
-class Graph
+template <typename Data>
+using NodePtr = std::shared_ptr<Node<Data>>;
+
+template <typename NodeType>
+using get_neighbors_t = std::function<std::vector<NodeType>(const NodeType&, const size_t)>;
+
+template <typename NodeType>
+using distance_t = std::function<double(const NodeType&, const NodeType&)>;
+
+template <typename Data>
+void search(BaseContainer<NodePtr<Data>>& container, get_neighbors_t<NodePtr<Data>> get_neighbors_fun,
+            std::vector<NodePtr<Data>> start_nodes, distance_t<NodePtr<Data>> distance_fun)
 {
-  GraphData raw_data_;
-  std::vector<std::vector<Node>> nodes_;
-  int num_path_points_ = 0;
-  bool shortest_path_is_found = false;
+    for (NodePtr<Data>& node : start_nodes)
+    {
+        container.push(node, 0);
+        node->distance = 0.0;
+    }
 
-public:
-  Graph() = default;
-  Graph(std::vector<std::vector<JointPositions>>& path_joint_poses);
-  ~Graph() = default;
+    size_t k{ 0 };
+    NodePtr<Data> current;
+    while (!container.empty())
+    {
+        current = container.pop();
 
-  double last_path_cost;
-  void addPathPointData(std::vector<JointPositions>& joint_poses);
-  const std::vector<std::vector<Node>>& getNodes() const;
-  std::vector<Node*> getNeighbors(Node* node);
-  std::vector<Node*> getShortestPath();
-  void runMultiSourceDijkstra();
-};
+        for (NodePtr<Data>& nb : get_neighbors_fun(current, k))
+        {
+            if (!nb.visited)
+            {
+                container.push(nb);
+            }
+            else
+            {
+                auto new_d = current->distance + distance_fun(current, nb);
+                if (new_d < nb.distance)
+                {
+                    nb->distance = new_d;
+                    nb->parent = current;
+                }
+            }
+        }
+    }
+}
 
-struct sortNodesFunction
+// template <typename T>
+// std::vector<NodePtr<T>> treeSearch();
+}  // namespace tree
+namespace graph
 {
-  bool operator()(Node* n1, Node* n2) const
-  {
-    return (*n2).shortest_distance < (*n1).shortest_distance;
-  }
-};
-
-double L1NormCost(Node n1, Node n2);
-double sumSquaredCost(Node n1, Node n2);
-
-} // namespace ocpl
+}
+}  // namespace ocpl

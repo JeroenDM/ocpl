@@ -2,8 +2,22 @@
 #include <ocpl_graph/graph.h>
 
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <vector>
+
+inline double norm2Diff(const std::vector<double>& n1, const std::vector<double>& n2)
+{
+    assert(n1.size() == n2.size());
+
+    double cost{ 0.0 };
+    for (int i = 0; i < n1.size(); ++i)
+    {
+        cost += std::sqrt((n1[i] - n2[i]) * (n1[i] - n2[i]));
+    }
+    return cost;
+}
 
 using namespace ocpl;
 
@@ -128,6 +142,30 @@ TEST(TestContainers, TestWithDoubleVector)
     ps.push({ 7, 99 }, 1);
     EXPECT_EQ(ps.pop().at(0), 7);
     EXPECT_TRUE(ps.empty());
+}
+
+TEST(TestGraph, TestGraphSearch)
+{
+    using Data = std::vector<double>;
+    using MyNode = tree::Node<Data>;
+    using MyNodePtr = tree::NodePtr<Data>;
+    // create graph
+    std::vector<Data> jp1 = { { 0, 0 }, { 0, 1 } };
+    std::vector<Data> jp2 = { { 1, -1 }, { 1, 0 }, { 1, 1 } };
+    std::vector<Data> jp3 = { { 0, 2 }, { 2, 2 } };
+
+    std::vector<std::vector<tree::NodePtr<Data>>> graph(3);
+    for (size_t k{ 0 }; k < 3; ++k)
+    {
+        std::transform(jp1.begin(), jp1.end(), std::back_inserter(graph.at(k)),
+                       [k](const Data& d) { return std::make_shared<MyNode>(d, k); });
+    }
+
+    QueueContainer<tree::NodePtr<Data>> container;
+
+    auto nb_fun = [&graph](const MyNodePtr& /* n */, const size_t k) { return graph.at(k + 1); };
+    auto d_fun = [](const MyNodePtr& a, const MyNodePtr& b) { return norm2Diff(a->data, b->data); };
+    // tree::search(container, nb_fun, graph.front(), d_fun);
 }
 
 int main(int argc, char** argv)
