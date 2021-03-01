@@ -1,13 +1,13 @@
 #include <ocpl_graph/tree.h>
 
+#include <algorithm>
 #include <queue>
-#include <algorithm>  // std::find, std::min_element
 #include <iostream>
 #include <cmath>  // isnan
+#include <cassert>
 
 namespace ocpl
 {
-
 struct compareNodesFunction
 {
     bool operator()(NodePtr n1, NodePtr n2) const
@@ -45,9 +45,6 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
     const std::vector<NodePtr>& start_nodes = nodes.front();
     const std::vector<NodePtr>& goal_nodes = nodes.back();
 
-    // We keep track of how many goal nodes we have yet to reach.
-    std::size_t goal_nodes_to_reach{ goal_nodes.size() };
-
     // Give the nodes correct waypoint indices to do fast nearest neighbor search.
     for (std::size_t index{ 0 }; index < nodes.size(); ++index)
     {
@@ -65,32 +62,20 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
 
     // The actual graph search loop
     NodePtr current_node{ nullptr };
+    bool goal_reached{ false };
 
     // TODO replace this with for loop over samples and remove priority queue for DAG case
     while (!Q.empty())
     {
-        //    current_node = Q.front();
         current_node = Q.top();
         Q.pop();
 
-        // std::cout << "graph search: (" << current_node->waypoint_index << " ) " << (*current_node) << "\n";
-        // std::cout << "graph search: gntr " << goal_nodes_to_reach << "\n";
-
-        // is the current node a goal node?
-        // if (std::find(goal_nodes.begin(), goal_nodes.end(), current_node) != goal_nodes.end())
+        // A goal if found, when using a priority queue this should also be the goal
+        // that gives the shortest path
         if (current_node->waypoint_index == (nodes.size() - 1))
         {
-            // keep going until all nodes are expanded!
-            if (goal_nodes_to_reach > 0)
-            {
-                goal_nodes_to_reach--;
-                continue;
-            }
-            else
-            {
-                // std::cout << "Found the last goal!\n";
-                break;
-            }
+            goal_reached = true;
+            break;
         }
 
         const std::vector<NodePtr>& neighbors = nodes.at(current_node->waypoint_index + 1);
@@ -118,27 +103,15 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
         }
     }
 
-    if (goal_nodes_to_reach > 0)
-    {
-        std::cout << "Not all goal nodes reached.\n";
-    }
-    if (goal_nodes_to_reach == goal_nodes.size())
+    if (!goal_reached)
     {
         std::cout << "None of the goals are reached in graph search.\n";
         return _extract_partial_solution(nodes);
     }
 
-    // find the goal node with the smallest distance
-    auto node_iter = std::min_element(goal_nodes.begin(), goal_nodes.end(),
-                                      [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
+    assert(current_node != nullptr);
 
-    if (node_iter == goal_nodes.end())
-    {
-        std::cout << "None of the goals are reached.\n";
-        return {};
-    }
-
-    return _extract_path(*node_iter);
+    return _extract_path(current_node);
 }
 
 std::vector<NodePtr> _extract_partial_solution(const std::vector<std::vector<NodePtr>>& nodes)
