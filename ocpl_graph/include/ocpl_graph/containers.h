@@ -129,7 +129,7 @@ class PriorityStackContainer : public BaseContainer<T>
     virtual bool empty() override
     {
         // Everyting above the current waypoint is empty by definition, only check below
-        return std::all_of(data_.begin(), data_.begin() + current_waypoint_, [](const auto& q) { return q.empty(); });
+        return std::all_of(data_.begin(), data_.begin() + current_waypoint_ + 1, [](const auto& q) { return q.empty(); });
     }
 };
 
