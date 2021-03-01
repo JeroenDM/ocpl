@@ -48,11 +48,10 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
     auto d_fun = [](const NodePtr& a, const NodePtr& b) { return b->dist < a->dist; };
 
     // StackContainer<NodePtr> Q;
-    PriorityStackContainer<NodePtr> Q(nodes.size(), d_fun);
-    // OcplPriorityQueueContainer<NodePtr> Q(d_fun);
+    // PriorityStackContainer<NodePtr> Q(nodes.size(), d_fun);
+    OcplPriorityQueueContainer<NodePtr> Q(d_fun);
 
     const std::vector<NodePtr>& start_nodes = nodes.front();
-    const std::vector<NodePtr>& goal_nodes = nodes.back();
 
     // Give the nodes correct waypoint indices to do fast nearest neighbor search.
     for (std::size_t index{ 0 }; index < nodes.size(); ++index)
@@ -79,8 +78,6 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
         // current_node = Q.top();
         // Q.pop();
         current_node = Q.pop();
-
-        std::cout << "Popped node at waypoint: " << current_node->waypoint_index << ". \n";
 
         // A goal if found, when using a priority queue this should also be the goal
         // that gives the shortest path
@@ -154,20 +151,4 @@ std::ostream& operator<<(std::ostream& os, const Node& node)
     os << ")";
     return os;
 }
-
-std::ostream& operator<<(std::ostream& os, const Edge& edge)
-{
-    os << "Edge: " << *edge.child << " : " << edge.cost;
-    return os;
-}
-
-std::ostream& operator<<(std::ostream& os, const std::vector<Edge>& edges)
-{
-    for (const auto& edge : edges)
-    {
-        os << edge << ", ";
-    }
-    return os;
-}
-
 }  // namespace ocpl

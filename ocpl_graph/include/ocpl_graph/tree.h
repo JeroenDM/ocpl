@@ -3,7 +3,6 @@
 #include <vector>
 #include <limits>
 #include <ostream>
-#include <unordered_map>
 #include <memory>
 #include <functional>
 #include <cassert>
@@ -43,22 +42,6 @@ struct Node
 };
 typedef std::shared_ptr<Node> NodePtr;
 
-struct Edge
-{
-    NodePtr child{ nullptr };
-    double cost = { 0 };
-
-    Edge(NodePtr child_, double cost_) : child(std::move(child_)), cost(cost_)
-    {
-    }
-};
-
-/* Tree data structure
- *
- * An unordered map is used as a hash table to store a tree as a linked list.
- */
-typedef std::unordered_map<NodePtr, std::vector<Edge>> Tree;
-
 std::vector<NodePtr> _extract_path(NodePtr goal);
 std::vector<NodePtr> _extract_partial_solution(const std::vector<std::vector<NodePtr>>& nodes);
 
@@ -67,9 +50,5 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
                                        std::function<double(const NodePtr, const NodePtr)> cost_function);
 
 std::ostream& operator<<(std::ostream& os, const Node& node);
-
-std::ostream& operator<<(std::ostream& os, const Edge& edge);
-
-std::ostream& operator<<(std::ostream& os, const std::vector<Edge>& edges);
 
 }  // namespace ocpl
