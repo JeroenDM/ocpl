@@ -196,4 +196,34 @@ class PriorityQueueContainer : public BaseContainer<T>
         return std::all_of(data_.begin() + current_waypoint_, data_.end(), [](const auto& q) { return q.empty(); });
     }
 };
+
+template <typename T>
+class OcplPriorityQueueContainer : public BaseContainer<T>
+{
+    using compare_fun_t = std::function<bool(const T&, const T&)>;
+    using priority_queue_t = std::priority_queue<T, std::vector<T>, compare_fun_t>;
+    priority_queue_t data_;
+
+  public:
+    OcplPriorityQueueContainer(compare_fun_t compare_fun) : data_(compare_fun)
+    {
+    }
+
+    ~OcplPriorityQueueContainer() = default;
+
+    virtual T pop() override
+    {
+        T v = data_.top();
+        data_.pop();
+        return v;
+    }
+    virtual void push(const T& v, const size_t /* waypoint*/) override
+    {
+        data_.push(v);
+    }
+    virtual bool empty() override
+    {
+        return data_.empty();
+    }
+};
 }  // namespace ocpl

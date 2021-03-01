@@ -6,6 +6,8 @@
 #include <cmath>  // isnan
 #include <cassert>
 
+#include <ocpl_graph/containers.h>
+
 namespace ocpl
 {
 struct compareNodesFunction
@@ -40,7 +42,14 @@ std::vector<NodePtr> _extract_path(NodePtr goal)
 std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& nodes,
                                        std::function<double(const NodePtr, const NodePtr)> cost_function)
 {
-    std::priority_queue<NodePtr, std::vector<NodePtr>, compareNodesFunction> Q;
+    // std::priority_queue<NodePtr, std::vector<NodePtr>, compareNodesFunction> Q;
+
+    // auto d_fun = [](const NodePtr& a, const NodePtr& b) { return math::norm2Diff(a->data, b->data); };
+    auto d_fun = [](const NodePtr& a, const NodePtr& b) { return b->dist < a->dist; };
+
+    // StackContainer<NodePtr> Q;
+    PriorityStackContainer<NodePtr> Q(nodes.size(), d_fun);
+    // OcplPriorityQueueContainer<NodePtr> Q(d_fun);
 
     const std::vector<NodePtr>& start_nodes = nodes.front();
     const std::vector<NodePtr>& goal_nodes = nodes.back();
@@ -57,18 +66,21 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
     {
         start_node->dist = start_node->cost;
         start_node->visited = true;
-        Q.push(start_node);
+        // Q.push(start_node);
+        Q.push(start_node, 0);
     }
 
     // The actual graph search loop
     NodePtr current_node{ nullptr };
     bool goal_reached{ false };
 
-    // TODO replace this with for loop over samples and remove priority queue for DAG case
     while (!Q.empty())
     {
-        current_node = Q.top();
-        Q.pop();
+        // current_node = Q.top();
+        // Q.pop();
+        current_node = Q.pop();
+
+        std::cout << "Popped node at waypoint: " << current_node->waypoint_index << ". \n";
 
         // A goal if found, when using a priority queue this should also be the goal
         // that gives the shortest path
@@ -96,7 +108,8 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
 
                 if (!nb->visited)
                 {
-                    Q.push(nb);
+                    // Q.push(nb);
+                    Q.push(nb, nb->waypoint_index);
                     nb->visited = true;
                 }
             }
