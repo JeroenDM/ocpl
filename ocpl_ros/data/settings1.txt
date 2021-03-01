@@ -1,0 +1,6 @@
+name: settings1
+method: local_stack
+dq_max: 0.1
+dw_max: 0.1
+max_iters: 200
+min_samples: 300

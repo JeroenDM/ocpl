@@ -6,6 +6,7 @@
 
 #include <ocpl_ros/moveit_robot_examples.h>
 #include <ocpl_ros/rviz.h>
+#include <ocpl_ros/io.h>
 #include <ocpl_sampling/grid_sampler.h>
 #include <ocpl_sampling/halton_sampler.h>
 #include <ocpl_sampling/random_sampler.h>
@@ -209,19 +210,17 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Try new generic algorithms
     //////////////////////////////////
+    auto smap = ocpl::readSettingsFile("settings1.txt");
     Planner2Settings settings{};
-    // settings.method = "local_priority_stack";
-    // settings.MAX_SHOTS = 1000;
-
-    // settings.method = "global_priority_stack";
-    settings.method = "global_priority_queue";
-    settings.MAX_SHOTS = 1000;
-    settings.MIN_VALID_SAMPLES = 500;
-    settings.DQ_MAX = 1.5;
+    settings.method = smap.at("method");
+    settings.MAX_SHOTS = std::stoi(smap.at("max_iters"));
+    std::cout << settings.MAX_SHOTS << "\n";
+    settings.MIN_VALID_SAMPLES = std::stoi(smap.at("min_samples"));
+    settings.DQ_MAX = std::stoi(smap.at("dq_max"));
 
     Planner2 planner("planner2", bot, settings);
 
-    std::reverse(regions.begin(), regions.end());
+    // std::reverse(regions.begin(), regions.end());
     Solution solution = planner.solve(regions);
 
     if (solution.path.empty())
