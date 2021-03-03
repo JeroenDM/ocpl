@@ -14,7 +14,6 @@
 #include <ocpl_planning/planners.h>
 #include <ocpl_planning/factories.h>
 #include <ocpl_planning/cost_functions.h>
-#include <ocpl_planning/jdm.h>
 
 using namespace ocpl;
 
@@ -229,7 +228,7 @@ int main(int argc, char** argv)
     // solve it!
     // Solution solution = solve(regions, joint_limits, ik_fun, is_valid_fun, path_cost_fun, state_cost_fun, ps);
 
-    jdm::JdmPlanner planner("grid_search", bot, ps);
+    UnifiedPlanner planner(bot, ps);
     Solution solution = planner.solve(regions);
 
     if (solution.success)

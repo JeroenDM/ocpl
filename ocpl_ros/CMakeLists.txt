@@ -58,16 +58,16 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_demo
-  demos/demo.cpp
-)
-set_target_properties(${PROJECT_NAME}_demo
-  PROPERTIES OUTPUT_NAME demo PREFIX ""
-)
-target_link_libraries(${PROJECT_NAME}_demo
-  ${catkin_LIBRARIES}
-  ${PROJECT_NAME}
-)
+# add_executable(${PROJECT_NAME}_demo
+#   demos/demo.cpp
+# )
+# set_target_properties(${PROJECT_NAME}_demo
+#   PROPERTIES OUTPUT_NAME demo PREFIX ""
+# )
+# target_link_libraries(${PROJECT_NAME}_demo
+#   ${catkin_LIBRARIES}
+#   ${PROJECT_NAME}
+# )
 
 add_executable(${PROJECT_NAME}_oriolo
   demos/oriolo.cpp
@@ -102,41 +102,41 @@ target_link_libraries(${PROJECT_NAME}_demo_redundant
   ${PROJECT_NAME}
 )
 
-# welding demo with kuka kr5
-add_executable(${PROJECT_NAME}_welding
-  demos/welding.cpp
-)
-set_target_properties(${PROJECT_NAME}_welding
-  PROPERTIES OUTPUT_NAME welding PREFIX ""
-)
-target_link_libraries(${PROJECT_NAME}_welding
-  ${catkin_LIBRARIES}
-  ${PROJECT_NAME}
-)
+# # welding demo with kuka kr5
+# add_executable(${PROJECT_NAME}_welding
+#   demos/welding.cpp
+# )
+# set_target_properties(${PROJECT_NAME}_welding
+#   PROPERTIES OUTPUT_NAME welding PREFIX ""
+# )
+# target_link_libraries(${PROJECT_NAME}_welding
+#   ${catkin_LIBRARIES}
+#   ${PROJECT_NAME}
+# )
 
-# welding demo with kuka kr5 on rail
-add_executable(${PROJECT_NAME}_welding_redundant
-  demos/welding_redundant.cpp
-)
-set_target_properties(${PROJECT_NAME}_welding_redundant
-  PROPERTIES OUTPUT_NAME welding_redundant PREFIX ""
-)
-target_link_libraries(${PROJECT_NAME}_welding_redundant
-  ${catkin_LIBRARIES}
-  ${PROJECT_NAME}
-)
+# # welding demo with kuka kr5 on rail
+# add_executable(${PROJECT_NAME}_welding_redundant
+#   demos/welding_redundant.cpp
+# )
+# set_target_properties(${PROJECT_NAME}_welding_redundant
+#   PROPERTIES OUTPUT_NAME welding_redundant PREFIX ""
+# )
+# target_link_libraries(${PROJECT_NAME}_welding_redundant
+#   ${catkin_LIBRARIES}
+#   ${PROJECT_NAME}
+# )
 
 
-add_executable(${PROJECT_NAME}_benchmark1
-  benchmarks/benchmark1.cpp
-)
-set_target_properties(${PROJECT_NAME}_benchmark1
-  PROPERTIES OUTPUT_NAME benchmark1 PREFIX ""
-)
-target_link_libraries(${PROJECT_NAME}_benchmark1
-  ${catkin_LIBRARIES}
-  ${PROJECT_NAME}
-)
+# add_executable(${PROJECT_NAME}_benchmark1
+#   benchmarks/benchmark1.cpp
+# )
+# set_target_properties(${PROJECT_NAME}_benchmark1
+#   PROPERTIES OUTPUT_NAME benchmark1 PREFIX ""
+# )
+# target_link_libraries(${PROJECT_NAME}_benchmark1
+#   ${catkin_LIBRARIES}
+#   ${PROJECT_NAME}
+# )
 
 ############# 
 ## Testing ##

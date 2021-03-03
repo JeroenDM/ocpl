@@ -42,7 +42,6 @@ add_library(
   src/factories.cpp
   src/io.cpp
   src/oriolo.cpp
-  src/jdm.cpp
   src/planner2.cpp
 )
 target_link_libraries(${PROJECT_NAME}

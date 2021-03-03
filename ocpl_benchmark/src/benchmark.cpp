@@ -11,7 +11,7 @@
 
 namespace ocpl
 {
-void runBenchmark(const std::string& name, const Problem& problem, const std::vector<TSR>& task,
+void runBenchmark(const std::string& name, const Robot& robot, const std::vector<TSR>& task,
                   const std::vector<PlannerSettings>& settings, int num_repeats)
 {
     std::cout << "Starting benchmark named: " << name << " repeating it " << num_repeats << " times \n";
@@ -21,6 +21,7 @@ void runBenchmark(const std::string& name, const Problem& problem, const std::ve
     for (auto ps : settings)
     {
         std::cout << "--- planner " << ps.name << " ---\n";
+        UnifiedPlanner planner(robot, ps);
 
         for (int run{ 0 }; run < num_repeats; ++run)
         {
@@ -28,8 +29,7 @@ void runBenchmark(const std::string& name, const Problem& problem, const std::ve
 
             Timer timer;
             timer.start();
-            Solution solution = solve(task, problem.redundant_joint_limits, problem.ik_fun, problem.is_valid_fun,
-                                      problem.path_cost_fun, problem.state_cost_fun, ps);
+            Solution solution = planner.solve(task);
             double t = timer.stop();
 
             log.log(ps.name);

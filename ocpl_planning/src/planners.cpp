@@ -18,8 +18,8 @@ Planner::Planner(const std::string& name, const Robot& robot) : name_(name), rob
 /************************************************************************
  * GLOBAL SAMPLING
  * **********************************************************************/
-std::vector<std::vector<JointPositions>>
-sampleGlobalIncremental(std::vector<std::function<IKSolution()>> path_samplers, const PlannerSettings& settings)
+std::vector<std::vector<JointPositions>> UnifiedPlanner::sampleGlobalIncremental(
+    std::vector<std::function<IKSolution()>> path_samplers)
 {
     std::vector<std::vector<JointPositions>> graph_data;
     graph_data.resize(path_samplers.size());
@@ -32,7 +32,7 @@ sampleGlobalIncremental(std::vector<std::function<IKSolution()>> path_samplers, 
     {
         int iters{ 0 };
         std::vector<JointPositions> valid_samples;
-        while (iters < settings.max_iters && valid_samples.size() < settings.min_valid_samples)
+        while (iters < settings_.max_iters && valid_samples.size() < settings_.min_valid_samples)
         {
             auto s = path_samplers[i]();
 
@@ -46,13 +46,14 @@ sampleGlobalIncremental(std::vector<std::function<IKSolution()>> path_samplers, 
 
         logger.logWaypoint(i, valid_samples.size());
 
-        if (iters == settings.max_iters)
+        if (iters == settings_.max_iters)
             logger.log("ocpl_planner: maximum number of iterations reached.\n");
     }
     return graph_data;
 }
 
-std::vector<std::vector<JointPositions>> sampleGlobalGrid(std::vector<std::function<IKSolution()>> path_samplers)
+std::vector<std::vector<JointPositions>>
+UnifiedPlanner::sampleGlobalGrid(std::vector<std::function<IKSolution()>> path_samplers)
 {
     std::vector<std::vector<JointPositions>> graph_data;
     graph_data.resize(path_samplers.size());
@@ -73,43 +74,59 @@ std::vector<std::vector<JointPositions>> sampleGlobalGrid(std::vector<std::funct
 /************************************************************************
  * LOCAL SAMPLING
  * **********************************************************************/
+std::vector<JointPositions> UnifiedPlanner::sampleLocalIncremental(
+    const JointPositions& q_bias, std::function<IKSolution(const JointPositions&)> local_sampler)
+{
+    int iters{ 0 };
+    std::vector<JointPositions> valid_samples;
+    while (iters < settings_.max_iters && valid_samples.size() < settings_.min_valid_samples)
+    {
+        auto s = local_sampler(q_bias);
+
+        // add the new joint positions to valid_samples (stl can be ugly...)
+        valid_samples.reserve(valid_samples.size() + std::distance(s.begin(), s.end()));
+        valid_samples.insert(valid_samples.end(), s.begin(), s.end());
+
+        iters++;
+    }
+
+    return valid_samples;
+}
 
 /************************************************************************
  * SOLVE
  * **********************************************************************/
-Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits,
-               std::function<IKSolution(const Transform&, const JointPositions&)> ik_fun,
-               std::function<bool(const JointPositions&)> is_valid_fun,
-               std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
-               std::function<double(const TSR&, const JointPositions&)> state_cost_fun, PlannerSettings settings)
+Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits,
+                                std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
+                                std::function<double(const TSR&, const JointPositions&)> state_cost_fun)
 {
     // create the path samplers
     std::vector<std::function<IKSolution()>> path_samplers;
 
-    if (settings.is_redundant && redundant_joint_limits.empty())
+    if (settings_.is_redundant && redundant_joint_limits.empty())
         std::cout << "The robot is marked redundant, but the joint limits for the redundant joints are not "
                      "specified...\n";
 
-    if (!settings.is_redundant && redundant_joint_limits.size() > 0)
+    if (!settings_.is_redundant && redundant_joint_limits.size() > 0)
         std::cout << "The robot is not marked redundant, but joint limits for redundant joints where given.\n";
 
-    if (settings.is_redundant)
+    if (settings_.is_redundant)
     {
         for (auto tsr : task_space_regions)
         {
-            SamplerPtr t_sampler = createSampler(tsr.bounds.asVector(), settings.sampler_type, settings.tsr_resolution);
+            SamplerPtr t_sampler = createSampler(tsr.bounds.asVector(), settings_.sampler_type, settings_.tsr_resolution);
             SamplerPtr c_sampler =
-                createSampler(redundant_joint_limits, settings.sampler_type, settings.redundant_joints_resolution);
+                createSampler(redundant_joint_limits, settings_.sampler_type, settings_.redundant_joints_resolution);
             path_samplers.push_back(
-                [tsr, ik_fun, is_valid_fun, redundant_joint_limits, settings, t_sampler, c_sampler]() {
+                [tsr, redundant_joint_limits, t_sampler, c_sampler, this]() {
                     IKSolution result;
-                    for (auto tsr_values : t_sampler->getSamples(settings.t_space_batch_size))
+                    for (auto tsr_values : t_sampler->getSamples(settings_.t_space_batch_size))
                     {
-                        for (auto q_red : c_sampler->getSamples(settings.c_space_batch_size))
+                        for (auto q_red : c_sampler->getSamples(settings_.c_space_batch_size))
                         {
-                            for (auto q : ik_fun(tsr.valuesToPose(tsr_values), q_red))
+                            for (auto q : robot_.ik(tsr.valuesToPose(tsr_values), q_red))
                             {
-                                if (is_valid_fun(q))
+                                if (robot_.isValid(q))
                                     result.push_back(q);
                             }
                         }
@@ -123,14 +140,14 @@ Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& re
     {
         for (const TSR& tsr : task_space_regions)
         {
-            SamplerPtr sampler = createSampler(tsr.bounds.asVector(), settings.sampler_type, settings.tsr_resolution);
-            path_samplers.push_back([tsr, ik_fun, is_valid_fun, &settings, sampler]() {
+            SamplerPtr sampler = createSampler(tsr.bounds.asVector(), settings_.sampler_type, settings_.tsr_resolution);
+            path_samplers.push_back([tsr, sampler, this]() {
                 IKSolution result;
-                for (auto tsr_values : sampler->getSamples(settings.t_space_batch_size))
+                for (auto tsr_values : sampler->getSamples(settings_.t_space_batch_size))
                 {
-                    for (auto q : ik_fun(tsr.valuesToPose(tsr_values), {}))
+                    for (auto q : robot_.ik(tsr.valuesToPose(tsr_values), {}))
                     {
-                        if (is_valid_fun(q))
+                        if (robot_.isValid(q))
                             result.push_back(q);
                     }
                 }
@@ -141,14 +158,14 @@ Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& re
 
     // sample valid joint positions along the path
     std::vector<std::vector<JointPositions>> graph_data;
-    if (settings.sampler_type == SamplerType::GRID)
+    if (settings_.sampler_type == SamplerType::GRID)
     {
         graph_data = sampleGlobalGrid(path_samplers);
     }
     else
     {
         auto start = std::chrono::steady_clock::now();
-        graph_data = sampleGlobalIncremental(path_samplers, settings);
+        graph_data = sampleGlobalIncremental(path_samplers);
         auto stop = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsed_seconds = stop - start;
         std::cout << "Sampling time: " << elapsed_seconds.count() << "\n";
@@ -202,6 +219,12 @@ Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& re
     {
         return Solution{ true, path, path_nodes.back()->dist };
     }
-}  // namespace ocpl
+}
+
+Solution UnifiedPlanner::solve(const std::vector<TSR>& task)
+{
+    std::vector<Bounds> red_joint_limits(robot_.joint_limits.begin(), robot_.joint_limits.begin() + robot_.num_red_dof);
+    return _solve(task, red_joint_limits, L2NormDiff2, zeroStateCost);
+}
 
 }  // namespace ocpl
