@@ -156,11 +156,26 @@ Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& re
         }
     }
 
+    // Give the nodes correct waypoint indices.
+    for (std::size_t index{ 0 }; index < nodes.size(); ++index)
+    {
+        for (auto& n : nodes[index])
+            n->waypoint_index = index;
+    }
+
     // convert the path cost function to something that can work with NodePtr instead of JointPositions
     auto path_cost = [path_cost_fun](NodePtr n1, NodePtr n2) { return path_cost_fun(n1->data, n2->data); };
 
+    // DAGraph graph(nodes);
+
+    // test out tree
+    auto sample_f = [&nodes](const NodePtr& node, size_t /* num_samples */) {
+        return nodes.at(node->waypoint_index + 1);
+    };
+    Tree graph(sample_f, nodes.size(), nodes.at(0));
+
     // Find the shortest path in this structured array of nodes
-    auto path_nodes = shortest_path_dag(nodes, path_cost);
+    auto path_nodes = shortest_path_dag(graph, path_cost);
 
     std::vector<JointPositions> path;
     for (NodePtr n : path_nodes)

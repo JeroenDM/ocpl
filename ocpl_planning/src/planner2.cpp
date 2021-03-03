@@ -293,7 +293,7 @@ std::vector<JointPositions> Planner2::search_global(BaseContainer& A)
     auto graph_data = createRoadMap();
 
     // convert graph_data into roadmap with vertices
-    DAGraph graph(task_.size());
+    std::vector<std::vector<VerticePtr>> graph(task_.size());
     for (size_t k{ 0 }; k < task_.size(); ++k)
     {
         graph[k].resize(graph_data[k].size());

@@ -152,13 +152,13 @@ int main(int argc, char** argv)
     // Create task
     //////////////////////////////////
     // 2P 3R robot case
-    auto regions = createCase1bis();
-    // JointLimits joint_limits{ { 2.0, 3.0 }, { 0.0, 0.9 } };  // joint limits for the redundant joints
-    JointLimits joint_limits{ { 2.0, 3.0 }, { -2.0, 1.0 } };  // joint limits for the redundant joints
+    // auto regions = createCase1bis();
+    // // JointLimits joint_limits{ { 2.0, 3.0 }, { 0.0, 0.9 } };  // joint limits for the redundant joints
+    // JointLimits joint_limits{ { 2.0, 3.0 }, { -2.0, 1.0 } };  // joint limits for the redundant joints
 
     // small passage case
-    // auto regions = createCase2(20);
-    // JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
+    auto regions = createCase2(20);
+    JointLimits joint_limits{ { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };  // for redundant joints
 
     // 8 dof zig zag case
     // auto regions = createCase3();
@@ -223,8 +223,8 @@ int main(int argc, char** argv)
     // ps.tsr_resolution = { 5, 1, 1, 1, 1, 32 };
     // ps.redundant_joints_resolution = { 10, 9 };
     ps.tsr_resolution = { 1, 1, 1, 1, 1, 100 };
-    ps.redundant_joints_resolution = { 10, 50 };
-    // ps.redundant_joints_resolution = { 6, 6, 6 };
+    // ps.redundant_joints_resolution = { 10, 50 };
+    ps.redundant_joints_resolution = { 6, 6, 6 };
 
     // solve it!
     // Solution solution = solve(regions, joint_limits, ik_fun, is_valid_fun, path_cost_fun, state_cost_fun, ps);

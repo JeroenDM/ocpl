@@ -18,7 +18,20 @@ struct compareNodesFunction
     }
 };
 
-std::vector<NodePtr> _extract_path(NodePtr goal)
+const std::vector<NodePtr>& DAGraph::getNeighbors(const NodePtr& node)
+{
+    return nodes_.at(node->waypoint_index + 1);
+}
+const std::vector<NodePtr>& DAGraph::getStartNodes()
+{
+    return nodes_.at(0);
+}
+const bool DAGraph::isGoal(const NodePtr& node) const
+{
+    return node->waypoint_index == (num_waypoints_ - 1);
+}
+
+std::vector<NodePtr> DAGraph::extract_solution(const NodePtr& goal) const
 {
     std::vector<NodePtr> path;
     path.push_back(goal);
@@ -39,8 +52,83 @@ std::vector<NodePtr> _extract_path(NodePtr goal)
     return path;
 }
 
-std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& nodes,
-                                       std::function<double(const NodePtr, const NodePtr)> cost_function)
+std::vector<NodePtr> DAGraph::extract_partial_solution() const
+{
+    for (std::size_t pi{ nodes_.size() - 1 }; pi >= 0; --pi)
+    {
+        auto pt_nodes = nodes_[pi];
+        auto node_iter = std::min_element(pt_nodes.begin(), pt_nodes.end(),
+                                          [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
+        if (node_iter != pt_nodes.end() && (*node_iter)->parent != nullptr)
+        {
+            std::cout << "Found partial path up until pt index: " << pi << ".\n";
+            return extract_solution(*node_iter);
+        }
+    }
+    std::cout << "Also could not extract partial solution.\n";
+    return {};
+}
+
+/** Tree implementation **/
+const std::vector<NodePtr>& Tree::getNeighbors(const NodePtr& node)
+{
+    if (sample_locally_)
+    {
+        // override previous samples for the sampled waypoint
+        nodes_.at(node->waypoint_index + 1) = sample_fun_(node, 300);
+    }
+    return nodes_.at(node->waypoint_index + 1);
+}
+const std::vector<NodePtr>& Tree::getStartNodes()
+{
+    return nodes_.at(0);
+}
+const bool Tree::isGoal(const NodePtr& node) const
+{
+    return node->waypoint_index == (num_waypoints_ - 1);
+}
+
+std::vector<NodePtr> Tree::extract_solution(const NodePtr& goal) const
+{
+    std::vector<NodePtr> path;
+    path.push_back(goal);
+    NodePtr node = goal;
+    while (true)
+    {
+        if (node->parent == nullptr)
+        {
+            break;
+        }
+        else
+        {
+            node = node->parent;
+            path.insert(path.begin(), node);
+        }
+    }
+
+    return path;
+}
+
+std::vector<NodePtr> Tree::extract_partial_solution() const
+{
+    for (std::size_t pi{ nodes_.size() - 1 }; pi >= 0; --pi)
+    {
+        auto pt_nodes = nodes_[pi];
+        auto node_iter = std::min_element(pt_nodes.begin(), pt_nodes.end(),
+                                          [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
+        if (node_iter != pt_nodes.end() && (*node_iter)->parent != nullptr)
+        {
+            std::cout << "Found partial path up until pt index: " << pi << ".\n";
+            return extract_solution(*node_iter);
+        }
+    }
+    std::cout << "Also could not extract partial solution.\n";
+    return {};
+}
+
+/** Graph traversal algorithm **/
+
+std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const NodePtr, const NodePtr)> cost_function)
 {
     // std::priority_queue<NodePtr, std::vector<NodePtr>, compareNodesFunction> Q;
 
@@ -51,14 +139,7 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
     // PriorityStackContainer<NodePtr> Q(nodes.size(), d_fun);
     OcplPriorityQueueContainer<NodePtr> Q(d_fun);
 
-    const std::vector<NodePtr>& start_nodes = nodes.front();
-
-    // Give the nodes correct waypoint indices to do fast nearest neighbor search.
-    for (std::size_t index{ 0 }; index < nodes.size(); ++index)
-    {
-        for (auto& n : nodes[index])
-            n->waypoint_index = index;
-    }
+    const std::vector<NodePtr>& start_nodes = graph.getStartNodes();
 
     // Add the starting nodes to the queue.
     for (auto start_node : start_nodes)
@@ -81,13 +162,13 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
 
         // A goal if found, when using a priority queue this should also be the goal
         // that gives the shortest path
-        if (current_node->waypoint_index == (nodes.size() - 1))
+        if (graph.isGoal(current_node))
         {
             goal_reached = true;
             break;
         }
 
-        const std::vector<NodePtr>& neighbors = nodes.at(current_node->waypoint_index + 1);
+        const std::vector<NodePtr>& neighbors = graph.getNeighbors(current_node);
 
         // the costs can be calculated in parallel
         // this can improve speed for complex cost functions
@@ -116,29 +197,12 @@ std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& 
     if (!goal_reached)
     {
         std::cout << "None of the goals are reached in graph search.\n";
-        return _extract_partial_solution(nodes);
+        return graph.extract_partial_solution();
     }
 
     assert(current_node != nullptr);
 
-    return _extract_path(current_node);
-}
-
-std::vector<NodePtr> _extract_partial_solution(const std::vector<std::vector<NodePtr>>& nodes)
-{
-    for (std::size_t pi{ nodes.size() - 1 }; pi >= 0; --pi)
-    {
-        auto pt_nodes = nodes[pi];
-        auto node_iter = std::min_element(pt_nodes.begin(), pt_nodes.end(),
-                                          [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
-        if (node_iter != pt_nodes.end() && (*node_iter)->parent != nullptr)
-        {
-            std::cout << "Found partial path up until pt index: " << pi << ".\n";
-            return _extract_path(*node_iter);
-        }
-    }
-    std::cout << "Also could not extract partial solution.\n";
-    return {};
+    return graph.extract_solution(current_node);
 }
 
 std::ostream& operator<<(std::ostream& os, const Node& node)

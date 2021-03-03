@@ -42,12 +42,79 @@ struct Node
 };
 typedef std::shared_ptr<Node> NodePtr;
 
-std::vector<NodePtr> _extract_path(NodePtr goal);
-std::vector<NodePtr> _extract_partial_solution(const std::vector<std::vector<NodePtr>>& nodes);
+class Graph
+{
+  protected:
+    bool sample_locally_{ true };
+
+  public:
+    virtual const std::vector<NodePtr>& getNeighbors(const NodePtr& node) = 0;
+    virtual const std::vector<NodePtr>& getStartNodes() = 0;
+    virtual const bool isGoal(const NodePtr& node) const = 0;
+    virtual size_t size() const = 0;
+
+    virtual std::vector<NodePtr> extract_solution(const NodePtr& goal) const = 0;
+    virtual std::vector<NodePtr> extract_partial_solution() const = 0;
+    virtual void setSampleLocally(bool value)
+    {
+        sample_locally_ = value;
+    };
+};
+
+class DAGraph : public Graph
+{
+    std::vector<std::vector<NodePtr>> nodes_;
+    size_t num_waypoints_;
+
+  public:
+    DAGraph(std::vector<std::vector<NodePtr>>& nodes) : nodes_(nodes), num_waypoints_(nodes.size())
+    {
+    }
+    ~DAGraph() = default;
+
+    virtual const std::vector<NodePtr>& getNeighbors(const NodePtr& node) override;
+    virtual const std::vector<NodePtr>& getStartNodes() override;
+    virtual const bool isGoal(const NodePtr& node) const override;
+    virtual size_t size() const override
+    {
+        return num_waypoints_;
+    }
+
+    virtual std::vector<NodePtr> extract_solution(const NodePtr& goal) const override;
+    virtual std::vector<NodePtr> extract_partial_solution() const override;
+};
+
+typedef std::function<std::vector<NodePtr>(const NodePtr& node, size_t num_samples)> SampleFun;
+
+class Tree : public Graph
+{
+    SampleFun sample_fun_;
+    size_t num_waypoints_;
+    std::vector<std::vector<NodePtr>> nodes_;
+
+  public:
+    Tree(SampleFun sample_fun, size_t num_waypoints, std::vector<NodePtr> start_nodes)
+      : sample_fun_(sample_fun), num_waypoints_(num_waypoints)
+    {
+        nodes_.resize(num_waypoints);
+        nodes_.at(0) = start_nodes;
+    }
+    ~Tree() = default;
+
+    virtual const std::vector<NodePtr>& getNeighbors(const NodePtr& node) override;
+    virtual const std::vector<NodePtr>& getStartNodes() override;
+    virtual const bool isGoal(const NodePtr& node) const override;
+    virtual size_t size() const override
+    {
+        return num_waypoints_;
+    }
+
+    virtual std::vector<NodePtr> extract_solution(const NodePtr& goal) const override;
+    virtual std::vector<NodePtr> extract_partial_solution() const override;
+};
 
 /** \brief Find shortest path in a directed acyclic graph. **/
-std::vector<NodePtr> shortest_path_dag(const std::vector<std::vector<NodePtr>>& nodes,
-                                       std::function<double(const NodePtr, const NodePtr)> cost_function);
+std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const NodePtr, const NodePtr)> cost_function);
 
 std::ostream& operator<<(std::ostream& os, const Node& node);
 
