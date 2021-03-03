@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <ocpl_planning/types.h>
+#include <ocpl_planning/planner_base.h>  // PlannerSettings
 #include <ocpl_planning/numpy_io.h>
 
 namespace ocpl

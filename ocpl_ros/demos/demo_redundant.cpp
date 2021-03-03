@@ -11,7 +11,7 @@
 #include <ocpl_sampling/random_sampler.h>
 #include <ocpl_tsr/task_space_regions.h>
 
-#include <ocpl_planning/planners.h>
+#include <ocpl_planning/acro_planner.h>
 #include <ocpl_planning/factories.h>
 #include <ocpl_planning/cost_functions.h>
 

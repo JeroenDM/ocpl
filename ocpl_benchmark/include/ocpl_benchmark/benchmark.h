@@ -4,7 +4,7 @@
 
 #include <ocpl_tsr/task_space_regions.h>
 #include <ocpl_planning/types.h>
-#include <ocpl_planning/planners.h>
+#include <ocpl_planning/planner_base.h>
 #include <ocpl_planning/oriolo.h>
 #include <ocpl_planning/planner2.h>
 

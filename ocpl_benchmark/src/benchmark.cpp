@@ -7,7 +7,7 @@
 
 #include <ocpl_tsr/task_space_regions.h>
 #include <ocpl_planning/types.h>
-#include <ocpl_planning/planners.h>
+#include <ocpl_planning/acro_planner.h>
 
 namespace ocpl
 {

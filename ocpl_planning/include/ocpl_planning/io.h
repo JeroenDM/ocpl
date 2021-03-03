@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <ocpl_planning/types.h>
+#include <ocpl_planning/planner_base.h>  // PlannerSettings
 
 namespace ocpl
 {

@@ -5,24 +5,11 @@
 
 #include <ocpl_graph/tree.h>
 #include <ocpl_tsr/task_space_regions.h>
-#include <ocpl_planning/cost_functions.h>
 #include <ocpl_planning/types.h>
+#include <ocpl_planning/planner_base.h>
 
 namespace ocpl
 {
-class Planner
-{
-  protected:
-    const std::string name_;
-    Robot robot_;
-
-  public:
-    Planner(const std::string& name, const Robot& robot);
-    ~Planner() = default;
-
-    virtual Solution solve(const std::vector<TSR>& task) = 0;
-};
-
 class UnifiedPlanner : public Planner
 {
     PlannerSettings settings_;

@@ -12,7 +12,7 @@
 
 #include <ocpl_tsr/task_space_regions.h>
 #include <ocpl_sampling/sampler.h>
-#include <ocpl_planning/planners.h>
+#include <ocpl_planning/planner_base.h>
 #include <mutex>
 
 namespace ocpl
