@@ -15,8 +15,11 @@ Planner::Planner(const std::string& name, const Robot& robot) : name_(name), rob
 {
 }
 
+/************************************************************************
+ * GLOBAL SAMPLING
+ * **********************************************************************/
 std::vector<std::vector<JointPositions>>
-createCSpaceGraphIncrementally(std::vector<std::function<IKSolution()>> path_samplers, const PlannerSettings& settings)
+sampleGlobalIncremental(std::vector<std::function<IKSolution()>> path_samplers, const PlannerSettings& settings)
 {
     std::vector<std::vector<JointPositions>> graph_data;
     graph_data.resize(path_samplers.size());
@@ -49,7 +52,7 @@ createCSpaceGraphIncrementally(std::vector<std::function<IKSolution()>> path_sam
     return graph_data;
 }
 
-std::vector<std::vector<JointPositions>> createCSpaceGraphGrid(std::vector<std::function<IKSolution()>> path_samplers)
+std::vector<std::vector<JointPositions>> sampleGlobalGrid(std::vector<std::function<IKSolution()>> path_samplers)
 {
     std::vector<std::vector<JointPositions>> graph_data;
     graph_data.resize(path_samplers.size());
@@ -67,6 +70,13 @@ std::vector<std::vector<JointPositions>> createCSpaceGraphGrid(std::vector<std::
     return graph_data;
 }
 
+/************************************************************************
+ * LOCAL SAMPLING
+ * **********************************************************************/
+
+/************************************************************************
+ * SOLVE
+ * **********************************************************************/
 Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits,
                std::function<IKSolution(const Transform&, const JointPositions&)> ik_fun,
                std::function<bool(const JointPositions&)> is_valid_fun,
@@ -133,12 +143,12 @@ Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& re
     std::vector<std::vector<JointPositions>> graph_data;
     if (settings.sampler_type == SamplerType::GRID)
     {
-        graph_data = createCSpaceGraphGrid(path_samplers);
+        graph_data = sampleGlobalGrid(path_samplers);
     }
     else
     {
         auto start = std::chrono::steady_clock::now();
-        graph_data = createCSpaceGraphIncrementally(path_samplers, settings);
+        graph_data = sampleGlobalIncremental(path_samplers, settings);
         auto stop = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsed_seconds = stop - start;
         std::cout << "Sampling time: " << elapsed_seconds.count() << "\n";

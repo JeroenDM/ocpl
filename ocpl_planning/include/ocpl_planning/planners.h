@@ -23,10 +23,12 @@ class Planner
     virtual Solution solve(const std::vector<TSR>& task) = 0;
 };
 
+/** \brief Global incremental sampling for all waypoints. **/
 std::vector<std::vector<JointPositions>>
-createCSpaceGraphIncrementally(std::vector<std::function<IKSolution()>> path_samplers, const PlannerSettings& settings);
+sampleGlobalIncremental(std::vector<std::function<IKSolution()>> path_samplers, const PlannerSettings& settings);
 
-std::vector<std::vector<JointPositions>> createCSpaceGraphGrid(std::vector<std::function<IKSolution()>> path_samplers);
+/** \brief Sample on global uniform grid. **/
+std::vector<std::vector<JointPositions>> sampleGlobalGrid(std::vector<std::function<IKSolution()>> path_samplers);
 
 Solution solve(const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits,
                std::function<IKSolution(const Transform&, const JointPositions&)> ik_fun,
