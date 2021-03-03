@@ -68,9 +68,20 @@ ocpl::SamplerPtr createLocalSampler(size_t dimensions, double max_deviation, Sam
     std::vector<Bounds> bounds;
     for (size_t i{ 0 }; i < dimensions; ++i)
     {
-        bounds.push_back({-max_deviation, max_deviation});
+        bounds.push_back({ -max_deviation, max_deviation });
     }
     return createIncrementalSampler(bounds, type);
+}
+
+ocpl::SamplerPtr createLocalSampler(size_t dimensions, double max_deviation, SamplerType type,
+                                    const std::vector<int>& num_samples)
+{
+    std::vector<Bounds> bounds;
+    for (size_t i{ 0 }; i < dimensions; ++i)
+    {
+        bounds.push_back({ -max_deviation, max_deviation });
+    }
+    return createSampler(bounds, type, num_samples);
 }
 
 }  // namespace ocpl

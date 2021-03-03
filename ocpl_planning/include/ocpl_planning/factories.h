@@ -13,4 +13,5 @@ SamplerPtr createGridSampler(const std::vector<Bounds> bounds, const std::vector
 SamplerPtr createIncrementalSampler(const std::vector<Bounds> bounds, SamplerType type);
 
 ocpl::SamplerPtr createLocalSampler(size_t dimensions, double max_deviation, SamplerType type);
+ocpl::SamplerPtr createLocalSampler(size_t dimensions, double max_deviation, SamplerType type, const std::vector<int>& num_samples);
 }  // namespace ocpl

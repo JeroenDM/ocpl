@@ -34,7 +34,8 @@ struct Vertice
 };
 typedef std::shared_ptr<Vertice> VerticePtr;
 
-inline const std::vector<VerticePtr>& getNeighbors(const std::vector<std::vector<VerticePtr>>& graph, const VerticePtr& vertice)
+inline const std::vector<VerticePtr>& getNeighbors(const std::vector<std::vector<VerticePtr>>& graph,
+                                                   const VerticePtr& vertice)
 {
     assert(vertice->waypoint + 1 < graph.size());
     return graph[vertice->waypoint + 1];
@@ -73,5 +74,11 @@ struct Solution
     bool success;
     std::vector<JointPositions> path;
     double cost{ 0.0 };
+};
+
+enum class PlannerType
+{
+    GLOBAL,
+    LOCAL
 };
 }  // namespace ocpl

@@ -205,30 +205,33 @@ int main(int argc, char** argv)
     // settings to select a planner
     PlannerSettings ps;
     ps.is_redundant = true;
-    // ps.sampler_type = SamplerType::HALTON;
-    // ps.t_space_batch_size = 10;
-    // ps.c_space_batch_size = 100;
-    // ps.min_valid_samples = 50;
-    // ps.max_iters = 200;
+    ps.sampler_type = SamplerType::HALTON;
+    ps.t_space_batch_size = 10;
+    ps.c_space_batch_size = 100;
+    ps.min_valid_samples = 50;
+    ps.max_iters = 200;
 
-    ps.sampler_type = SamplerType::GRID;
-    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
-    // ps.redundant_joints_resolution = std::vector<int>(redundant_joint_limits.size(), 6);
+    ps.type = PlannerType::LOCAL;
 
-    //////////////////////////////////
-    // Planners
-    //////////////////////////////////
-    // case 1
+    // ps.sampler_type = SamplerType::GRID;
+    // // ps.tsr_resolution = { 1, 1, 1, 1, 1, 30 };
+    // // ps.redundant_joints_resolution = std::vector<int>(redundant_joint_limits.size(), 6);
+
+    // //////////////////////////////////
+    // // Planners
+    // //////////////////////////////////
+    // // case 1
     // ps.tsr_resolution = { 5, 1, 1, 1, 1, 32 };
-    // ps.redundant_joints_resolution = { 10, 9 };
+    // // ps.redundant_joints_resolution = { 10, 9 };
     ps.tsr_resolution = { 1, 1, 1, 1, 1, 100 };
-    // ps.redundant_joints_resolution = { 10, 50 };
+    // // ps.redundant_joints_resolution = { 10, 50 };
     ps.redundant_joints_resolution = { 6, 6, 6 };
 
     // solve it!
     // Solution solution = solve(regions, joint_limits, ik_fun, is_valid_fun, path_cost_fun, state_cost_fun, ps);
 
     UnifiedPlanner planner(bot, ps);
+    std::reverse(regions.begin(), regions.end());
     Solution solution = planner.solve(regions);
 
     if (solution.success)

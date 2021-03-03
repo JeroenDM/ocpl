@@ -2,7 +2,6 @@
 
 #include <ocpl_graph/tree.h>
 #include <ocpl_planning/cost_functions.h>
-#include <ocpl_planning/factories.h>
 
 #include <algorithm>
 #include <iostream>
@@ -10,70 +9,11 @@
 
 namespace ocpl
 {
-
-
-/************************************************************************
- * SOLVE
- * **********************************************************************/
-Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits,
-                                std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
-                                std::function<double(const TSR&, const JointPositions&)> state_cost_fun)
+std::vector<std::vector<NodePtr>> UnifiedPlanner::createGlobalRoadmap(
+    const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits,
+    std::function<double(const TSR&, const JointPositions&)> state_cost_fun)
 {
-    // create the path samplers
-    std::vector<std::function<IKSolution()>> path_samplers;
-
-    if (settings_.is_redundant && redundant_joint_limits.empty())
-        std::cout << "The robot is marked redundant, but the joint limits for the redundant joints are not "
-                     "specified...\n";
-
-    if (!settings_.is_redundant && redundant_joint_limits.size() > 0)
-        std::cout << "The robot is not marked redundant, but joint limits for redundant joints where given.\n";
-
-    if (settings_.is_redundant)
-    {
-        for (auto tsr : task_space_regions)
-        {
-            SamplerPtr t_sampler = createSampler(tsr.bounds.asVector(), settings_.sampler_type, settings_.tsr_resolution);
-            SamplerPtr c_sampler =
-                createSampler(redundant_joint_limits, settings_.sampler_type, settings_.redundant_joints_resolution);
-            path_samplers.push_back(
-                [tsr, redundant_joint_limits, t_sampler, c_sampler, this]() {
-                    IKSolution result;
-                    for (auto tsr_values : t_sampler->getSamples(settings_.t_space_batch_size))
-                    {
-                        for (auto q_red : c_sampler->getSamples(settings_.c_space_batch_size))
-                        {
-                            for (auto q : robot_.ik(tsr.valuesToPose(tsr_values), q_red))
-                            {
-                                if (robot_.isValid(q))
-                                    result.push_back(q);
-                            }
-                        }
-                    }
-
-                    return result;
-                });
-        }
-    }
-    else
-    {
-        for (const TSR& tsr : task_space_regions)
-        {
-            SamplerPtr sampler = createSampler(tsr.bounds.asVector(), settings_.sampler_type, settings_.tsr_resolution);
-            path_samplers.push_back([tsr, sampler, this]() {
-                IKSolution result;
-                for (auto tsr_values : sampler->getSamples(settings_.t_space_batch_size))
-                {
-                    for (auto q : robot_.ik(tsr.valuesToPose(tsr_values), {}))
-                    {
-                        if (robot_.isValid(q))
-                            result.push_back(q);
-                    }
-                }
-                return result;
-            });
-        }
-    }
+    auto path_samplers = createGlobalWaypointSamplers(task_space_regions, redundant_joint_limits);
 
     // sample valid joint positions along the path
     std::vector<std::vector<JointPositions>> graph_data;
@@ -90,7 +30,7 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
         std::cout << "Sampling time: " << elapsed_seconds.count() << "\n";
     }
 
-    // Convert the end-effector poses to Nodes, so we can search for the shortest path
+    // Convert the end-effector poses to Nodes, which is the desired output format for the getNeighbor function
     // can also be done in parallel if state cost function is heavy
     std::vector<std::vector<NodePtr>> nodes;
     nodes.resize(path_samplers.size());
@@ -109,19 +49,74 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
             n->waypoint_index = index;
     }
 
+    return nodes;
+}
+
+/************************************************************************
+ * SOLVE
+ * **********************************************************************/
+Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits,
+                                std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
+                                std::function<double(const TSR&, const JointPositions&)> state_cost_fun)
+{
+    if (settings_.is_redundant && redundant_joint_limits.empty())
+        std::cout << "The robot is marked redundant, but the joint limits for the redundant joints are not "
+                     "specified...\n";
+
+    if (!settings_.is_redundant && redundant_joint_limits.size() > 0)
+        std::cout << "The robot is not marked redundant, but joint limits for redundant joints where given.\n";
+
+    initializeTaskSpaceSamplers(task_space_regions.at(0).bounds.asVector());
+
     // convert the path cost function to something that can work with NodePtr instead of JointPositions
     auto path_cost = [path_cost_fun](NodePtr n1, NodePtr n2) { return path_cost_fun(n1->data, n2->data); };
 
-    // DAGraph graph(nodes);
+    std::vector<NodePtr> path_nodes;
+    if (settings_.type == PlannerType::GLOBAL)
+    {
+        auto nodes = createGlobalRoadmap(task_space_regions, redundant_joint_limits, state_cost_fun);
 
-    // test out tree
-    auto sample_f = [&nodes](const NodePtr& node, size_t /* num_samples */) {
-        return nodes.at(node->waypoint_index + 1);
-    };
-    Tree graph(sample_f, nodes.size(), nodes.at(0));
+        // Wrap this nodes in a nearest getNeighbor function that the graph search needs
+        auto sample_f = [&nodes](const NodePtr& node, size_t /* num_samples */) {
+            return nodes.at(node->waypoint_index + 1);
+        };
+        Tree graph(sample_f, nodes.size(), nodes.at(0));
 
-    // Find the shortest path in this structured array of nodes
-    auto path_nodes = shortest_path_dag(graph, path_cost);
+        // Find the shortest path in this structured array of nodes
+        path_nodes = shortest_path_dag(graph, path_cost);
+    }
+    else
+    {
+        // create local biased samplers for all path points
+        std::vector<std::function<IKSolution(const JointPositions&)>> local_samplers;
+        for (size_t wp{ 0 }; wp < task_space_regions.size(); ++wp)
+        {
+            local_samplers.push_back([wp, task_space_regions, this](const JointPositions& q_bias) {
+                return sample(wp, q_bias, task_space_regions);
+            });
+        }
+
+        auto sample_f = [local_samplers, state_cost_fun, task_space_regions, this](const NodePtr& node,
+                                                                                   size_t /* num_samples */) {
+            auto q_samples = sampleLocalIncremental(node->data, local_samplers[node->waypoint_index + 1]);
+            std::vector<NodePtr> nodes;
+            for (const JointPositions& q : q_samples)
+            {
+                nodes.push_back(std::make_shared<Node>(q, state_cost_fun(task_space_regions[node->waypoint_index], q)));
+                nodes.back()->waypoint_index = node->waypoint_index + 1;
+            }
+            std::cout << "locally sampling point " << node->waypoint_index << ". Found " << nodes.size() << " samples\n";
+            return nodes;
+        };
+
+        std::vector<NodePtr> start_nodes =
+            (createGlobalRoadmap({ task_space_regions.at(0) }, redundant_joint_limits, state_cost_fun)).at(0);
+        std::cout << "local planner found " << start_nodes.size() << " start nodes.\n";
+        Tree graph(sample_f, task_space_regions.size(), start_nodes);
+
+        // Find the shortest path in this structured array of nodes
+        path_nodes = shortest_path_dag(graph, path_cost);
+    }
 
     std::vector<JointPositions> path;
     for (NodePtr n : path_nodes)

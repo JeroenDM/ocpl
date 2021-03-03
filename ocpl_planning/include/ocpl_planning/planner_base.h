@@ -42,6 +42,11 @@ struct PlannerSettings
 
     /** How many iterations can we try to find valid samples before giving up. **/
     int max_iters{ 50 };
+
+    double cspace_delta{ 0.1 };
+    double tspace_delta{ 0.1 };
+
+    PlannerType type{ PlannerType::GLOBAL };
 };
 
 class Planner

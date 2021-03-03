@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cmath>  // isnan
 #include <cassert>
+#include <chrono>
 
 #include <ocpl_graph/containers.h>
 
@@ -135,9 +136,9 @@ std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const 
     // auto d_fun = [](const NodePtr& a, const NodePtr& b) { return math::norm2Diff(a->data, b->data); };
     auto d_fun = [](const NodePtr& a, const NodePtr& b) { return b->dist < a->dist; };
 
-    // StackContainer<NodePtr> Q;
+    StackContainer<NodePtr> Q;
     // PriorityStackContainer<NodePtr> Q(nodes.size(), d_fun);
-    OcplPriorityQueueContainer<NodePtr> Q(d_fun);
+    // OcplPriorityQueueContainer<NodePtr> Q(d_fun);
 
     const std::vector<NodePtr>& start_nodes = graph.getStartNodes();
 
@@ -154,8 +155,16 @@ std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const 
     NodePtr current_node{ nullptr };
     bool goal_reached{ false };
 
+    auto start = std::chrono::system_clock::now();
+    std::chrono::seconds timeout(5);
     while (!Q.empty())
     {
+        auto current = std::chrono::system_clock::now();
+        if ((current - start) > timeout)
+        {
+            std::cout << "Maximum planning time reached.\n";
+            break;
+        }
         // current_node = Q.top();
         // Q.pop();
         current_node = Q.pop();
