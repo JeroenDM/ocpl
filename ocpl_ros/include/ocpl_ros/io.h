@@ -18,7 +18,7 @@ namespace impl
 {
 const std::string THIS_PACKAGE_NAME{ "ocpl_ros" };
 const std::string REL_PATH_DATA{ "/data/" };
-const std::regex LINE_REGEX{ "^[^:]+: [^:]+$" };
+const std::regex LINE_REGEX{ "^[^:]+: [^:]+$" }; // match key-value pairs seperated by ": "
 
 std::pair<std::string, std::string> proccessLine(const std::string& line)
 {
@@ -59,6 +59,40 @@ SettingsMap readSettingsFile(const std::string& filename)
     }
 
     return result;
+}
+
+std::string findOrDefault(const SettingsMap& map, const std::string& key, const std::string& default_value)
+{
+    auto entry = map.find(key);
+    if (entry != map.end())
+        return entry->second;
+    else
+        return default_value;
+}
+
+size_t findOrDefault(const SettingsMap& map, const std::string& key, const size_t default_value)
+{
+    auto entry = map.find(key);
+    if (entry != map.end())
+        return std::stoi(entry->second);
+    else
+        return default_value;
+}
+
+double findOrDefault(const SettingsMap& map, const std::string& key, const double default_value)
+{
+    auto entry = map.find(key);
+    if (entry != map.end())
+        return std::stod(entry->second);
+    else
+        return default_value;
+}
+
+std::ostream& operator<<(std::ostream& os, const JointPositions& q)
+{
+    for (auto qi : q)
+        os << qi << ", ";
+    return os;
 }
 
 }  // namespace ocpl
