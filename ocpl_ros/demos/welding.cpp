@@ -14,6 +14,9 @@
 #include <ocpl_planning/cost_functions.h>
 #include <ocpl_planning/types.h>
 
+#include <ocpl_ros/planning_cases/puzzle.h>
+#include <ocpl_ros/planning_cases/teapot.h>
+
 // ROS Trajectory Action server definition
 #include <control_msgs/FollowJointTrajectoryAction.h>
 // Means by which we communicate with above action-server
@@ -32,31 +35,6 @@ void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& 
             robot.plot(rviz.visual_tools_, q, rviz_visual_tools::DEFAULT);
         ros::Duration(dt).sleep();
     }
-}
-
-
-
-std::vector<TSR> createLineTask(TSRBounds bounds, Eigen::Vector3d start, Eigen::Vector3d stop,
-                                Eigen::Isometry3d orientation, std::size_t num_points)
-{
-    std::vector<TSR> task;
-    Transform tf(orientation);
-    tf.translation() = start;
-
-    Eigen::Vector3d direction = (stop - start).normalized();
-
-    double step = (stop - start).norm() / num_points;
-    for (int i{ 0 }; i < num_points; ++i)
-    {
-        tf.translation() += step * direction;
-        task.push_back({ tf, bounds });
-    }
-    return task;
-}
-
-inline double deg2rad(double deg)
-{
-    return deg * M_PI / 180.0;
 }
 
 int main(int argc, char** argv)
@@ -119,25 +97,8 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // glass of water
     //////////////////////////////////
-    TSRBounds bounds{ { 0.0, 0.0 }, { 0, 0 }, { -0.05, 0.05 }, { -1.3, 1.3 }, { 0, 0 }, { 0.0, 0.0 } };
-
-    Eigen::Isometry3d ori(AngleAxisd(deg2rad(90), Vector3d::UnitY()) * AngleAxisd(deg2rad(-90), Vector3d::UnitX()));
-    Eigen::Vector3d start(0.98, 0.0, 0.8);
-
-    Transform tf(ori);
-    tf.translation() = start;
-
-    const std::size_t num_points{ 30 };
-    const double total_distance = 1.1;
-    double step = total_distance / num_points;
-
-    std::vector<TSR> task;
-    for (int i{ 0 }; i < num_points; ++i)
-    {
-        tf = tf * Eigen::AngleAxisd(step, Eigen::Vector3d::UnitY());
-        task.push_back(TSR{ tf, bounds });
-        task.back().local_ = false;
-    }
+    auto task = teapot::waypoints();
+    auto bounds = teapot::tsrBounds();
 
     EigenSTL::vector_Vector3d visual_path;
     int skipper{ 0 };
@@ -199,12 +160,12 @@ int main(int argc, char** argv)
         s = 1.0 * deg2rad(s);
     }
     // welding speed 10 cm / seconde? 0.1 m/s
-    const double welding_speed{ 0.1 };
-    const double dt = (total_distance / welding_speed) / num_points;
+    // const double welding_speed{ 0.1 };
+    // const double dt = (total_distance / welding_speed) / num_points;
 
-    std::cout << "distance: " << total_distance << "\n";
-    std::cout << "dt: " << dt << "\n";
-    std::cout << "max dq: " << dt * max_joint_speed[0] << "\n";
+    // std::cout << "distance: " << total_distance << "\n";
+    // std::cout << "dt: " << dt << "\n";
+    // std::cout << "max dq: " << dt * max_joint_speed[0] << "\n";
 
     // specify an objective to minimize the cost along the path
     // here we use a predefined function that uses the L1 norm of the different

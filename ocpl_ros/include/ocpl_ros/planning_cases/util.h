@@ -24,3 +24,8 @@ std::vector<ocpl::TSR> createLineTask(ocpl::TSRBounds bounds, Eigen::Vector3d st
     }
     return task;
 }
+
+inline double deg2rad(double deg)
+{
+    return deg * M_PI / 180.0;
+}
