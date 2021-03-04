@@ -84,6 +84,13 @@ class MoveItRobot
     bool isPathColliding(const JointPositions& q_from, const JointPositions& q_to, int steps) const;
     void plot(moveit_visual_tools::MoveItVisualToolsPtr mvt, JointPositions& joint_pose,
               const rviz_visual_tools::colors& color = rviz_visual_tools::DEFAULT);
+
+    /** Show the different robot poses along the path with a short delay in between.
+     * 
+     * When a configuration is colliding, it is shown red. Otherwise it is shown green.
+     * **/
+    void animatePath(moveit_visual_tools::MoveItVisualToolsPtr mvt,
+                                  const std::vector<JointPositions>& path);
     std::size_t getNumDof()
     {
         return num_dof_;

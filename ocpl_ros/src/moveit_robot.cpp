@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include <ocpl_planning/math.h> // interpolate
+#include <ocpl_planning/math.h>  // interpolate
 
 namespace ocpl
 {
@@ -74,7 +74,8 @@ MoveItRobot::MoveItRobot(const std::string& tcp_frame) : tcp_frame_(tcp_frame)
 // {
 //     //
 //     //  ps->setActiveCollisionDetector(collision_detection::CollisionDetectorAllocatorHybrid::create(), true);
-//     planning_scene_->setActiveCollisionDetector(collision_detection::CollisionDetectorAllocatorHybrid::create(), true);
+//     planning_scene_->setActiveCollisionDetector(collision_detection::CollisionDetectorAllocatorHybrid::create(),
+//     true);
 
 //     // CHOMP code
 //     std::vector<std::string> cd_names;
@@ -284,6 +285,18 @@ void MoveItRobot::plot(moveit_visual_tools::MoveItVisualToolsPtr mvt, std::vecto
     robot_state->setJointGroupPositions(joint_model_group_, joint_pose);
     mvt->publishRobotState(robot_state, color);
     mvt->trigger();
+}
+
+void MoveItRobot::animatePath(moveit_visual_tools::MoveItVisualToolsPtr mvt, const std::vector<JointPositions>& path)
+{
+    for (JointPositions q : path)
+    {
+        if (isInCollision(q))
+            plot(mvt, q, rviz_visual_tools::RED);
+        else
+            plot(mvt, q, rviz_visual_tools::GREEN);
+        ros::Duration(0.1).sleep();
+    }
 }
 
 }  // namespace ocpl
