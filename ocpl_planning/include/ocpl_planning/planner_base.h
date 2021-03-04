@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include <ocpl_planning/types.h>
 
 namespace ocpl
@@ -62,5 +64,9 @@ class Planner
     ~Planner() = default;
 
     virtual Solution solve(const std::vector<TSR>& task) = 0;
+
+    virtual Solution solve(const std::vector<TSR>& task,
+                   std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
+                   std::function<double(const TSR&, const JointPositions&)> state_cost_fun) = 0;
 };
 }  // namespace ocpl

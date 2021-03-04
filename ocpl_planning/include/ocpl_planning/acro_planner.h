@@ -49,5 +49,9 @@ class UnifiedPlanner : public Planner
                     std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
                     std::function<double(const TSR&, const JointPositions&)> state_cost_fun);
     Solution solve(const std::vector<TSR>& task) override;
+
+    Solution solve(const std::vector<TSR>& task,
+                   std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
+                   std::function<double(const TSR&, const JointPositions&)> state_cost_fun) override;
 };
 }  // namespace ocpl

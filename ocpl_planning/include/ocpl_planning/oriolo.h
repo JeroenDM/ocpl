@@ -88,6 +88,9 @@ class OrioloPlanner : public Planner
     OrioloPlanner(const std::string& name, const Robot& robot, const OrioloSpecificSettings& settings);
 
     Solution solve(const std::vector<TSR>& task) override;
+    Solution solve(const std::vector<TSR>& task,
+                   std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
+                   std::function<double(const TSR&, const JointPositions&)> state_cost_fun) override;
 
     void initializeTaskSpaceSamplers(const std::vector<Bounds> tsr_bounds);
 
