@@ -83,6 +83,13 @@ Solution OrioloPlanner::solve(const std::vector<ocpl::TSR>& task)
     return sol;
 }
 
+Solution OrioloPlanner::solve(const std::vector<TSR>& task,
+                              std::function<double(const JointPositions&, const JointPositions&)> /* path_cost_fun */,
+                              std::function<double(const TSR&, const JointPositions&)> /* state_cost_fun */)
+{
+    return solve(task);
+}
+
 JointPositions OrioloPlanner::invKin(const TSR& tsr, const JointPositions& q_red)
 {
     assert(tsr_sampler_ != nullptr);

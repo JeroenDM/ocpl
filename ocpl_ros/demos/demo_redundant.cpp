@@ -206,6 +206,7 @@ int main(int argc, char** argv)
     PlannerSettings ps;
     ps.is_redundant = true;
     ps.sampler_type = SamplerType::HALTON;
+    // ps.sampler_type = SamplerType::RANDOM;
     ps.t_space_batch_size = 10;
     ps.c_space_batch_size = 100;
     ps.min_valid_samples = 50;

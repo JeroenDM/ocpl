@@ -245,6 +245,10 @@ std::vector<JointPositions> UnifiedPlanner::sampleLocalIncremental(
 
         iters++;
     }
+    if (iters == settings_.max_iters)
+    {
+        std::cout << "Sampler reached maximum number of iterations.\n";
+    }
 
     return valid_samples;
 }

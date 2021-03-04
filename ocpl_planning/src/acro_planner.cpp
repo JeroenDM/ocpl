@@ -105,7 +105,8 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
                 nodes.push_back(std::make_shared<Node>(q, state_cost_fun(task_space_regions[node->waypoint_index], q)));
                 nodes.back()->waypoint_index = node->waypoint_index + 1;
             }
-            std::cout << "locally sampling point " << node->waypoint_index << ". Found " << nodes.size() << " samples\n";
+            std::cout << "locally sampling point " << node->waypoint_index << ". Found " << nodes.size()
+                      << " samples\n";
             return nodes;
         };
 
@@ -139,6 +140,14 @@ Solution UnifiedPlanner::solve(const std::vector<TSR>& task)
 {
     std::vector<Bounds> red_joint_limits(robot_.joint_limits.begin(), robot_.joint_limits.begin() + robot_.num_red_dof);
     return _solve(task, red_joint_limits, L2NormDiff2, zeroStateCost);
+}
+
+Solution UnifiedPlanner::solve(const std::vector<TSR>& task,
+                               std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
+                               std::function<double(const TSR&, const JointPositions&)> state_cost_fun)
+{
+    std::vector<Bounds> red_joint_limits(robot_.joint_limits.begin(), robot_.joint_limits.begin() + robot_.num_red_dof);
+    return _solve(task, red_joint_limits, path_cost_fun, state_cost_fun);
 }
 
 }  // namespace ocpl
