@@ -97,46 +97,63 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // glass of water
     //////////////////////////////////
-    auto task = teapot::waypoints();
-    auto bounds = teapot::tsrBounds();
+    // auto task = teapot::waypoints();
+    // auto bounds = teapot::tsrBounds();
 
-    EigenSTL::vector_Vector3d visual_path;
-    int skipper{ 0 };
-    for (auto tsr : task)
-    {
-        if (skipper % 3 == 0)
-        {
-            rviz.plotPose(tsr.tf_nominal);
-            visual_path.push_back(tsr.tf_nominal.translation());
-            ros::Duration(0.1).sleep();
-        }
-        skipper++;
-    }
-    ros::Duration(0.5).sleep();
+    // EigenSTL::vector_Vector3d visual_path;
+    // int skipper{ 0 };
+    // for (auto tsr : task)
+    // {
+    //     if (skipper % 3 == 0)
+    //     {
+    //         rviz.plotPose(tsr.tf_nominal);
+    //         visual_path.push_back(tsr.tf_nominal.translation());
+    //         ros::Duration(0.1).sleep();
+    //     }
+    //     skipper++;
+    // }
+    // ros::Duration(0.5).sleep();
+    // auto f_path_cost = L2NormDiff2;
 
     //////////////////////////////////
     // Puzzle
     //////////////////////////////////
-    // TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
-    // Transform tf = robot.fk(q_zero);
-    // auto task_tfs = makePuzzleToolPoses();
-    // std::size_t num_points = task_tfs.size();
-    // EigenSTL::vector_Vector3d visual_path;
-    // std::vector<TSR> task;
-    // for (auto& pose : task_tfs)
-    // {
-    //     pose.translation().x() += 0.8;
-    //     task.push_back({ pose, bounds });
-    //     visual_path.push_back(pose.translation());
-    // }
-    // double total_distance{0.0};
-    // for (std::size_t i{1}; i < task_tfs.size(); ++i)
-    // {
-    //     total_distance += (task_tfs[i].translation() - task_tfs[i-1].translation()).norm();
-    // }
+    auto welding_task = puzzle::waypoints();
+    auto bounds = puzzle::tsrBounds();
 
-    // rviz.visual_tools_->publishPath(visual_path);
-    // ros::Duration(1.0).sleep();
+    // select only the first 50 points
+    std::vector<TSR> task;
+    task.reserve(100);
+    std::copy_n(welding_task.begin(), 100, std::back_inserter(task));
+
+    EigenSTL::vector_Vector3d path_positions;
+    for (auto& pt : task)
+    {
+        path_positions.push_back(pt.tf_nominal.translation());
+    }
+
+    rviz.visual_tools_->publishPath(path_positions);
+    ros::Duration(1.0).sleep();
+
+    // define a path cost that puts an upper limit on the joint motion between two waypoints
+    // this limit is calculated from the desired end-effector speed along the path and the robot's joint velocity limits
+    auto dq_max = puzzle::calcMaxJointStep(task, robot.getJointVelocityLimits(), /* end-effector speed */ 0.05);
+    auto f_path_cost = [&dq_max](const std::vector<double>& n1, const std::vector<double>& n2) {
+        assert(n1.size() == n2.size());
+        assert(dq_max.size() == n1.size());
+
+        double cost{ 0.0 };
+        for (int i = 0; i < n1.size(); ++i)
+        {
+            double inc = std::abs(n1[i] - n2[i]);
+            if (inc > dq_max[i])
+                return std::nan("1");
+            cost += inc;
+        }
+        // if (cost > 1.0)
+        //     cost = std::numeric_limits<double>::max();
+        return cost;
+    };
 
     //////////////////////////////////
     // Simple interface solver
@@ -150,43 +167,6 @@ int main(int argc, char** argv)
 
     // function that returns analytical inverse kinematics solution for end-effector pose
     auto f_ik = [&robot](const Transform& tf, const JointPositions& /*q_fixed*/) { return robot.ik(tf); };
-
-    // calculate max step size for joints based on max speed
-    // TODO get this from robot model!
-    std::vector<double> max_joint_speed{ 154, 154, 228, 343, 384, 721 };  // radians / second
-    // convert to radians and scale:
-    for (double& s : max_joint_speed)
-    {
-        s = 1.0 * deg2rad(s);
-    }
-    // welding speed 10 cm / seconde? 0.1 m/s
-    // const double welding_speed{ 0.1 };
-    // const double dt = (total_distance / welding_speed) / num_points;
-
-    // std::cout << "distance: " << total_distance << "\n";
-    // std::cout << "dt: " << dt << "\n";
-    // std::cout << "max dq: " << dt * max_joint_speed[0] << "\n";
-
-    // specify an objective to minimize the cost along the path
-    // here we use a predefined function that uses the L1 norm of the different
-    // between two joint positions
-    auto f_path_cost = L2NormDiff2;
-    // auto f_path_cost = [&max_joint_speed, dt](const std::vector<double>& n1, const std::vector<double>& n2) {
-    //     assert(n1.size() == n2.size());
-    //     assert(max_joint_speed.size() == n1.size());
-
-    //     double cost{ 0.0 };
-    //     for (int i = 0; i < n1.size(); ++i)
-    //     {
-    //         double inc = std::abs(n1[i] - n2[i]);
-    //         if (inc > max_joint_speed[i] * dt)
-    //             return std::nan("1");
-    //         cost += inc;
-    //     }
-    //     // if (cost > 1.0)
-    //     //     cost = std::numeric_limits<double>::max();
-    //     return cost;
-    // };
 
     // optionally we can set a state cost for every point along the path
     // this one tries to keep the end-effector pose close the the nominal pose
