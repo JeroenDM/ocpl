@@ -9,7 +9,7 @@
 #include <ocpl_sampling/random_sampler.h>
 #include <ocpl_tsr/task_space_regions.h>
 
-#include <ocpl_planning/planners.h>
+#include <ocpl_planning/acro_planner.h>
 #include <ocpl_planning/factories.h>
 #include <ocpl_planning/cost_functions.h>
 #include <ocpl_planning/types.h>
@@ -34,66 +34,7 @@ void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& 
     }
 }
 
-/** \brief Read the data from the puzzle piece from the Descartes tutorials.
- * code copied from:
- * https://github.com/ros-industrial-consortium/descartes_tutorials/blob/master/descartes_tutorials/src/tutorial2.cpp
- *
- * (And the corresponding csv file is also copied from these tutorials.)
- * **/
-static EigenSTL::vector_Isometry3d makePuzzleToolPoses()
-{
-    EigenSTL::vector_Isometry3d path;  // results
-    std::ifstream indata;              // input file
 
-    // You could load your parts from anywhere, but we are transporting them with the git repo
-    std::string filename = ros::package::getPath("ocpl_ros") + "/data/puzzle_descartes.csv";
-
-    // In a non-trivial app, you'll of course want to check that calls like 'open' succeeded
-    indata.open(filename);
-
-    std::string line;
-    int lnum = 0;
-    while (std::getline(indata, line))
-    {
-        ++lnum;
-        if (lnum < 3)
-            continue;
-
-        std::stringstream lineStream(line);
-        std::string cell;
-        Eigen::Matrix<double, 6, 1> xyzijk;
-        int i = -2;
-        while (std::getline(lineStream, cell, ','))
-        {
-            ++i;
-            if (i == -1)
-                continue;
-
-            xyzijk(i) = std::stod(cell);
-        }
-
-        Eigen::Vector3d pos = xyzijk.head<3>();
-        pos = pos / 1000.0;  // Most things in ROS use meters as the unit of length. Our part was exported in mm.
-        Eigen::Vector3d norm = xyzijk.tail<3>();
-        norm.normalize();
-
-        // This code computes two extra directions to turn the normal direction into a full defined frame. Descartes
-        // will search around this frame for extra poses, so the exact values do not matter as long they are valid.
-        Eigen::Vector3d temp_x = (-1 * pos).normalized();
-        Eigen::Vector3d y_axis = (norm.cross(temp_x)).normalized();
-        Eigen::Vector3d x_axis = (y_axis.cross(norm)).normalized();
-        Eigen::Isometry3d pose;
-        pose.matrix().col(0).head<3>() = x_axis;
-        pose.matrix().col(1).head<3>() = y_axis;
-        pose.matrix().col(2).head<3>() = norm;
-        pose.matrix().col(3).head<3>() = pos;
-
-        path.push_back(pose);
-    }
-    indata.close();
-
-    return path;
-}
 
 std::vector<TSR> createLineTask(TSRBounds bounds, Eigen::Vector3d start, Eigen::Vector3d stop,
                                 Eigen::Isometry3d orientation, std::size_t num_points)
@@ -294,6 +235,13 @@ int main(int argc, char** argv)
     };
     // auto f_state_cost = zeroStateCost;
 
+    Robot bot{ robot.getNumDof(),
+               robot.getNumDof() - 3,
+               robot.getJointPositionLimits(),
+               [&robot](const JointPositions& q) { return robot.fk(q); },
+               f_ik,
+               f_is_valid };
+
     // keep close to robot home pose
     std::vector<double> q_home{ 0, -1.5708, 1.5708, 0, 0, 0 };
     // robot.plot(rviz.visual_tools_, q_home, rviz_visual_tools::MAGENTA);
@@ -303,19 +251,23 @@ int main(int argc, char** argv)
 
     // settings to select a planner
     PlannerSettings ps;
+    ps.is_redundant = true;
     ps.sampler_type = SamplerType::HALTON;
-    ps.t_space_batch_size = 100;
-    // ps.c_space_batch_size = 100;
+    // ps.sampler_type = SamplerType::RANDOM;
+    ps.t_space_batch_size = 10;
+    ps.c_space_batch_size = 100;
     ps.min_valid_samples = 100;
     ps.max_iters = 500;
 
     // ps.sampler_type = SamplerType::GRID;
     // ps.tsr_resolution = { 1, 1, 1, 1, 1, 10 };
 
-    // // solve it!
-    auto solution = solve(task, joint_limits, f_ik, f_is_valid, f_path_cost, f_state_cost, ps);
+    UnifiedPlanner planner(bot, ps);
 
-    showPath(solution.path, rviz, robot, dt);
+    // // solve it!
+    auto solution = planner.solve(task, f_path_cost, f_state_cost);
+
+    robot.animatePath(rviz.visual_tools_, solution.path);
 
     return 0;
 }
