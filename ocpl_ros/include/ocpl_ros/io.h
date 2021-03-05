@@ -1,14 +1,13 @@
 #pragma once
 
-#include <exception>
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <string>
 #include <regex>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <ros/package.h>
+
+#include <ocpl_planning/planner_base.h>
 
 namespace ocpl
 {
@@ -18,48 +17,16 @@ namespace impl
 {
 const std::string THIS_PACKAGE_NAME{ "ocpl_ros" };
 const std::string REL_PATH_DATA{ "/data/" };
-const std::regex LINE_REGEX{ "^[^:]+: [^:]+$" }; // match key-value pairs seperated by ": "
+const std::regex LINE_REGEX{ "^[^:]+: [^:]+$" };  // match key-value pairs seperated by ": "
+const std::string LINE_SPLIT_STR{ ": " };
 
-std::pair<std::string, std::string> proccessLine(const std::string& line)
-{
-    // black magic as input validation
-    if (!std::regex_match(line.begin(), line.end(), LINE_REGEX))
-    {
-        throw std::runtime_error({ "Line in settings file has syntax error: " + line });
-    }
-    std::stringstream ss(line);
-    std::string key, value;
-    ss >> key >> value;
-    key.pop_back();  // remove the trailing ":"
-    return { key, value };
-}
+std::pair<std::string, std::string> proccessLine(const std::string& line);
 }  // namespace impl
 
-SettingsMap readSettingsFile(const std::string& filename)
-{
-    // Find the data folder in the current package where we expect the file to be located
-    std::string path = ros::package::getPath(impl::THIS_PACKAGE_NAME);
-    path.append(impl::REL_PATH_DATA);
-    path.append(filename);
+SettingsMap readSettingsFile(const std::string& filename);
 
-    std::ifstream file(path);
-
-    if (!file.is_open())
-    {
-        throw std::runtime_error({ "Planner settings file [" + path + "] not found." });
-    }
-
-    std::string line;
-    SettingsMap result;
-    while (std::getline(file, line))
-    {
-        std::cout << line << "\n";
-        auto key_value = impl::proccessLine(line);
-        result[key_value.first] = key_value.second;
-    }
-
-    return result;
-}
+template <typename Scalar>
+std::vector<Scalar> stringToVector(const std::string& s);
 
 std::string findOrDefault(const SettingsMap& map, const std::string& key, const std::string& default_value)
 {
@@ -79,6 +46,15 @@ size_t findOrDefault(const SettingsMap& map, const std::string& key, const size_
         return default_value;
 }
 
+int findOrDefault(const SettingsMap& map, const std::string& key, const int default_value)
+{
+    auto entry = map.find(key);
+    if (entry != map.end())
+        return std::stoi(entry->second);
+    else
+        return default_value;
+}
+
 double findOrDefault(const SettingsMap& map, const std::string& key, const double default_value)
 {
     auto entry = map.find(key);
@@ -88,11 +64,35 @@ double findOrDefault(const SettingsMap& map, const std::string& key, const doubl
         return default_value;
 }
 
+bool findOrDefault(const SettingsMap& map, const std::string& key, const bool default_value)
+{
+    auto entry = map.find(key);
+    if (entry != map.end())
+    {
+        if (entry->second == "true")
+        {
+            return true;
+        }
+        else if (entry->second == "false")
+        {
+            return false;
+        }
+        else
+        {
+            throw std::invalid_argument("Cannot convert " + entry->second +
+                                        " into bool value.\n Use true or false instead.");
+        }
+    }
+    return default_value;
+}
+
 std::ostream& operator<<(std::ostream& os, const JointPositions& q)
 {
     for (auto qi : q)
         os << qi << ", ";
     return os;
 }
+
+PlannerSettings loadSettingsFromFile(const std::string filename);
 
 }  // namespace ocpl

@@ -2,6 +2,14 @@
 
 #include <gtest/gtest.h>
 
+TEST(TestReadSettings, TestStringToVector)
+{
+    std::vector<int> v = ocpl::stringToVector<int>("1 3 2");
+    EXPECT_EQ(v.at(0), 1);
+    EXPECT_EQ(v.at(1), 3);
+    EXPECT_EQ(v.at(2), 2);
+}
+
 TEST(TestReadSettings, TestProccessLIne)
 {
     auto p = ocpl::impl::proccessLine("key: value");

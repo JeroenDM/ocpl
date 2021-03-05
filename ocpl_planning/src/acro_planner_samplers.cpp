@@ -17,7 +17,18 @@ UnifiedPlanner::UnifiedPlanner(const Robot& robot, const PlannerSettings& settin
                                               settings_.redundant_joints_resolution);
 
     // sampler to generate completely random robot configurations inside the limits
-    q_sampler_ = createSampler(robot.joint_limits, settings_.sampler_type, settings_.redundant_joints_resolution);
+    // at the moment this sampler is never used in the case we do grid sampling
+    // but it might be usefull in some cases for RRT like planners that use a grid??
+    // therefore extend the resolution of the last redundant joint to all the other joints.
+    std::vector<int> all_joints_resolution;
+    if (!settings_.redundant_joints_resolution.empty())
+    {
+        all_joints_resolution = settings_.redundant_joints_resolution;
+        all_joints_resolution.resize(robot.num_dof);
+        std::fill(all_joints_resolution.begin() + robot.num_red_dof, all_joints_resolution.end(),
+                  settings_.redundant_joints_resolution.back());
+    }
+    q_sampler_ = createSampler(robot.joint_limits, settings_.sampler_type, all_joints_resolution);
 }
 
 void UnifiedPlanner::initializeTaskSpaceSamplers(const std::vector<Bounds> tsr_bounds)

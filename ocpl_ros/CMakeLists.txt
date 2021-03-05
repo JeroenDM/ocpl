@@ -53,6 +53,7 @@ add_library(
   src/moveit_robot_examples.cpp
   src/rviz.cpp
   src/threadsave_state_storage.cpp
+  src/io.cpp
 )
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
