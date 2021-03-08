@@ -74,6 +74,8 @@ PlannerSettings loadSettingsFromFile(const std::string filename)
     s.c_space_batch_size = findOrDefault(map, "c_space_batch_size", s.c_space_batch_size);
     s.max_iters = findOrDefault(map, "max_iters", s.max_iters);
     s.min_valid_samples = findOrDefault(map, "min_valid_samples", s.min_valid_samples);
+    s.cspace_delta = findOrDefault(map, "cspace_delta", s.cspace_delta);
+    s.state_cost_weight = findOrDefault(map, "state_cost_weight", s.state_cost_weight);
 
     auto entry = map.find("planner_type");
     if (entry != map.end())

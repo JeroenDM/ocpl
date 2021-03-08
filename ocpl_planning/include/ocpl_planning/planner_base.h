@@ -48,6 +48,9 @@ struct PlannerSettings
     double cspace_delta{ 0.1 };
     double tspace_delta{ 0.1 };
 
+    /** The state cost is multiplied with this weight before adding it to the path cost. **/
+    double state_cost_weight{1.0};
+
     PlannerType type{ PlannerType::GLOBAL };
 };
 
