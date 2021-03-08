@@ -115,17 +115,17 @@ target_link_libraries(${PROJECT_NAME}_welding
   ${PROJECT_NAME}
 )
 
-# # welding demo with kuka kr5 on rail
-# add_executable(${PROJECT_NAME}_welding_redundant
-#   demos/welding_redundant.cpp
-# )
-# set_target_properties(${PROJECT_NAME}_welding_redundant
-#   PROPERTIES OUTPUT_NAME welding_redundant PREFIX ""
-# )
-# target_link_libraries(${PROJECT_NAME}_welding_redundant
-#   ${catkin_LIBRARIES}
-#   ${PROJECT_NAME}
-# )
+# welding demo with kuka kr5 on rail
+add_executable(${PROJECT_NAME}_welding_redundant
+  demos/welding_redundant.cpp
+)
+set_target_properties(${PROJECT_NAME}_welding_redundant
+  PROPERTIES OUTPUT_NAME welding_redundant PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_welding_redundant
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
 
 
 # add_executable(${PROJECT_NAME}_benchmark1

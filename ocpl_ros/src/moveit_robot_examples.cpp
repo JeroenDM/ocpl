@@ -92,7 +92,7 @@ IKSolution PlanarRobotNR::ik(const Transform& tf, const std::vector<double>& q_f
 }
 
 /*************************************************
- * Industiral robot (Kuka KR5 hard coded for now)
+ * Industrial robot (Kuka KR5 hard coded for now)
  * **********************************************/
 IndustrialRobot::IndustrialRobot(const std::string& tcp_frame) : MoveItRobot(tcp_frame)
 {

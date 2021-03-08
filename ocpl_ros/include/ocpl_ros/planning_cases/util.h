@@ -25,6 +25,31 @@ std::vector<ocpl::TSR> createLineTask(ocpl::TSRBounds bounds, Eigen::Vector3d st
     return task;
 }
 
+std::vector<ocpl::TSR> createCircleSegment(ocpl::TSRBounds bounds, ocpl::Transform start, Eigen::Vector3d stop,
+                                           Eigen::Vector3d centre, Eigen::Vector3d axis, std::size_t num_points)
+{
+    std::vector<ocpl::TSR> task;
+
+    // calculate circle segment angle
+    Eigen::Vector3d a = (start.translation() - centre).normalized();
+    Eigen::Vector3d b = (stop - centre).normalized();
+    double angle = std::acos(a.dot(b));
+    double step = angle / (num_points - 1);
+
+    Eigen::Isometry3d r(start.linear());
+    Eigen::Vector3d v = (start.translation() - centre);
+
+    for (int i{ 0 }; i < num_points; ++i)
+    {
+        ocpl::Transform tf(r);
+        tf.translation() = centre + v;
+        task.push_back({ tf, bounds });
+        v = Eigen::AngleAxisd(step, axis) * v;
+        r = Eigen::AngleAxisd(step, axis) * r;
+    }
+    return task;
+}
+
 inline double deg2rad(double deg)
 {
     return deg * M_PI / 180.0;
