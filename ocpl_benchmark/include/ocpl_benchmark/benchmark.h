@@ -16,8 +16,8 @@ namespace ocpl
 void runBenchmark(const std::string& name, const Problem& problem, const std::vector<TSR>& task,
                   const std::vector<PlannerSettings>& settings, int num_repeats);
 
-void runBenchmark(const std::string& name, const Robot& robot, const std::vector<TSR>& task,
-                  const std::vector<oriolo::OrioloSpecificSettings>& settings, int num_repeats);
+// void runBenchmark(const std::string& name, const Robot& robot, const std::vector<TSR>& task,
+//                   const std::vector<oriolo::OrioloSpecificSettings>& settings, int num_repeats);
 
 void runBenchmark(const std::string& name, const Robot& robot, const std::vector<TSR>& task,
                   const std::vector<Planner2Settings>& settings, int num_repeats);

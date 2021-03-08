@@ -12,6 +12,7 @@
 #include <ocpl_tsr/task_space_regions.h>
 
 #include <ocpl_planning/acro_planner.h>
+#include <ocpl_planning/oriolo.h>
 #include <ocpl_planning/factories.h>
 #include <ocpl_planning/cost_functions.h>
 
@@ -99,7 +100,10 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // solve it!
     //////////////////////////////////
-    UnifiedPlanner planner(bot, ps);
+    // auto orioli_ps = loadOrioloSettings("oriolo1.txt");
+    oriolo::OrioloPlanner planner("oriolo", bot, ps);
+    // 
+    // UnifiedPlanner planner(bot, ps);
     Solution res = planner.solve(task, path_cost_fun, state_cost_fun);
     if (res.success)
     {

@@ -84,9 +84,25 @@ PlannerSettings loadSettingsFromFile(const std::string filename)
         {
             s.type = PlannerType::LOCAL;
         }
-        else /* (entry->second == "global") */
+        else if (entry->second == "global")
         {
             s.type = PlannerType::GLOBAL;
+        }
+        else if (entry->second == "greedy")
+        {
+            s.type = PlannerType::GREEDY;
+        }
+        else if (entry->second == "bigreedy")
+        {
+            s.type = PlannerType::BIGREEDY;
+        }
+        else if (entry->second == "rrtlike")
+        {
+            s.type = PlannerType::RRTLIKE;
+        }
+        else
+        {
+            throw std::invalid_argument("Invalid planner type: " + entry->second);
         }
     }
 

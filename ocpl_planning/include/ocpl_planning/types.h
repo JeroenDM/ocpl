@@ -78,7 +78,12 @@ struct Solution
 
 enum class PlannerType
 {
+    // unified planner types
     GLOBAL,
-    LOCAL
+    LOCAL,
+    // Orioli planner variations
+    GREEDY,
+    BIGREEDY,
+    RRTLIKE
 };
 }  // namespace ocpl

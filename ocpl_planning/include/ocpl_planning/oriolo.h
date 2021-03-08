@@ -53,20 +53,32 @@ namespace oriolo
 using PriorityQueue = std::priority_queue<JointPositions, std::vector<JointPositions>,
                                           std::function<bool(const JointPositions&, const JointPositions&)>>;
 
-struct OrioloSpecificSettings
-{
-    std::string METHOD{ "greedy" };
-    // d: "maximum allowed displacement of a single joint."
-    double D{ 0.4 };
-    // upperbound on calls to randConf to find joint positions for a waypoint along thepath
-    size_t MAX_SHOTS{ 100 };
-    // maximum iterations to find a good start configuration for greedy search
-    size_t MAX_ITER{ 100 };
-    // how many times do extend before adding another start config to the tree
-    size_t MAX_EXTEND{ 50000 };
-    std::string name{};
-};
+// struct OrioloSpecificSettings
+// {
+//     std::string METHOD{ "greedy" };
+//     // d: "maximum allowed displacement of a single joint."
+//     double D{ 0.4 };
+//     // upperbound on calls to randConf to find joint positions for a waypoint along thepath
+//     size_t MAX_SHOTS{ 100 };
+//     // maximum iterations to find a good start configuration for greedy search
+//     size_t MAX_ITER{ 100 };
+//     // how many times do extend before adding another start config to the tree
+//     size_t MAX_EXTEND{ 50000 };
+//     std::string name{};
+// };
 
+/** Planner from Orioli paper.
+ *
+ * Parameters have different names:
+ * MAX_SHOTS, MAX_EXTEND = max_iters
+ * D = cspace_delta
+ *
+ * D: "maximum allowed displacement of a single joint."
+ * MAX_SHOTS: upperbound on calls to randConf to find joint positions for a waypoint along thepath
+ * MAX_ITER maximum iterations to find a good start configuration for greedy search
+ * MAX_EXTEND how many times do extend before adding another start config to the tree
+ *
+ * **/
 class OrioloPlanner : public Planner
 {
   private:
@@ -76,7 +88,7 @@ class OrioloPlanner : public Planner
     SamplerPtr tsr_local_sampler_;
     std::vector<int> has_tolerance_;
 
-    OrioloSpecificSettings settings_;
+    PlannerSettings settings_;
 
     double EXTEND_STEP_{ 0.0 };
 
@@ -85,7 +97,7 @@ class OrioloPlanner : public Planner
     std::mutex priority_queue_mutex_;
 
   public:
-    OrioloPlanner(const std::string& name, const Robot& robot, const OrioloSpecificSettings& settings);
+    OrioloPlanner(const std::string& name, const Robot& robot, const PlannerSettings& settings);
 
     Solution solve(const std::vector<TSR>& task) override;
     Solution solve(const std::vector<TSR>& task,

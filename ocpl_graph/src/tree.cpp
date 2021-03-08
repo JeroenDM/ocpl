@@ -156,7 +156,7 @@ std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const 
     bool goal_reached{ false };
 
     auto start = std::chrono::system_clock::now();
-    std::chrono::seconds timeout(5);
+    std::chrono::seconds timeout(20);
     while (!Q.empty())
     {
         auto current = std::chrono::system_clock::now();

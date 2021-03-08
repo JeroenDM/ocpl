@@ -26,19 +26,6 @@
 
 using namespace ocpl;
 
-oriolo::OrioloSpecificSettings loadOrioloSettings(const std::string filename)
-{
-    auto map = readSettingsFile(filename);
-
-    oriolo::OrioloSpecificSettings settings;
-    settings.METHOD = findOrDefault(map, "method", settings.METHOD);
-    settings.D = findOrDefault(map, "d", settings.D);
-    settings.MAX_SHOTS = findOrDefault(map, "max_shots", settings.MAX_SHOTS);
-    settings.MAX_ITER = findOrDefault(map, "max_iter", settings.MAX_ITER);
-    settings.MAX_EXTEND = findOrDefault(map, "max_extend", settings.MAX_EXTEND);
-    return settings;
-}
-
 /** \brief Demo for a planar, 6 link robot.
  *
  * You can specify and load collision objects with the python script "load_collision_objects.py".
@@ -52,8 +39,8 @@ int main(int argc, char** argv)
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
-    // std::shared_ptr<MoveItRobot> robot = std::make_shared<PlanarRobotNR>();
-    std::shared_ptr<MoveItRobot> robot = std::make_shared<IndustrialRobot>();
+    std::shared_ptr<MoveItRobot> robot = std::make_shared<PlanarRobotNR>();
+    // std::shared_ptr<MoveItRobot> robot = std::make_shared<IndustrialRobot>();
 
     Rviz rviz;
     ros::Duration(0.2).sleep();
@@ -70,26 +57,26 @@ int main(int argc, char** argv)
     // JointLimits joint_limits{ { 2.0, 3.0 }, { -2.0, 1.0 }, { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };
 
     // small passage case
-    // auto regions = case2::waypoints(20);
-    // auto tsr_bounds = case2::tsrBounds();
+    auto regions = case2::waypoints(20);
+    auto tsr_bounds = case2::tsrBounds();
 
     // 8 dof zig zag case
     // auto regions = case3::waypoints();
     // auto tsr_bounds = case3::tsrBounds();
 
     // puzzle piece from ROS-Industrial descartes package tutorials
-    auto regions = puzzle::waypoints();
-    auto tsr_bounds = puzzle::tsrBounds();
+    // auto regions = puzzle::waypoints();
+    // auto tsr_bounds = puzzle::tsrBounds();
 
-    EigenSTL::vector_Vector3d path_pos;
+    // EigenSTL::vector_Vector3d path_pos;
     for (TSR& tsr : regions)
     {
         rviz.plotPose(tsr.tf_nominal);
-        // ros::Duration(0.05).sleep();
-        path_pos.push_back(tsr.tf_nominal.translation());
+        ros::Duration(0.05).sleep();
+        // path_pos.push_back(tsr.tf_nominal.translation());
     }
-    rviz.visual_tools_->publishPath(path_pos, rviz_visual_tools::RED, 0.1);
-    ros::Duration(0.1).sleep();
+    // rviz.visual_tools_->publishPath(path_pos, rviz_visual_tools::RED, 0.1);
+    // ros::Duration(0.1).sleep();
 
     //////////////////////////////////
     // Describe the robot
@@ -109,12 +96,7 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Try Oriolo algorithms
     //////////////////////////////////
-    // oriolo::OrioloSpecificSettings ps;
-    // ps.METHOD = "bigreedy";
-    // // // ps.METHOD = "quispe";
-    // // ps.MAX_SHOTS = 2000;
-    // ps.MAX_ITER = 2000;
-    auto ps = loadOrioloSettings("oriolo1.txt");
+    auto ps = loadSettingsFromFile("oriolo1.txt");
     oriolo::OrioloPlanner planner("oriolo", bot, ps);
     // // std::reverse(regions.begin(), regions.end());
 

@@ -18,11 +18,11 @@ namespace ocpl
 {
 namespace oriolo
 {
-OrioloPlanner::OrioloPlanner(const std::string& name, const Robot& robot, const OrioloSpecificSettings& settings)
-  : Planner(name, robot), settings_(settings), EXTEND_STEP_(settings_.D * std::sqrt(robot.num_dof))
+OrioloPlanner::OrioloPlanner(const std::string& name, const Robot& robot, const PlannerSettings& settings)
+  : Planner(name, robot), settings_(settings), EXTEND_STEP_(settings_.cspace_delta * std::sqrt(robot.num_dof))
 {
     // sampler to generate perturbations on redundant joints with max deviation d around zero
-    q_red_local_sampler_ = createLocalSampler(3, settings_.D, SamplerType::RANDOM);
+    q_red_local_sampler_ = createLocalSampler(3, settings_.cspace_delta, SamplerType::RANDOM);
 
     // sampler to generate completely random robot configurations inside the limits
     q_sampler_ = createIncrementalSampler(robot.joint_limits, SamplerType::RANDOM);
@@ -45,7 +45,7 @@ void OrioloPlanner::initializeTaskSpaceSamplers(const std::vector<Bounds> tsr_bo
         }
         else
         {
-            tsr_perturbations.push_back({ -settings_.D, settings_.D });
+            tsr_perturbations.push_back({ -settings_.cspace_delta, settings_.cspace_delta });
             has_tolerance_.push_back(1);
         }
     }
@@ -56,29 +56,29 @@ Solution OrioloPlanner::solve(const std::vector<ocpl::TSR>& task)
 {
     initializeTaskSpaceSamplers(task.at(0).bounds.asVector());
     Solution sol;
-    if (settings_.METHOD == "greedy")
+    if (settings_.type == PlannerType::GREEDY)
     {
         sol.path = greedy(task);
         sol.success = sol.path.size() == task.size();
     }
-    else if (settings_.METHOD == "bigreedy")
+    else if (settings_.type == PlannerType::BIGREEDY)
     {
         sol.path = bidirectionalGreedy(task);
         sol.success = sol.path.size() == task.size();
     }
-    else if (settings_.METHOD == "rrtlike")
+    else if (settings_.type == PlannerType::RRTLIKE)
     {
         sol.path = rrtLike(task);
         sol.success = sol.path.size() == task.size();
     }
-    else if (settings_.METHOD == "quispe")
-    {
-        sol.path = greedy2(task);
-        sol.success = sol.path.size() == task.size();
-    }
+    // else if (settings_.type == "quispe")
+    // {
+    //     sol.path = greedy2(task);
+    //     sol.success = sol.path.size() == task.size();
+    // }
     else
     {
-        throw std::runtime_error("Unkown planning method in OrioliPlanner");
+        throw std::invalid_argument("Invalid planning type for Oriolo planner");
     }
     return sol;
 }
@@ -127,7 +127,7 @@ JointPositions OrioloPlanner::invKin(const TSR& tsr, const JointPositions& q_red
     IKSolution sol = robot_.ik(tf, q_red);
     for (auto q_sol : sol)
     {
-        if (LInfNormDiff2(q_sol, q_bias) < settings_.D)
+        if (LInfNormDiff2(q_sol, q_bias) < settings_.cspace_delta)
         {
             return q_sol;
         }
@@ -227,7 +227,7 @@ JointPositions OrioloPlanner::sample(const TSR& tsr, const JointPositions& q_bia
     IKSolution sol = robot_.ik(tf, q_red);
     for (auto q_sol : sol)
     {
-        if (LInfNormDiff2(q_sol, q_bias) < settings_.D)
+        if (LInfNormDiff2(q_sol, q_bias) < settings_.cspace_delta)
         {
             return q_sol;
         }
@@ -287,7 +287,7 @@ PriorityQueue OrioloPlanner::getLocalSamples(const TSR& tsr, const JointPosition
         IKSolution sol = robot_.ik(tf_samples[i], q_red_samples[i]);
         for (auto q_sol : sol)
         {
-            if (LInfNormDiff2(q_sol, q_bias) < settings_.D)
+            if (LInfNormDiff2(q_sol, q_bias) < settings_.cspace_delta)
             {
                 if (noColl(q_bias, q_sol))
                 {
@@ -305,7 +305,7 @@ JointPositions OrioloPlanner::findChildren(const TSR& tsr, const JointPositions&
     JointPositions q_child{};
     size_t iters{ 0 };
     bool success{ false };
-    while (!success && iters < settings_.MAX_SHOTS)
+    while (!success && iters < settings_.max_iters)
     {
         q_child = sample(tsr, q_bias);
         if (!q_child.empty())
@@ -348,7 +348,7 @@ std::vector<JointPositions> OrioloPlanner::greedy2(const std::vector<TSR>& task)
     JointPositions q_start{}, q_current{};
 
     // try for different start configs until success
-    while (!success && iters < settings_.MAX_ITER)
+    while (!success && iters < settings_.max_iters)
     {
         std::cout << "Start config iterations " << iters << "\n";
         q_start = sample(task[0]);
@@ -362,7 +362,7 @@ std::vector<JointPositions> OrioloPlanner::greedy2(const std::vector<TSR>& task)
             {
                 size_t iters_2{ 0 };
                 bool success_2{ false };
-                while (!success_2 && iters_2 < settings_.MAX_SHOTS)
+                while (!success_2 && iters_2 < settings_.max_iters)
                 {
                     std::cout << "Find next config iteration " << iters_2 << "\n";
                     auto local_samples = getLocalSamples(task[i], path.back(), 1000);
@@ -419,7 +419,7 @@ std::vector<JointPositions> OrioloPlanner::step(size_t start_index, size_t stop_
         size_t l{ 0 };
         bool success{ false };
         // inner loop that tries to find a valid new configurations at j+1
-        while (l < settings_.MAX_SHOTS && !success)
+        while (l < settings_.max_iters && !success)
         {
             // q_new = randConf(task.at(j + 1), q_current);
             q_new = sample(task[j + 1], q_current);
@@ -432,7 +432,7 @@ std::vector<JointPositions> OrioloPlanner::step(size_t start_index, size_t stop_
         }  // end inner loop
 
         // give up if this is reached for any path point
-        if (l == settings_.MAX_SHOTS)
+        if (l == settings_.max_iters)
         {
             // TODO add backtracking here?
             // j--; j >= start_index
@@ -453,7 +453,7 @@ std::vector<JointPositions> OrioloPlanner::greedy(const std::vector<TSR>& task)
     std::vector<JointPositions> path;
     size_t iters{ 0 };
     bool success{ false };
-    while (iters < settings_.MAX_ITER && !success)
+    while (iters < settings_.max_iters && !success)
     {
         JointPositions q_start = sample(task[0]);
         if (!q_start.empty())
@@ -484,7 +484,7 @@ std::vector<JointPositions> OrioloPlanner::bidirectionalGreedy(const std::vector
     std::vector<JointPositions> path;
     size_t iters{ 0 };
     bool success{ false };
-    while (iters < settings_.MAX_ITER && !success)
+    while (iters < settings_.max_iters && !success)
     {
         JointPositions q_start = sample(task[0]);
         if (!q_start.empty())
@@ -576,7 +576,7 @@ std::vector<JointPositions> OrioloPlanner::rrtLike(const std::vector<ocpl::TSR>&
     graph::Tree tree;
 
     // try to build a tree to the goal waypoint
-    while (current_waypoint != goal_waypoint && iters < settings_.MAX_ITER)
+    while (current_waypoint != goal_waypoint && iters < settings_.max_iters)
     {
         tree.clear();
 
@@ -600,7 +600,7 @@ std::vector<JointPositions> OrioloPlanner::rrtLike(const std::vector<ocpl::TSR>&
                 // here to extend step could be added for the other variations
             }
             extend_iters++;
-        } while (current_waypoint != goal_waypoint && extend_iters < settings_.MAX_EXTEND);
+        } while (current_waypoint != goal_waypoint && extend_iters < settings_.max_iters);
 
         std::cout << "tree reached waypoint: " << current_waypoint << " after " << extend_iters << "\n";
 
