@@ -112,12 +112,26 @@ int main(int argc, char** argv)
 
     auto ps = loadSettingsFromFile("case2_default.yaml");
 
+    // auto f_path_cost = L2NormDiff2;
+    auto f_path_cost = [&ps](const std::vector<double>& n1, const std::vector<double>& n2) {
+        assert(n1.size() == n2.size());
+        double cost{ 0.0 };
+        for (int i = 0; i < n1.size(); ++i)
+        {
+            double inc = std::abs(n1[i] - n2[i]);
+            if (inc > ps.cspace_delta)
+                return std::nan("1");
+            cost += inc * inc;
+        }
+        return cost;
+    };
+
     //////////////////////////////////
     // Solve the problem
     //////////////////////////////////
     UnifiedPlanner planner(bot, ps);
     std::reverse(regions.begin(), regions.end());
-    Solution solution = planner.solve(regions, L2NormDiff2, state_cost_fun);
+    Solution solution = planner.solve(regions, f_path_cost, state_cost_fun);
 
     if (solution.success)
     {
