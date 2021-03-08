@@ -4,6 +4,8 @@
 
 #include <ocpl_ros/moveit_robot_examples.h>
 #include <ocpl_ros/rviz.h>
+#include <ocpl_ros/io.h>
+
 #include <ocpl_sampling/grid_sampler.h>
 #include <ocpl_sampling/halton_sampler.h>
 #include <ocpl_sampling/random_sampler.h>
@@ -16,6 +18,7 @@
 
 #include <ocpl_ros/planning_cases/puzzle.h>
 #include <ocpl_ros/planning_cases/teapot.h>
+#include <ocpl_ros/planning_cases/l_profile.h>
 
 // ROS Trajectory Action server definition
 #include <control_msgs/FollowJointTrajectoryAction.h>
@@ -74,25 +77,13 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // l_profile
     //////////////////////////////////
-    // TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
-    // Transform tf = robot.fk(q_zero);
-
-    // Eigen::Isometry3d ori(AngleAxisd(0.0, Vector3d::UnitX()) * AngleAxisd(deg2rad(135), Vector3d::UnitY()) *
-    //                       AngleAxisd(deg2rad(90), Vector3d::UnitZ()));
-    // Eigen::Vector3d start(0.98, -0.5, 0.02);
-    // Eigen::Vector3d stop(0.98, 0.5, 0.02);
-    // const std::size_t num_points{ 30 };
-    // const double total_distance = (stop - start).norm();
-    // std::vector<TSR> task = createLineTask(bounds, start, stop, ori, num_points);
-
-    // EigenSTL::vector_Vector3d visual_path;
-    // for (auto tsr : task)
-    // {
-    //     rviz.plotPose(tsr.tf_nominal);
-    //     visual_path.push_back(tsr.tf_nominal.translation());
-    //     ros::Duration(0.1).sleep();
-    // }
-    // ros::Duration(0.5).sleep();
+    auto task = l_profile::waypoints(/* x_offset */ 0.98, /* extra_tolerance */ true);
+    for (auto tsr : task)
+    {
+        rviz.plotPose(tsr.tf_nominal);
+        ros::Duration(0.1).sleep();
+    }
+    ros::Duration(0.5).sleep();
 
     //////////////////////////////////
     // glass of water
@@ -118,42 +109,43 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Puzzle
     //////////////////////////////////
-    auto welding_task = puzzle::waypoints();
-    auto bounds = puzzle::tsrBounds();
+    // auto welding_task = puzzle::waypoints();
+    // auto bounds = puzzle::tsrBounds();
 
-    // select only the first 50 points
-    std::vector<TSR> task;
-    task.reserve(100);
-    std::copy_n(welding_task.begin(), 100, std::back_inserter(task));
+    // // select only the first 50 points
+    // std::vector<TSR> task;
+    // task.reserve(100);
+    // std::copy_n(welding_task.begin(), 100, std::back_inserter(task));
 
-    EigenSTL::vector_Vector3d path_positions;
-    for (auto& pt : task)
-    {
-        path_positions.push_back(pt.tf_nominal.translation());
-    }
+    // EigenSTL::vector_Vector3d path_positions;
+    // for (auto& pt : task)
+    // {
+    //     path_positions.push_back(pt.tf_nominal.translation());
+    // }
 
-    rviz.visual_tools_->publishPath(path_positions);
-    ros::Duration(1.0).sleep();
+    // rviz.visual_tools_->publishPath(path_positions);
+    // ros::Duration(1.0).sleep();
 
-    // define a path cost that puts an upper limit on the joint motion between two waypoints
-    // this limit is calculated from the desired end-effector speed along the path and the robot's joint velocity limits
-    auto dq_max = puzzle::calcMaxJointStep(task, robot.getJointVelocityLimits(), /* end-effector speed */ 0.05);
-    auto f_path_cost = [&dq_max](const std::vector<double>& n1, const std::vector<double>& n2) {
-        assert(n1.size() == n2.size());
-        assert(dq_max.size() == n1.size());
+    // // define a path cost that puts an upper limit on the joint motion between two waypoints
+    // // this limit is calculated from the desired end-effector speed along the path and the robot's joint velocity
+    // limits
+    // auto dq_max = calcMaxJointStep(task, robot.getJointVelocityLimits(), /* end-effector speed */ 0.05);
+    // auto f_path_cost = [&dq_max](const std::vector<double>& n1, const std::vector<double>& n2) {
+    //     assert(n1.size() == n2.size());
+    //     assert(dq_max.size() == n1.size());
 
-        double cost{ 0.0 };
-        for (int i = 0; i < n1.size(); ++i)
-        {
-            double inc = std::abs(n1[i] - n2[i]);
-            if (inc > dq_max[i])
-                return std::nan("1");
-            cost += inc;
-        }
-        // if (cost > 1.0)
-        //     cost = std::numeric_limits<double>::max();
-        return cost;
-    };
+    //     double cost{ 0.0 };
+    //     for (int i = 0; i < n1.size(); ++i)
+    //     {
+    //         double inc = std::abs(n1[i] - n2[i]);
+    //         if (inc > dq_max[i])
+    //             return std::nan("1");
+    //         cost += inc;
+    //     }
+    //     // if (cost > 1.0)
+    //     //     cost = std::numeric_limits<double>::max();
+    //     return cost;
+    // };
 
     //////////////////////////////////
     // Simple interface solver
@@ -168,20 +160,51 @@ int main(int argc, char** argv)
     // function that returns analytical inverse kinematics solution for end-effector pose
     auto f_ik = [&robot](const Transform& tf, const JointPositions& /*q_fixed*/) { return robot.ik(tf); };
 
-    // optionally we can set a state cost for every point along the path
-    // this one tries to keep the end-effector pose close the the nominal pose
-    // defined in the task space region
-    auto f_state_cost = [&robot](const TSR& tsr, const JointPositions& q) {
-        return 1.0 * poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
-    };
-    // auto f_state_cost = zeroStateCost;
-
     Robot bot{ robot.getNumDof(),
                robot.getNumDof() - 3,
                robot.getJointPositionLimits(),
                [&robot](const JointPositions& q) { return robot.fk(q); },
                f_ik,
                f_is_valid };
+
+    //////////////////////////////////
+    // Planning settings
+    //////////////////////////////////
+    // PlannerSettings ps;
+    // ps.is_redundant = true;
+    // ps.sampler_type = SamplerType::HALTON;
+    // // ps.sampler_type = SamplerType::RANDOM;
+    // ps.t_space_batch_size = 10;
+    // ps.c_space_batch_size = 100;
+    // ps.min_valid_samples = 100;
+    // ps.max_iters = 500;
+    PlannerSettings ps = loadSettingsFromFile("kuka1.yaml");
+
+    auto f_path_cost = [&ps](const std::vector<double>& n1, const std::vector<double>& n2) {
+        assert(n1.size() == n2.size());
+        double cost{ 0.0 };
+        for (int i = 0; i < n1.size(); ++i)
+        {
+            double inc = std::abs(n1[i] - n2[i]);
+            if (inc > ps.cspace_delta)
+                return std::nan("1");
+            cost += inc * inc;
+        }
+        return cost;
+    };
+
+    // optionally we can set a state cost for every point along the path
+    // this one tries to keep the end-effector pose close the the nominal pose
+    // defined in the task space region
+    auto f_state_cost = [&robot, &ps](const TSR& tsr, const JointPositions& q) {
+        Eigen::VectorXd dv = poseDistance(tsr.tf_nominal, robot.fk(q));
+        // only penalize the x and y rotation
+        return ps.state_cost_weight * std::sqrt(dv[3] * dv[3] + dv[4] * dv[4]);
+    };
+    // auto f_state_cost = zeroStateCost;
+
+    // ps.sampler_type = SamplerType::GRID;
+    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 10 };
 
     // keep close to robot home pose
     std::vector<double> q_home{ 0, -1.5708, 1.5708, 0, 0, 0 };
@@ -190,19 +213,9 @@ int main(int argc, char** argv)
 
     // auto f_state_cost = [q_home](const TSR& tsr, const JointPositions& q) { return L2NormDiff2(q, q_home); };
 
-    // settings to select a planner
-    PlannerSettings ps;
-    ps.is_redundant = true;
-    ps.sampler_type = SamplerType::HALTON;
-    // ps.sampler_type = SamplerType::RANDOM;
-    ps.t_space_batch_size = 10;
-    ps.c_space_batch_size = 100;
-    ps.min_valid_samples = 100;
-    ps.max_iters = 500;
-
-    // ps.sampler_type = SamplerType::GRID;
-    // ps.tsr_resolution = { 1, 1, 1, 1, 1, 10 };
-
+    //////////////////////////////////
+    // Solve it
+    //////////////////////////////////
     UnifiedPlanner planner(bot, ps);
 
     // // solve it!
