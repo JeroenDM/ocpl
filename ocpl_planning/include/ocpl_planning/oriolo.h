@@ -50,9 +50,6 @@ using Tree = std::unordered_map<std::shared_ptr<Node>, std::vector<NodePtr>>;
 
 namespace oriolo
 {
-using PriorityQueue = std::priority_queue<JointPositions, std::vector<JointPositions>,
-                                          std::function<bool(const JointPositions&, const JointPositions&)>>;
-
 // struct OrioloSpecificSettings
 // {
 //     std::string METHOD{ "greedy" };
@@ -153,11 +150,11 @@ class OrioloPlanner : public Planner
      * **/
     JointPositions sample(const TSR& tsr, const JointPositions& q_bias);
 
-    PriorityQueue getLocalSamples(const TSR& tsr, const JointPositions& q_bias, int num_samples);
+    // std::vector<JointPositions> greedy2(const std::vector<TSR>& task);
 
-    JointPositions findChildren(const TSR& tsr, const JointPositions& q_bias, int num_samples = 1);
+    //     PriorityQueue getLocalSamples(const TSR& tsr, const JointPositions& q_bias, int num_samples);
 
-    std::vector<JointPositions> greedy2(const std::vector<TSR>& task);
+    // JointPositions findChildren(const TSR& tsr, const JointPositions& q_bias, int num_samples = 1);
 };
 
 }  // namespace oriolo
