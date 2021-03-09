@@ -34,7 +34,7 @@ class UnifiedPlanner : public Planner
     std::vector<JointPositions> sampleLocalIncremental(const JointPositions& q_bias,
                                                        std::function<IKSolution(const JointPositions&)> local_sampler);
 
-    std::vector<std::vector<NodePtr>>
+    std::vector<std::vector<ocpl_graph::NodePtr>>
     createGlobalRoadmap(const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits,
                         std::function<double(const TSR&, const JointPositions&)> state_cost_fun);
 

@@ -10,7 +10,7 @@
 
 namespace ocpl
 {
-std::vector<std::vector<NodePtr>> UnifiedPlanner::createGlobalRoadmap(
+std::vector<std::vector<ocpl_graph::NodePtr>> UnifiedPlanner::createGlobalRoadmap(
     const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits,
     std::function<double(const TSR&, const JointPositions&)> state_cost_fun)
 {
@@ -33,13 +33,13 @@ std::vector<std::vector<NodePtr>> UnifiedPlanner::createGlobalRoadmap(
 
     // Convert the end-effector poses to Nodes, which is the desired output format for the getNeighbor function
     // can also be done in parallel if state cost function is heavy
-    std::vector<std::vector<NodePtr>> nodes;
+    std::vector<std::vector<ocpl_graph::NodePtr>> nodes;
     nodes.resize(path_samplers.size());
     for (std::size_t pt = 0; pt < graph_data.size(); pt++)
     {
         for (const JointPositions& q : graph_data[pt])
         {
-            nodes[pt].push_back(std::make_shared<Node>(q, state_cost_fun(task_space_regions[pt], q)));
+            nodes[pt].push_back(std::make_shared<ocpl_graph::Node>(q, state_cost_fun(task_space_regions[pt], q)));
         }
     }
 
@@ -70,29 +70,29 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
     initializeTaskSpaceSamplers(task_space_regions.at(0).bounds.asVector());
 
     // convert the path cost function to something that can work with NodePtr instead of JointPositions
-    auto path_cost = [path_cost_fun](NodePtr n1, NodePtr n2) { return path_cost_fun(n1->data, n2->data); };
+    auto path_cost = [path_cost_fun](ocpl_graph::NodePtr n1, ocpl_graph::NodePtr n2) { return path_cost_fun(n1->data, n2->data); };
 
-    std::vector<NodePtr> path_nodes;
+    std::vector<ocpl_graph::NodePtr> path_nodes;
     if (settings_.type == PlannerType::GLOBAL || settings_.type == PlannerType::GLOBAL_DFS)
     {
         auto nodes = createGlobalRoadmap(task_space_regions, redundant_joint_limits, state_cost_fun);
 
         // Wrap this nodes in a nearest getNeighbor function that the graph search needs
-        auto sample_f = [&nodes](const NodePtr& node, size_t /* num_samples */) {
+        auto sample_f = [&nodes](const ocpl_graph::NodePtr& node, size_t /* num_samples */) {
             return nodes.at(node->waypoint_index + 1);
         };
 
-        Tree graph(sample_f, nodes.size(), nodes.at(0));
+        ocpl_graph::Graph graph(sample_f, nodes.size(), nodes.at(0));
 
         if (settings_.type == PlannerType::GLOBAL)
         {
-            auto d_fun = [](const NodePtr& a, const NodePtr& b) { return b->dist < a->dist; };
-            PriorityQueueContainer<NodePtr> container(graph.size(), d_fun);
+            auto d_fun = [](const ocpl_graph::NodePtr& a, const ocpl_graph::NodePtr& b) { return b->dist < a->dist; };
+            ocpl_graph::PriorityQueueContainer<ocpl_graph::NodePtr> container(graph.size(), d_fun);
             path_nodes = shortest_path_dag(graph, path_cost, container);
         }
         else /* if (settings_.type == PlannerType::GLOBAL_DFS) */
         {
-            StackContainer<NodePtr> container;
+            ocpl_graph::StackContainer<ocpl_graph::NodePtr> container;
             path_nodes = shortest_path_dag(graph, path_cost, container);
         }
     }
@@ -107,13 +107,13 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
             });
         }
 
-        auto sample_f = [local_samplers, state_cost_fun, task_space_regions, this](const NodePtr& node,
+        auto sample_f = [local_samplers, state_cost_fun, task_space_regions, this](const ocpl_graph::NodePtr& node,
                                                                                    size_t /* num_samples */) {
             auto q_samples = sampleLocalIncremental(node->data, local_samplers[node->waypoint_index + 1]);
-            std::vector<NodePtr> nodes;
+            std::vector<ocpl_graph::NodePtr> nodes;
             for (const JointPositions& q : q_samples)
             {
-                nodes.push_back(std::make_shared<Node>(q, state_cost_fun(task_space_regions[node->waypoint_index], q)));
+                nodes.push_back(std::make_shared<ocpl_graph::Node>(q, state_cost_fun(task_space_regions[node->waypoint_index], q)));
                 nodes.back()->waypoint_index = node->waypoint_index + 1;
             }
             if (debug_)
@@ -124,7 +124,7 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
             return nodes;
         };
 
-        std::vector<NodePtr> start_nodes =
+        std::vector<ocpl_graph::NodePtr> start_nodes =
             (createGlobalRoadmap({ task_space_regions.at(0) }, redundant_joint_limits, state_cost_fun)).at(0);
 
         if (debug_)
@@ -134,21 +134,21 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
 
         if (settings_.type == PlannerType::LOCAL_DFS)
         {
-            Tree graph(sample_f, task_space_regions.size(), start_nodes);
-            StackContainer<NodePtr> container;
-            path_nodes = shortest_path_dag(graph, path_cost, container);
+            ocpl_graph::Graph graph(sample_f, task_space_regions.size(), start_nodes);
+            ocpl_graph::StackContainer<ocpl_graph::NodePtr> container;
+            path_nodes = ocpl_graph::shortest_path_dag(graph, path_cost, container);
         }
         else /*if (settings_.type == PlannerType::LOCAL_BEST_FIRST_DFS) */
         {
-            Tree graph(sample_f, task_space_regions.size(), start_nodes);
-            auto d_fun = [](const NodePtr& a, const NodePtr& b) { return b->dist < a->dist; };
-            PriorityStackContainer<NodePtr> container(graph.size(), d_fun);
-            path_nodes = shortest_path_dag(graph, path_cost, container);
+            ocpl_graph::Graph graph(sample_f, task_space_regions.size(), start_nodes);
+            auto d_fun = [](const ocpl_graph::NodePtr& a, const ocpl_graph::NodePtr& b) { return b->dist < a->dist; };
+            ocpl_graph::PriorityStackContainer<ocpl_graph::NodePtr> container(graph.size(), d_fun);
+            path_nodes = ocpl_graph::shortest_path_dag(graph, path_cost, container);
         }
     }
 
     std::vector<JointPositions> path;
-    for (NodePtr n : path_nodes)
+    for (ocpl_graph::NodePtr n : path_nodes)
     {
         path.push_back(n->data);
         if (debug_)
@@ -181,7 +181,7 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
 Solution UnifiedPlanner::solve(const std::vector<TSR>& task)
 {
     std::vector<Bounds> red_joint_limits(robot_.joint_limits.begin(), robot_.joint_limits.begin() + robot_.num_red_dof);
-    return _solve(task, red_joint_limits, L2NormDiff2, zeroStateCost);
+    return _solve(task, red_joint_limits, norm2Diff, zeroStateCost);
 }
 
 Solution UnifiedPlanner::solve(const std::vector<TSR>& task,

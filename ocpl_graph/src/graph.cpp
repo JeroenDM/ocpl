@@ -9,7 +9,7 @@
 
 #include <ocpl_graph/containers.h>
 
-namespace ocpl
+namespace ocpl_graph
 {
 struct compareNodesFunction
 {
@@ -19,20 +19,25 @@ struct compareNodesFunction
     }
 };
 
-const std::vector<NodePtr>& DAGraph::getNeighbors(const NodePtr& node)
+const std::vector<NodePtr>& Graph::getNeighbors(const NodePtr& node)
 {
+    // if (sample_locally_)
+    // {
+    // override previous samples for the sampled waypoint
+    nodes_.at(node->waypoint_index + 1) = sample_fun_(node, 300);
+    // }
     return nodes_.at(node->waypoint_index + 1);
 }
-const std::vector<NodePtr>& DAGraph::getStartNodes()
+const std::vector<NodePtr>& Graph::getStartNodes()
 {
     return nodes_.at(0);
 }
-const bool DAGraph::isGoal(const NodePtr& node) const
+const bool Graph::isGoal(const NodePtr& node) const
 {
     return node->waypoint_index == (num_waypoints_ - 1);
 }
 
-std::vector<NodePtr> DAGraph::extract_solution(const NodePtr& goal) const
+std::vector<NodePtr> Graph::extract_solution(const NodePtr& goal) const
 {
     std::vector<NodePtr> path;
     path.push_back(goal);
@@ -53,64 +58,7 @@ std::vector<NodePtr> DAGraph::extract_solution(const NodePtr& goal) const
     return path;
 }
 
-std::vector<NodePtr> DAGraph::extract_partial_solution() const
-{
-    for (std::size_t pi{ nodes_.size() - 1 }; pi >= 0; --pi)
-    {
-        auto pt_nodes = nodes_[pi];
-        auto node_iter = std::min_element(pt_nodes.begin(), pt_nodes.end(),
-                                          [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
-        if (node_iter != pt_nodes.end() && (*node_iter)->parent != nullptr)
-        {
-            std::cout << "Found partial path up until pt index: " << pi << ".\n";
-            return extract_solution(*node_iter);
-        }
-    }
-    std::cout << "Also could not extract partial solution.\n";
-    return {};
-}
-
-/** Tree implementation **/
-const std::vector<NodePtr>& Tree::getNeighbors(const NodePtr& node)
-{
-    if (sample_locally_)
-    {
-        // override previous samples for the sampled waypoint
-        nodes_.at(node->waypoint_index + 1) = sample_fun_(node, 300);
-    }
-    return nodes_.at(node->waypoint_index + 1);
-}
-const std::vector<NodePtr>& Tree::getStartNodes()
-{
-    return nodes_.at(0);
-}
-const bool Tree::isGoal(const NodePtr& node) const
-{
-    return node->waypoint_index == (num_waypoints_ - 1);
-}
-
-std::vector<NodePtr> Tree::extract_solution(const NodePtr& goal) const
-{
-    std::vector<NodePtr> path;
-    path.push_back(goal);
-    NodePtr node = goal;
-    while (true)
-    {
-        if (node->parent == nullptr)
-        {
-            break;
-        }
-        else
-        {
-            node = node->parent;
-            path.insert(path.begin(), node);
-        }
-    }
-
-    return path;
-}
-
-std::vector<NodePtr> Tree::extract_partial_solution() const
+std::vector<NodePtr> Graph::extract_partial_solution() const
 {
     for (std::size_t pi{ nodes_.size() - 1 }; pi >= 0; --pi)
     {
@@ -129,19 +77,9 @@ std::vector<NodePtr> Tree::extract_partial_solution() const
 
 /** Graph traversal algorithm **/
 
-std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const NodePtr, const NodePtr)> cost_function, BaseContainer<NodePtr>& cont)
+std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const NodePtr, const NodePtr)> cost_function,
+                                       BaseContainer<NodePtr>& cont)
 {
-    // std::priority_queue<NodePtr, std::vector<NodePtr>, compareNodesFunction> Q;
-
-    // auto d_fun = [](const NodePtr& a, const NodePtr& b) { return math::norm2Diff(a->data, b->data); };
-    // auto d_fun = [](const NodePtr& a, const NodePtr& b) { return b->dist < a->dist; };
-
-    // std::shared_ptr<BaseContainer<NodePtr>> Q;
-    // Q = std::make_shared<StackContainer<NodePtr>>();
-    // StackContainer<NodePtr> Q;
-    // PriorityStackContainer<NodePtr> Q(graph.size(), d_fun);
-    // OcplPriorityQueueContainer<NodePtr> Q(d_fun);
-
     const std::vector<NodePtr>& start_nodes = graph.getStartNodes();
 
     // Add the starting nodes to the queue.
@@ -222,4 +160,4 @@ std::ostream& operator<<(std::ostream& os, const Node& node)
     os << ")";
     return os;
 }
-}  // namespace ocpl
+}  // namespace ocpl_graph

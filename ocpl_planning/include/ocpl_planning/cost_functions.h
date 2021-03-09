@@ -8,17 +8,17 @@
 
 namespace ocpl
 {
-inline double L1NormDiff(NodePtr n1, NodePtr n2)
+inline double L1NormDiff(ocpl_graph::NodePtr n1, ocpl_graph::NodePtr n2)
 {
     return norm1Diff(n1->data, n2->data);
 }
 
-inline double L2NormDiff(NodePtr n1, NodePtr n2)
+inline double L2NormDiff(ocpl_graph::NodePtr n1, ocpl_graph::NodePtr n2)
 {
     return norm2Diff(n1->data, n2->data);
 }
 
-inline double LInfNormDiff(NodePtr n1, NodePtr n2)
+inline double LInfNormDiff(ocpl_graph::NodePtr n1, ocpl_graph::NodePtr n2)
 {
     return normInfDiff(n1->data, n2->data);
 }

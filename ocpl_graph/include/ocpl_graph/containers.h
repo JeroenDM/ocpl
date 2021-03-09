@@ -5,7 +5,7 @@
 #include <vector>
 #include <functional>
 
-namespace ocpl
+namespace ocpl_graph
 {
 /** \brief Generic interface around containers in standard library. **/
 template <typename T>
@@ -129,7 +129,8 @@ class PriorityStackContainer : public BaseContainer<T>
     virtual bool empty() override
     {
         // Everyting above the current waypoint is empty by definition, only check below
-        return std::all_of(data_.begin(), data_.begin() + current_waypoint_ + 1, [](const auto& q) { return q.empty(); });
+        return std::all_of(data_.begin(), data_.begin() + current_waypoint_ + 1,
+                           [](const auto& q) { return q.empty(); });
     }
 };
 
@@ -226,4 +227,4 @@ class OcplPriorityQueueContainer : public BaseContainer<T>
         return data_.empty();
     }
 };
-}  // namespace ocpl
+}  // namespace ocpl_graph

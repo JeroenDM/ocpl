@@ -8,26 +8,10 @@
 #include <cassert>
 #include <cmath>
 
-
 #include <ocpl_graph/containers.h>
 
-namespace ocpl
+namespace ocpl_graph
 {
-namespace math
-{
-inline double norm2Diff(const std::vector<double>& n1, const std::vector<double>& n2)
-{
-    assert(n1.size() == n2.size());
-
-    double cost{ 0.0 };
-    for (int i = 0; i < n1.size(); ++i)
-    {
-        cost += std::sqrt((n1[i] - n2[i]) * (n1[i] - n2[i]));
-    }
-    return cost;
-}
-}  // namespace math
-
 struct Node
 {
     std::vector<double> data;
@@ -45,75 +29,37 @@ struct Node
 };
 typedef std::shared_ptr<Node> NodePtr;
 
-class Graph
-{
-  protected:
-    bool sample_locally_{ true };
-
-  public:
-    virtual const std::vector<NodePtr>& getNeighbors(const NodePtr& node) = 0;
-    virtual const std::vector<NodePtr>& getStartNodes() = 0;
-    virtual const bool isGoal(const NodePtr& node) const = 0;
-    virtual size_t size() const = 0;
-
-    virtual std::vector<NodePtr> extract_solution(const NodePtr& goal) const = 0;
-    virtual std::vector<NodePtr> extract_partial_solution() const = 0;
-    virtual void setSampleLocally(bool value)
-    {
-        sample_locally_ = value;
-    };
-};
-
-class DAGraph : public Graph
-{
-    std::vector<std::vector<NodePtr>> nodes_;
-    size_t num_waypoints_;
-
-  public:
-    DAGraph(std::vector<std::vector<NodePtr>>& nodes) : nodes_(nodes), num_waypoints_(nodes.size())
-    {
-    }
-    ~DAGraph() = default;
-
-    virtual const std::vector<NodePtr>& getNeighbors(const NodePtr& node) override;
-    virtual const std::vector<NodePtr>& getStartNodes() override;
-    virtual const bool isGoal(const NodePtr& node) const override;
-    virtual size_t size() const override
-    {
-        return num_waypoints_;
-    }
-
-    virtual std::vector<NodePtr> extract_solution(const NodePtr& goal) const override;
-    virtual std::vector<NodePtr> extract_partial_solution() const override;
-};
-
 typedef std::function<std::vector<NodePtr>(const NodePtr& node, size_t num_samples)> SampleFun;
 
-class Tree : public Graph
+/** \brief A generic graph implementation. The structure is determined by the sample function that is passed in to get
+ * the neighbors of a node.
+ * TODO Implement iterative grid refining.
+ * **/
+class Graph
 {
     SampleFun sample_fun_;
     size_t num_waypoints_;
     std::vector<std::vector<NodePtr>> nodes_;
 
   public:
-    Tree(SampleFun sample_fun, size_t num_waypoints, std::vector<NodePtr> start_nodes)
+    Graph(SampleFun sample_fun, size_t num_waypoints, std::vector<NodePtr> start_nodes)
       : sample_fun_(sample_fun), num_waypoints_(num_waypoints)
     {
         nodes_.resize(num_waypoints);
         nodes_.at(0) = start_nodes;
     }
-    ~Tree() = default;
+    ~Graph() = default;
 
-    virtual const std::vector<NodePtr>& getNeighbors(const NodePtr& node) override;
-    virtual const std::vector<NodePtr>& getStartNodes() override;
-    virtual const bool isGoal(const NodePtr& node) const override;
-    virtual size_t size() const override
+    const std::vector<NodePtr>& getNeighbors(const NodePtr& node);
+    const std::vector<NodePtr>& getStartNodes();
+    const bool isGoal(const NodePtr& node) const;
+    size_t size() const
     {
         return num_waypoints_;
     }
 
-    virtual std::vector<NodePtr> extract_solution(const NodePtr& goal) const override;
-    virtual std::vector<NodePtr> extract_partial_solution() const override;
+    std::vector<NodePtr> extract_solution(const NodePtr& goal) const;
+    std::vector<NodePtr> extract_partial_solution() const;
 };
 
 /** \brief Find shortest path in a directed acyclic graph. **/
@@ -122,4 +68,4 @@ std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const 
 
 std::ostream& operator<<(std::ostream& os, const Node& node);
 
-}  // namespace ocpl
+}  // namespace ocpl_graph
