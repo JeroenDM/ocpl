@@ -4,7 +4,7 @@
 #include <vector>
 
 #include <ocpl_planning/math.h>
-#include <ocpl_graph/tree.h>
+#include <ocpl_graph/graph.h>
 
 namespace ocpl
 {

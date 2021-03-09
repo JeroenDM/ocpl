@@ -3,7 +3,7 @@
 #include <vector>
 #include <functional>
 
-#include <ocpl_graph/tree.h>
+#include <ocpl_graph/graph.h>
 #include <ocpl_tsr/task_space_regions.h>
 #include <ocpl_sampling/sampler.h>
 #include <ocpl_planning/types.h>

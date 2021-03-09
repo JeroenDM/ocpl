@@ -1,6 +1,6 @@
 #include <ocpl_planning/acro_planner.h>
 
-#include <ocpl_graph/tree.h>
+#include <ocpl_graph/graph.h>
 #include <ocpl_planning/cost_functions.h>
 #include <ocpl_planning/io.h>
 
