@@ -79,29 +79,18 @@ namespace oriolo
 class OrioloPlanner : public Planner
 {
   private:
-    SamplerPtr q_red_local_sampler_;
-    SamplerPtr q_sampler_;
-    SamplerPtr tsr_sampler_;
-    SamplerPtr tsr_local_sampler_;
-    std::vector<int> has_tolerance_;
-
-    PlannerSettings settings_;
-
     double EXTEND_STEP_{ 0.0 };
 
     graph::Tree tree_;
 
-    std::mutex priority_queue_mutex_;
-
   public:
-    OrioloPlanner(const std::string& name, const Robot& robot, const PlannerSettings& settings);
-
+    OrioloPlanner(const Robot& robot, const PlannerSettings& settings) : Planner(robot, settings)
+    {
+    }
     Solution solve(const std::vector<TSR>& task) override;
     Solution solve(const std::vector<TSR>& task,
                    std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
                    std::function<double(const TSR&, const JointPositions&)> state_cost_fun) override;
-
-    void initializeTaskSpaceSamplers(const std::vector<Bounds> tsr_bounds);
 
     /** \brief Unbiased inverse kinematics for random samle in task space regions. **/
     JointPositions invKin(const TSR& tsr, const JointPositions& q_red);

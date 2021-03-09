@@ -18,40 +18,6 @@ namespace ocpl
 {
 namespace oriolo
 {
-OrioloPlanner::OrioloPlanner(const std::string& name, const Robot& robot, const PlannerSettings& settings)
-  : Planner(name, robot), settings_(settings), EXTEND_STEP_(settings_.cspace_delta * std::sqrt(robot.num_dof))
-{
-    // sampler to generate perturbations on redundant joints with max deviation d around zero
-    q_red_local_sampler_ = createLocalSampler(3, settings_.cspace_delta, SamplerType::RANDOM);
-
-    // sampler to generate completely random robot configurations inside the limits
-    q_sampler_ = createIncrementalSampler(robot.joint_limits, SamplerType::RANDOM);
-}
-
-void OrioloPlanner::initializeTaskSpaceSamplers(const std::vector<Bounds> tsr_bounds)
-{
-    //  sampler to generate random valid end-effector poses paramterised with 6 element vectors
-    tsr_sampler_ = createIncrementalSampler(tsr_bounds, SamplerType::RANDOM);
-
-    // go through tsr bounds and check were we need to add tolerance
-    std::vector<Bounds> tsr_perturbations;
-    has_tolerance_.clear();
-    for (size_t dim{ 0 }; dim < tsr_bounds.size(); ++dim)
-    {
-        if (tsr_bounds[dim].lower == tsr_bounds[dim].upper)
-        {
-            tsr_perturbations.push_back({ 0.0, 0.0 });
-            has_tolerance_.push_back(0);
-        }
-        else
-        {
-            tsr_perturbations.push_back({ -settings_.cspace_delta, settings_.cspace_delta });
-            has_tolerance_.push_back(1);
-        }
-    }
-    tsr_local_sampler_ = createIncrementalSampler(tsr_perturbations, SamplerType::RANDOM);
-}
-
 Solution OrioloPlanner::solve(const std::vector<ocpl::TSR>& task)
 {
     initializeTaskSpaceSamplers(task.at(0).bounds.asVector());
@@ -115,12 +81,13 @@ JointPositions OrioloPlanner::invKin(const TSR& tsr, const JointPositions& q_red
     std::vector<double> v_bias = tsr_local_sampler_->getSample();
 
     // assume the variable that changes between two poses has no tolerance
-    for (size_t dim{ 0 }; dim < has_tolerance_.size(); ++dim)
+    // (in most cases this is the x position, as the x-axis is oriented tangent to the path)
+    assert(v_prev.size() == v_bias.size());
+    const auto tsr_bounds = tsr.bounds.asVector();
+    for (size_t dim{ 0 }; dim < v_prev.size(); ++dim)
     {
-        if (has_tolerance_[dim] == 1)
-        {
-            v_bias.at(dim) += v_prev.at(dim);
-        }
+        if (tsr_bounds[dim].lower != tsr_bounds[dim].upper)
+            v_bias[dim] += v_prev[dim];
     }
 
     Transform tf = tsr.valuesToPose(v_bias);
@@ -210,17 +177,17 @@ JointPositions OrioloPlanner::sample(const TSR& tsr, const JointPositions& q_bia
     std::vector<double> v_prev = tsr.poseToValues(robot_.fk(q_bias));
     std::vector<double> v_bias = tsr_local_sampler_->getSample();
 
-    assert(v_prev.size() == has_tolerance_.size());
-    assert(v_bias.size() == has_tolerance_.size());
-
     // assume the variable that changes between two poses has no tolerance
-    for (size_t dim{ 0 }; dim < has_tolerance_.size(); ++dim)
+    // and then ignore the previous value for this variable (v_bias will be zero for that variable)
+    // (in most cases this is the x position, as the x-axis is oriented tangent to the path)
+    assert(v_prev.size() == v_bias.size());
+    const auto tsr_bounds = tsr.bounds.asVector();
+    for (size_t dim{ 0 }; dim < v_prev.size(); ++dim)
     {
-        if (has_tolerance_[dim] == 1)
-        {
+        if (tsr_bounds[dim].lower != tsr_bounds[dim].upper)
             v_bias[dim] += v_prev[dim];
-        }
     }
+
     Transform tf = tsr.valuesToPose(v_bias);
 
     // solve inverse kinematics te calculate base joints

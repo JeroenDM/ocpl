@@ -13,17 +13,10 @@ namespace ocpl
 {
 class UnifiedPlanner : public Planner
 {
-    PlannerSettings settings_;
-
-    SamplerPtr q_red_local_sampler_;
-    SamplerPtr q_sampler_;
-    SamplerPtr tsr_sampler_;
-    SamplerPtr tsr_local_sampler_;
-
   public:
-    UnifiedPlanner(const Robot& robot, const PlannerSettings& settings);
-    void initializeTaskSpaceSamplers(const std::vector<Bounds> tsr_bounds);
-
+    UnifiedPlanner(const Robot& robot, const PlannerSettings& settings) : Planner(robot, settings)
+    {
+    }
     std::vector<std::function<IKSolution()>> createGlobalWaypointSamplers(const std::vector<TSR>& task_space_regions,
                                                                           const JointLimits& redundant_joint_limits);
 

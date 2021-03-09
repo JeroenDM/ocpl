@@ -38,6 +38,7 @@ include_directories(
 
 add_library(
   ${PROJECT_NAME}
+  src/planner_base.cpp
   src/acro_planner_samplers.cpp
   src/acro_planner.cpp
   src/factories.cpp

@@ -3,6 +3,7 @@
 #include <functional>
 
 #include <ocpl_planning/types.h>
+#include <ocpl_sampling/sampler.h>
 
 namespace ocpl
 {
@@ -49,7 +50,7 @@ struct PlannerSettings
     double tspace_delta{ 0.1 };
 
     /** The state cost is multiplied with this weight before adding it to the path cost. **/
-    double state_cost_weight{1.0};
+    double state_cost_weight{ 1.0 };
 
     PlannerType type{ PlannerType::GLOBAL };
 };
@@ -59,17 +60,22 @@ class Planner
   protected:
     const std::string name_;
     Robot robot_;
+    PlannerSettings settings_;
+
+    SamplerPtr q_red_local_sampler_;
+    SamplerPtr q_sampler_;
+    SamplerPtr tsr_sampler_;
+    SamplerPtr tsr_local_sampler_;
+
+    void initializeTaskSpaceSamplers(const std::vector<Bounds> tsr_bounds);
 
   public:
-    Planner(const std::string& name, const Robot& robot) : name_(name), robot_(robot)
-    {
-    }
-    ~Planner() = default;
+    Planner(const Robot& robot, const PlannerSettings& settings);
 
     virtual Solution solve(const std::vector<TSR>& task) = 0;
 
     virtual Solution solve(const std::vector<TSR>& task,
-                   std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
-                   std::function<double(const TSR&, const JointPositions&)> state_cost_fun) = 0;
+                           std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
+                           std::function<double(const TSR&, const JointPositions&)> state_cost_fun) = 0;
 };
 }  // namespace ocpl

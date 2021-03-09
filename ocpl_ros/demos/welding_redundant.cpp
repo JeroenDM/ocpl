@@ -101,7 +101,7 @@ int main(int argc, char** argv)
     // solve it!
     //////////////////////////////////
     // auto orioli_ps = loadOrioloSettings("oriolo1.txt");
-    oriolo::OrioloPlanner planner("oriolo", bot, ps);
+    oriolo::OrioloPlanner planner(bot, ps);
     // 
     // UnifiedPlanner planner(bot, ps);
     Solution res = planner.solve(task, path_cost_fun, state_cost_fun);

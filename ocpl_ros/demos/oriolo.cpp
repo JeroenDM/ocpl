@@ -97,8 +97,8 @@ int main(int argc, char** argv)
     // Try Oriolo algorithms
     //////////////////////////////////
     auto ps = loadSettingsFromFile("oriolo1.txt");
-    oriolo::OrioloPlanner planner("oriolo", bot, ps);
-    // // std::reverse(regions.begin(), regions.end());
+    oriolo::OrioloPlanner planner(bot, ps);
+    // std::reverse(regions.begin(), regions.end());
 
     auto solution = planner.solve(regions);
 

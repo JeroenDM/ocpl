@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queue>
+#include <mutex>
 
 #include <ocpl_planning/planner_base.h>
 
@@ -13,6 +14,8 @@ using PriorityQueue = std::priority_queue<JointPositions, std::vector<JointPosit
 
 class QuispePlanner : public Planner
 {
+
+    std::mutex priority_queue_mutex_;
   public:
     std::vector<JointPositions> greedy2(const std::vector<TSR>& task);
 
