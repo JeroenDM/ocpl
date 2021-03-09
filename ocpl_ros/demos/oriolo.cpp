@@ -19,7 +19,6 @@
 
 #include <ocpl_planning/cost_functions.h>
 #include <ocpl_planning/oriolo.h>
-#include <ocpl_planning/planner2.h>
 #include <ocpl_planning/io.h>
 
 #include <ocpl_benchmark/benchmark.h>
