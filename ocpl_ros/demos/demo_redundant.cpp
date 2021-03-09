@@ -21,6 +21,8 @@
 #include <ocpl_planning/factories.h>
 #include <ocpl_planning/cost_functions.h>
 
+#include <ocpl_benchmark/benchmark.h>
+
 using namespace ocpl;
 
 /** \brief Demo for a planar, 6 link robot.
@@ -111,7 +113,7 @@ int main(int argc, char** argv)
                ik_fun,
                is_valid_fun };
 
-    auto ps = loadSettingsFromFile("local_dfs.yaml");
+    auto ps = loadSettingsFromFile("local1.yaml");
 
     double max_l2_norm_diff = std::sqrt((double)robot.getNumDof() * ps.cspace_delta * ps.cspace_delta);
 
@@ -134,22 +136,50 @@ int main(int argc, char** argv)
     //////////////////////////////////
     UnifiedPlanner planner(bot, ps);
     std::reverse(regions.begin(), regions.end());
-    Solution solution = planner.solve(regions, f_path_cost, state_cost_fun);
+    // Solution solution = planner.solve(regions, f_path_cost, state_cost_fun);
 
-    if (solution.success)
-    {
-        std::cout << "A solution is found with a cost of " << solution.cost << "\n";
-    }
-    else
-    {
-        std::cout << "No complete solution was found.\n";
-    }
+    // if (solution.success)
+    // {
+    //     std::cout << "A solution is found with a cost of " << solution.cost << "\n";
+    // }
+    // else
+    // {
+    //     std::cout << "No complete solution was found.\n";
+    // }
 
-    robot.animatePath(rviz.visual_tools_, solution.path);
+    // robot.animatePath(rviz.visual_tools_, solution.path);
 
     //////////////////////////////////
     // Benchmark
     //////////////////////////////////
+
+    PlannerSettings set1 = loadSettingsFromFile("global1.yaml");
+    set1.name = "set1";
+    set1.type = PlannerType::GLOBAL;
+
+    PlannerSettings set2 = loadSettingsFromFile("global1.yaml");
+    set2.name = "set2";
+    set2.type = PlannerType::GLOBAL_DFS;
+
+    PlannerSettings set1b = loadSettingsFromFile("global1.yaml");
+    set1b.name = "set1b";
+    set1b.type = PlannerType::GLOBAL;
+    set1b.sampler_type = SamplerType::HALTON;
+
+    PlannerSettings set2b = loadSettingsFromFile("global1.yaml");
+    set2b.name = "set2b";
+    set2b.type = PlannerType::GLOBAL_DFS;
+    set2b.sampler_type = SamplerType::HALTON;
+
+    PlannerSettings set3 = loadSettingsFromFile("local1.yaml");
+    set3.name = "set3";
+    set3.type = PlannerType::LOCAL_DFS;
+
+    PlannerSettings set4 = loadSettingsFromFile("local1.yaml");
+    set4.name = "set4";
+    set4.type = PlannerType::LOCAL_BEST_FIRST_DFS;
+
+    runBenchmark("unified_planner", bot, regions, planner, {set1, set2, set1b, set2b, set3, set4}, 5);
 
     return 0;
 }
