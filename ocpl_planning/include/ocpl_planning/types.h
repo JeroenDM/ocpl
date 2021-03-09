@@ -80,7 +80,9 @@ enum class PlannerType
 {
     // unified planner types
     GLOBAL,
-    LOCAL,
+    GLOBAL_DFS,
+    LOCAL_DFS,
+    LOCAL_BEST_FIRST_DFS,
     // Orioli planner variations
     GREEDY,
     BIGREEDY,

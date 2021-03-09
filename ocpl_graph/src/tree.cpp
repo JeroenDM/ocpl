@@ -129,15 +129,17 @@ std::vector<NodePtr> Tree::extract_partial_solution() const
 
 /** Graph traversal algorithm **/
 
-std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const NodePtr, const NodePtr)> cost_function)
+std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const NodePtr, const NodePtr)> cost_function, BaseContainer<NodePtr>& cont)
 {
     // std::priority_queue<NodePtr, std::vector<NodePtr>, compareNodesFunction> Q;
 
     // auto d_fun = [](const NodePtr& a, const NodePtr& b) { return math::norm2Diff(a->data, b->data); };
-    auto d_fun = [](const NodePtr& a, const NodePtr& b) { return b->dist < a->dist; };
+    // auto d_fun = [](const NodePtr& a, const NodePtr& b) { return b->dist < a->dist; };
 
-    StackContainer<NodePtr> Q;
-    // PriorityStackContainer<NodePtr> Q(nodes.size(), d_fun);
+    // std::shared_ptr<BaseContainer<NodePtr>> Q;
+    // Q = std::make_shared<StackContainer<NodePtr>>();
+    // StackContainer<NodePtr> Q;
+    // PriorityStackContainer<NodePtr> Q(graph.size(), d_fun);
     // OcplPriorityQueueContainer<NodePtr> Q(d_fun);
 
     const std::vector<NodePtr>& start_nodes = graph.getStartNodes();
@@ -147,8 +149,7 @@ std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const 
     {
         start_node->dist = start_node->cost;
         start_node->visited = true;
-        // Q.push(start_node);
-        Q.push(start_node, 0);
+        cont.push(start_node, 0);
     }
 
     // The actual graph search loop
@@ -157,7 +158,7 @@ std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const 
 
     auto start = std::chrono::system_clock::now();
     std::chrono::seconds timeout(20);
-    while (!Q.empty())
+    while (!cont.empty())
     {
         auto current = std::chrono::system_clock::now();
         if ((current - start) > timeout)
@@ -165,9 +166,7 @@ std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const 
             std::cout << "Maximum planning time reached.\n";
             break;
         }
-        // current_node = Q.top();
-        // Q.pop();
-        current_node = Q.pop();
+        current_node = cont.pop();
 
         // A goal if found, when using a priority queue this should also be the goal
         // that gives the shortest path
@@ -195,8 +194,7 @@ std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const 
 
                 if (!nb->visited)
                 {
-                    // Q.push(nb);
-                    Q.push(nb, nb->waypoint_index);
+                    cont.push(nb, nb->waypoint_index);
                     nb->visited = true;
                 }
             }

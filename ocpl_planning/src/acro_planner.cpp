@@ -2,6 +2,7 @@
 
 #include <ocpl_graph/tree.h>
 #include <ocpl_planning/cost_functions.h>
+#include <ocpl_planning/io.h>
 
 #include <algorithm>
 #include <iostream>
@@ -72,7 +73,7 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
     auto path_cost = [path_cost_fun](NodePtr n1, NodePtr n2) { return path_cost_fun(n1->data, n2->data); };
 
     std::vector<NodePtr> path_nodes;
-    if (settings_.type == PlannerType::GLOBAL)
+    if (settings_.type == PlannerType::GLOBAL || settings_.type == PlannerType::GLOBAL_DFS)
     {
         auto nodes = createGlobalRoadmap(task_space_regions, redundant_joint_limits, state_cost_fun);
 
@@ -80,10 +81,20 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
         auto sample_f = [&nodes](const NodePtr& node, size_t /* num_samples */) {
             return nodes.at(node->waypoint_index + 1);
         };
+
         Tree graph(sample_f, nodes.size(), nodes.at(0));
 
-        // Find the shortest path in this structured array of nodes
-        path_nodes = shortest_path_dag(graph, path_cost);
+        if (settings_.type == PlannerType::GLOBAL)
+        {
+            auto d_fun = [](const NodePtr& a, const NodePtr& b) { return b->dist < a->dist; };
+            PriorityQueueContainer<NodePtr> container(graph.size(), d_fun);
+            path_nodes = shortest_path_dag(graph, path_cost, container);
+        }
+        else /* if (settings_.type == PlannerType::GLOBAL_DFS) */
+        {
+            StackContainer<NodePtr> container;
+            path_nodes = shortest_path_dag(graph, path_cost, container);
+        }
     }
     else
     {
@@ -105,25 +116,56 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
                 nodes.push_back(std::make_shared<Node>(q, state_cost_fun(task_space_regions[node->waypoint_index], q)));
                 nodes.back()->waypoint_index = node->waypoint_index + 1;
             }
-            std::cout << "locally sampling point " << node->waypoint_index << ". Found " << nodes.size()
-                      << " samples\n";
+            if (debug_)
+            {
+                std::cout << "locally sampling point " << node->waypoint_index << ". Found " << nodes.size()
+                          << " samples\n";
+            }
             return nodes;
         };
 
         std::vector<NodePtr> start_nodes =
             (createGlobalRoadmap({ task_space_regions.at(0) }, redundant_joint_limits, state_cost_fun)).at(0);
-        std::cout << "local planner found " << start_nodes.size() << " start nodes.\n";
-        Tree graph(sample_f, task_space_regions.size(), start_nodes);
 
-        // Find the shortest path in this structured array of nodes
-        path_nodes = shortest_path_dag(graph, path_cost);
+        if (debug_)
+        {
+            std::cout << "local planner found " << start_nodes.size() << " start nodes.\n";
+        }
+
+        if (settings_.type == PlannerType::LOCAL_DFS)
+        {
+            Tree graph(sample_f, task_space_regions.size(), start_nodes);
+            StackContainer<NodePtr> container;
+            path_nodes = shortest_path_dag(graph, path_cost, container);
+        }
+        else /*if (settings_.type == PlannerType::LOCAL_BEST_FIRST_DFS) */
+        {
+            Tree graph(sample_f, task_space_regions.size(), start_nodes);
+            auto d_fun = [](const NodePtr& a, const NodePtr& b) { return b->dist < a->dist; };
+            PriorityStackContainer<NodePtr> container(graph.size(), d_fun);
+            path_nodes = shortest_path_dag(graph, path_cost, container);
+        }
     }
 
     std::vector<JointPositions> path;
     for (NodePtr n : path_nodes)
     {
         path.push_back(n->data);
-        std::cout << "Node: " << (*n) << " dist: " << n->dist << "\n";
+        if (debug_)
+            std::cout << "Node: " << (*n) << " dist: " << n->dist << "\n";
+    }
+
+    if (debug_)
+    {
+        for (size_t i{ 1 }; i < path.size(); ++i)
+        {
+            std::vector<double> diff(robot_.num_dof);
+            for (size_t j{ 0 }; j < robot_.num_dof; ++j)
+            {
+                diff[j] = std::abs(path[i][j] - path[i - 1][j]);
+            }
+            std::cout << diff << "\n";
+        }
     }
 
     if (path_nodes.size() < task_space_regions.size())

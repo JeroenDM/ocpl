@@ -9,7 +9,7 @@ namespace ocpl
 /************************************************************************
  * SAMPLER INITIALIZATION
  * **********************************************************************/
-Planner::Planner(const Robot& robot, const PlannerSettings& settings) : robot_(robot), settings_(settings)
+Planner::Planner(const Robot& robot, const PlannerSettings& settings) : robot_(robot), settings_(settings), debug_(settings.debug)
 {
     // sampler to generate perturbations on redundant joints with max deviation d around zero
     q_red_local_sampler_ = createLocalSampler(robot.num_red_dof, settings_.cspace_delta, settings_.sampler_type,

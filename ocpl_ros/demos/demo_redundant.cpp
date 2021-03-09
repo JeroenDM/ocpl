@@ -17,6 +17,7 @@
 #include <ocpl_tsr/task_space_regions.h>
 
 #include <ocpl_planning/acro_planner.h>
+#include <ocpl_planning/oriolo.h>
 #include <ocpl_planning/factories.h>
 #include <ocpl_planning/cost_functions.h>
 
@@ -110,16 +111,18 @@ int main(int argc, char** argv)
                ik_fun,
                is_valid_fun };
 
-    auto ps = loadSettingsFromFile("case2_default.yaml");
+    auto ps = loadSettingsFromFile("local_dfs.yaml");
+
+    double max_l2_norm_diff = std::sqrt((double)robot.getNumDof() * ps.cspace_delta * ps.cspace_delta);
 
     // auto f_path_cost = L2NormDiff2;
-    auto f_path_cost = [&ps](const std::vector<double>& n1, const std::vector<double>& n2) {
+    auto f_path_cost = [max_l2_norm_diff](const std::vector<double>& n1, const std::vector<double>& n2) {
         assert(n1.size() == n2.size());
         double cost{ 0.0 };
         for (int i = 0; i < n1.size(); ++i)
         {
             double inc = std::abs(n1[i] - n2[i]);
-            if (inc > ps.cspace_delta)
+            if (inc > max_l2_norm_diff)
                 return std::nan("1");
             cost += inc * inc;
         }
@@ -143,6 +146,10 @@ int main(int argc, char** argv)
     }
 
     robot.animatePath(rviz.visual_tools_, solution.path);
+
+    //////////////////////////////////
+    // Benchmark
+    //////////////////////////////////
 
     return 0;
 }

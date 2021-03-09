@@ -1,0 +1,4 @@
+sampler_type: halton
+planner_type: greedy
+cspace_delta: 0.1
+max_iters: 1000

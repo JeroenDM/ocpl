@@ -76,17 +76,26 @@ PlannerSettings loadSettingsFromFile(const std::string filename)
     s.min_valid_samples = findOrDefault(map, "min_valid_samples", s.min_valid_samples);
     s.cspace_delta = findOrDefault(map, "cspace_delta", s.cspace_delta);
     s.state_cost_weight = findOrDefault(map, "state_cost_weight", s.state_cost_weight);
+    s.debug = findOrDefault(map, "debug", s.debug);
 
     auto entry = map.find("planner_type");
     if (entry != map.end())
     {
-        if (entry->second == "local")
+        if (entry->second == "local" || entry->second == "local_dfs")
         {
-            s.type = PlannerType::LOCAL;
+            s.type = PlannerType::LOCAL_DFS;
+        }
+        else if (entry->second == "local_best_first_dfs")
+        {
+            s.type = PlannerType::LOCAL_BEST_FIRST_DFS;
         }
         else if (entry->second == "global")
         {
             s.type = PlannerType::GLOBAL;
+        }
+        else if (entry->second == "global_dfs")
+        {
+            s.type = PlannerType::GLOBAL_DFS;
         }
         else if (entry->second == "greedy")
         {

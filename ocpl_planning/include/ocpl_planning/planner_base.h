@@ -53,6 +53,8 @@ struct PlannerSettings
     double state_cost_weight{ 1.0 };
 
     PlannerType type{ PlannerType::GLOBAL };
+
+    int debug{ 0 }; /** Simple debug flag for logging statements. **/
 };
 
 class Planner
@@ -66,6 +68,8 @@ class Planner
     SamplerPtr q_sampler_;
     SamplerPtr tsr_sampler_;
     SamplerPtr tsr_local_sampler_;
+
+    int debug_{ 0 };
 
     void initializeTaskSpaceSamplers(const std::vector<Bounds> tsr_bounds);
 
@@ -114,5 +118,10 @@ class Planner
     virtual Solution solve(const std::vector<TSR>& task,
                            std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
                            std::function<double(const TSR&, const JointPositions&)> state_cost_fun) = 0;
+
+    void setDebugFlag(bool value)
+    {
+        debug_ = value;
+    }
 };
 }  // namespace ocpl

@@ -18,6 +18,16 @@ std::string format(const SamplerType& t);
 /** \brief Pretty printing of planner settings. **/
 std::ostream& operator<<(std::ostream& os, const PlannerSettings& ps);
 
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T> v)
+{
+    os << "( ";
+    for (auto el : v)
+        os << el << ", ";
+    os << " )";
+    return os;
+}
+
 /** \brief Write the path to a simple csv file. **/
 void savePath(const std::string& filename, const std::vector<JointPositions>& path);
 

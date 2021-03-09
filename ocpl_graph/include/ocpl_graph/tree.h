@@ -8,6 +8,9 @@
 #include <cassert>
 #include <cmath>
 
+
+#include <ocpl_graph/containers.h>
+
 namespace ocpl
 {
 namespace math
@@ -114,7 +117,8 @@ class Tree : public Graph
 };
 
 /** \brief Find shortest path in a directed acyclic graph. **/
-std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const NodePtr, const NodePtr)> cost_function);
+std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const NodePtr, const NodePtr)> cost_function,
+                                       BaseContainer<NodePtr>& cont);
 
 std::ostream& operator<<(std::ostream& os, const Node& node);
 
