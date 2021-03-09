@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 #include <queue>
+#include <cmath>
 
 // graph includes
 #include <unordered_map>
@@ -83,67 +84,43 @@ class OrioloPlanner : public Planner
 
     graph::Tree tree_;
 
+    /******************************
+     * BUILDING BLOCKS
+     * ****************************/
+    /** \brief Sample with the values for the redundant joints already specified.
+     * 
+     * (Used in the rrtlike planner for the extend method.)
+     * **/
+    JointPositions sampleIK(const TSR& tsr, const JointPositions& q_red, const JointPositions& q_bias);
+
+    std::vector<JointPositions> step(size_t start_index, size_t stop_index, const JointPositions& q_start,
+                                     const std::vector<TSR>& task);
+    std::pair<bool, graph::NodeData> extend(const std::vector<TSR>& task, graph::Tree& tree);
+    graph::NodePtr getNear(const JointPositions& q, graph::Tree& tree);
+
+    /******************************
+     * PLANNING ALGORITHMS
+     * ****************************/
+    std::vector<JointPositions> greedy(const std::vector<TSR>& task);
+    std::vector<JointPositions> bidirectionalGreedy(const std::vector<TSR>& task);
+    std::vector<JointPositions> rrtLike(const std::vector<TSR>& task);
+
   public:
-    OrioloPlanner(const Robot& robot, const PlannerSettings& settings) : Planner(robot, settings)
+    OrioloPlanner(const Robot& robot, const PlannerSettings& settings)
+      : Planner(robot, settings), EXTEND_STEP_(settings.cspace_delta * std::sqrt(robot.num_dof))
     {
     }
+
+    void changeSettings(const PlannerSettings& new_settings) override
+    {
+        Planner::changeSettings(new_settings);
+        EXTEND_STEP_ = new_settings.cspace_delta * std::sqrt(robot_.num_dof);
+    }
+
     Solution solve(const std::vector<TSR>& task) override;
     Solution solve(const std::vector<TSR>& task,
                    std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun,
                    std::function<double(const TSR&, const JointPositions&)> state_cost_fun) override;
-
-    /** \brief Unbiased inverse kinematics for random samle in task space regions. **/
-    JointPositions invKin(const TSR& tsr, const JointPositions& q_red);
-
-    /** \brief Inverse kinematics with a bias value to stay close to.
-     *
-     * Returns empty vector if it failed.
-     * **/
-    JointPositions invKin(const TSR& tsr, const JointPositions& q_red, const JointPositions& q_bias);
-
-    /** \brief return random positions for redundant joints. Centered around a bias position.
-     *
-     * In paper it is described as "generated through a limited random perturbation of q_red_bias".
-     * I interpret limited as using the maximum displacement parameter d;
-     * **/
-    JointPositions randRed(const JointPositions& q_bias);
-    JointPositions randRed();
-
-    // all variations on randConf to get random joint positions
-    JointPositions randConf();
-    JointPositions randConf(const TSR& tsr);
-    JointPositions randConf(const TSR& tsr, const JointPositions& q_bias);
-
-    // state and path validation (collision checking)
-    bool noColl(const JointPositions& q);
-    bool noColl(const JointPositions& q_from, const JointPositions& q_to);
-
-    std::vector<JointPositions> step(size_t start_index, size_t stop_index, const JointPositions& q_start,
-                                     const std::vector<TSR>& task);
-    std::vector<JointPositions> greedy(const std::vector<TSR>& task);
-    std::vector<JointPositions> bidirectionalGreedy(const std::vector<TSR>& task);
-
-    std::pair<bool, graph::NodeData> extend(const std::vector<TSR>& task, graph::Tree& tree);
-
-    graph::NodePtr getNear(const JointPositions& q, graph::Tree& tree);
-
-    std::vector<JointPositions> rrtLike(const std::vector<TSR>& task);
-
-    /** \brief Get a (random) robot configurations for a given waypoint along the path. **/
-    JointPositions sample(const TSR& tsr);
-
-    /** \brief Get a (random) biased robot configurations for a given waypoint along the path.
-     *
-     * The solution space for the given waypoint is sampled in a regions around the q_bias;
-     *
-     * **/
-    JointPositions sample(const TSR& tsr, const JointPositions& q_bias);
-
-    // std::vector<JointPositions> greedy2(const std::vector<TSR>& task);
-
-    //     PriorityQueue getLocalSamples(const TSR& tsr, const JointPositions& q_bias, int num_samples);
-
-    // JointPositions findChildren(const TSR& tsr, const JointPositions& q_bias, int num_samples = 1);
 };
 
 }  // namespace oriolo

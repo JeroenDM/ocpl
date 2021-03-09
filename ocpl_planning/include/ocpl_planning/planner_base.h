@@ -69,8 +69,45 @@ class Planner
 
     void initializeTaskSpaceSamplers(const std::vector<Bounds> tsr_bounds);
 
+    /******************************
+     * BUILDING BLOCKS
+     * ****************************/
+    /** \brief Sample only the redundant joints. **/
+    JointPositions sampleRedJoints();
+
+    /** \brief Sampled redudant joints around a given bias configuration.
+     *
+     * The interval with is [-d, d] where d is the `settings_.cspace_delta` parameter.
+     * It also keeps the samle within the joint limits.
+     * **/
+    JointPositions sampleRedJoints(const JointPositions& q_bias);
+
+    /** \brief Solve inverse kinematics and only return solutions close to a bias config.
+     *
+     * Meaning non of the joints deviate more than `settings_.cspace_delta`.
+     * **/
+    JointPositions biasedIK(const Transform& tf, const JointPositions& q_red, const JointPositions& q_bias);
+
+    /** \brief Collision checking along linear interpolated path between 2 configs. **/
+    bool isPathValid(const JointPositions& q_from, const JointPositions& q_to);
+
+    /** \brief Get a (random) robot configurations for a given waypoint along the path. **/
+    JointPositions sample(const TSR& tsr);
+
+    /** \brief Get a (random) biased robot configurations for a given waypoint along the path.
+     *
+     * The solution space for the given waypoint is sampled in a regions around the q_bias;
+     *
+     * **/
+    JointPositions sample(const TSR& tsr, const JointPositions& q_bias);
+
   public:
     Planner(const Robot& robot, const PlannerSettings& settings);
+
+    virtual void changeSettings(const PlannerSettings& new_settings)
+    {
+        settings_ = new_settings;
+    }
 
     virtual Solution solve(const std::vector<TSR>& task) = 0;
 

@@ -98,7 +98,7 @@ int main(int argc, char** argv)
     //////////////////////////////////
     auto ps = loadSettingsFromFile("oriolo1.txt");
     oriolo::OrioloPlanner planner(bot, ps);
-    // std::reverse(regions.begin(), regions.end());
+    // // std::reverse(regions.begin(), regions.end());
 
     auto solution = planner.solve(regions);
 
@@ -116,33 +116,23 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Some quick benchmarking
     //////////////////////////////////
-    // oriolo::OrioloSpecificSettings set1;
-    // set1.METHOD = "greedy";
-    // set1.MAX_ITER = 2000;
-    // set1.name = set1.METHOD;
+    // PlannerSettings set1;
+    // set1.name = "greedy";
+    // set1.type = PlannerType::GREEDY;
+    // set1.sampler_type = SamplerType::RANDOM;
+    // set1.max_iters = 2000;
+    // set1.cspace_delta = 0.1;
 
-    // oriolo::OrioloSpecificSettings set2;
-    // set2.METHOD = "bigreedy";
-    // set2.MAX_ITER = 2000;
-    // set2.name = set2.METHOD;
+    // PlannerSettings set2;
+    // set2.name = "bigreedy";
+    // set2.type = PlannerType::BIGREEDY;
+    // set2.sampler_type = SamplerType::RANDOM;
+    // set2.max_iters = 2000;
+    // set2.cspace_delta = 0.1;
 
-    // runBenchmark("oriolo_red_1.csv", bot, regions, { set1, set2 }, 50);
-
+    // runBenchmark("oriolo_red_2.csv", bot, regions, planner, { set1, set2 }, 50);
     // std::reverse(regions.begin(), regions.end());
-    // runBenchmark("oriolo_red_1_reversed.csv", bot, regions, { set1, set2 }, 50);
-
-    // Planner2Settings set1{};
-    // set1.name = "set1";
-    // set1.method = "local_stack";
-
-    // Planner2Settings set2{};
-    // set2.name = "set2";
-    // set2.method = "local_priority_stack";
-
-    // runBenchmark("planner2_1_ptr.csv", bot, regions, { set1, set2 }, 50);
-
-    // std::reverse(regions.begin(), regions.end());
-    // runBenchmark("oriolo_red_1_reversed.csv", bot, regions, { set1, set2 }, 50);
+    // runBenchmark("oriolo_red_2_reversed.csv", bot, regions, planner, { set1, set2 }, 50);
 
     return 0;
 }
