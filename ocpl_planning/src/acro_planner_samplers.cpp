@@ -181,7 +181,7 @@ std::vector<JointPositions> UnifiedPlanner::sample(size_t waypoint, const JointP
         IKSolution sol = robot_.ik(tf_samples[i], q_red_samples[i]);
         for (auto q_sol : sol)
         {
-            if (norm1Diff(q_sol, q_bias) < settings_.cspace_delta)
+            if (normInfDiff(q_sol, q_bias) < settings_.cspace_delta)
             {
                 // if (noColl(q_bias, q_sol))
                 if (robot_.isValid(q_sol))
