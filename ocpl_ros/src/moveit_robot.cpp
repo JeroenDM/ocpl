@@ -15,7 +15,7 @@
 
 namespace ocpl
 {
-MoveItRobot::MoveItRobot(const std::string& tcp_frame) : tcp_frame_(tcp_frame)
+MoveItRobot::MoveItRobot(const std::string& tcp_frame) : tcp_frame_(tcp_frame), num_red_dof_{ 0 }
 {
     // load robot model
     robot_model_loader_ = std::make_shared<robot_model_loader::RobotModelLoader>("robot_description");

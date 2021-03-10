@@ -38,6 +38,7 @@ class MoveItRobot
 
     std::string tcp_frame_;
     std::size_t num_dof_;
+    std::size_t num_red_dof_;
 
     std::vector<Bounds> joint_position_limits_;
     std::vector<Bounds> joint_velocity_limits_;
@@ -86,16 +87,20 @@ class MoveItRobot
               const rviz_visual_tools::colors& color = rviz_visual_tools::DEFAULT);
 
     /** Show the different robot poses along the path with a short delay in between.
-     * 
+     *
      * When a configuration is colliding, it is shown red. Otherwise it is shown green.
      * **/
-    void animatePath(moveit_visual_tools::MoveItVisualToolsPtr mvt,
-                                  const std::vector<JointPositions>& path);
+    void animatePath(moveit_visual_tools::MoveItVisualToolsPtr mvt, const std::vector<JointPositions>& path);
     std::size_t getNumDof()
     {
         return num_dof_;
     }
 
+    std::size_t getNumRedDof()
+    {
+        return num_red_dof_;
+    }
+    
     const std::vector<Bounds>& getJointPositionLimits()
     {
         return joint_position_limits_;

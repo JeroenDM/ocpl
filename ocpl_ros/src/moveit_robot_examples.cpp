@@ -34,6 +34,7 @@ PlanarRobotNR::PlanarRobotNR(const std::string& tcp_frame) : MoveItRobot(tcp_fra
 {
     assert(num_dof_ > 3);  // this class is for planar redundant robots
     messyHardCodedStuff();
+    num_red_dof_ = num_dof_ - num_base_joints_;
 }
 
 void PlanarRobotNR::messyHardCodedStuff()
@@ -105,6 +106,7 @@ IndustrialRobot::IndustrialRobot(const std::string& tcp_frame) : MoveItRobot(tcp
     }
     setOPWParameters();
     messyHardCodedStuff();
+    num_red_dof_ = num_red_joints_;
 }
 
 IKSolution IndustrialRobot::ik(const Transform& tf)
