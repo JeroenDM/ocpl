@@ -13,8 +13,11 @@ std::vector<ocpl::TSR> waypoints()
     return createLineTask(bounds, start, stop, Eigen::Isometry3d::Identity(), 10);
 }
 
-std::vector<ocpl::Bounds> tsrBounds()
+ocpl::CaseSettings settings()
 {
-    return { { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, M_PI } };
+    ocpl::CaseSettings s;
+    s.tsr_resolution = {1, 1, 1, 1, 1, 10};
+    s.redundant_joints_resolution = {5, 5, 5, 5, 5};
+    return s;
 }
 }  // namespace case3

@@ -7,7 +7,7 @@ namespace case1
 /** Case 1 modification**/
 std::vector<ocpl::TSR> waypoints()
 {
-    ocpl::TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, 0.0 } };
+    ocpl::TSRBounds bounds{ { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
     Eigen::Vector3d start(0.5, 2.0, 0.0);
     Eigen::Vector3d stop(0.5, 2.7, 0.0);
     auto line1 = createLineTask(bounds, start, stop, Eigen::Isometry3d::Identity(), 10);
@@ -28,8 +28,11 @@ std::vector<ocpl::TSR> waypoints()
     return line1;
 }
 
-std::vector<ocpl::Bounds> tsrBounds()
+ocpl::CaseSettings settings()
 {
-    return { { 0.0, 0.0 }, { 0.0, 0.0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, 0.0 } };
+    ocpl::CaseSettings s;
+    s.tsr_resolution = {1, 1, 1, 1, 1, 64};
+    s.redundant_joints_resolution = {40, 40};
+    return s;
 }
 }  // namespace case1
