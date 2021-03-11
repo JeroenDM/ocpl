@@ -152,9 +152,9 @@ std::vector<JointPositions> UnifiedPlanner::sample(size_t waypoint, const JointP
 
     // Now we add a perturbation on v_prev using the local tsr sampler.
     // This sample is then converted to a 3D Transform used later to solve the inverse kinematics.
-    auto tsr_samples = tsr_local_sampler_->getSamples(settings_.c_space_batch_size);
+    auto tsr_samples = tsr_local_sampler_->getSamples(settings_.t_space_batch_size);
     std::vector<Transform> tf_samples;
-    tf_samples.reserve(settings_.c_space_batch_size);
+    tf_samples.reserve(settings_.t_space_batch_size);
     for (auto tsr_sample : tsr_samples)
     {
         std::vector<double> v_bias = tsr_sample;
@@ -173,27 +173,29 @@ std::vector<JointPositions> UnifiedPlanner::sample(size_t waypoint, const JointP
 
     // solve inverse kinematics te calculate base joints
     std::vector<JointPositions> samples;
-    samples.reserve(settings_.c_space_batch_size);
+    samples.reserve(settings_.c_space_batch_size * settings_.t_space_batch_size);
     // #pragma omp parallel
     // #pragma omp for
-    for (size_t i{ 0 }; i < settings_.c_space_batch_size; ++i)
+    for (auto tf : tf_samples)
     {
-        IKSolution sol = robot_.ik(tf_samples[i], q_red_samples[i]);
-        for (auto q_sol : sol)
+        for (auto q_red : q_red_samples)
         {
-            if (normInfDiff(q_sol, q_bias) < settings_.cspace_delta)
+            for (auto q_sol : robot_.ik(tf, q_red))
             {
-                // if (noColl(q_bias, q_sol))
-                if (robot_.isValid(q_sol))
+                if (normInfDiff(q_sol, q_bias) < settings_.cspace_delta)
                 {
-                    samples.push_back(q_sol);
+                    // if (noColl(q_bias, q_sol))
+                    if (robot_.isValid(q_sol))
+                    {
+                        samples.push_back(q_sol);
+                    }
                 }
             }
         }
     }
     samples.shrink_to_fit();
     return samples;
-}
+}  // namespace ocpl
 
 std::vector<JointPositions> UnifiedPlanner::sampleLocalIncremental(
     const JointPositions& q_bias, std::function<IKSolution(const JointPositions&)> local_sampler)
