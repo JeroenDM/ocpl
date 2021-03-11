@@ -1,10 +1,12 @@
+name: local_halton_dfs
 is_redundant: true
 sampler_type: halton
-t_space_batch_size: 10
-c_space_batch_size: 100
-min_valid_samples: 300
+t_space_batch_size: 1
+c_space_batch_size: 1
+min_valid_samples: 1
+min_shots: 200
 max_iters: 1000
 planner_type: local_dfs
 cspace_delta: 0.1
 timeout: 5.0
-debug: 0
+debug: 1
