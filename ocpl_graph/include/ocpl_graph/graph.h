@@ -29,7 +29,7 @@ struct Node
 };
 typedef std::shared_ptr<Node> NodePtr;
 
-typedef std::function<std::vector<NodePtr>(const NodePtr& node, size_t num_samples)> SampleFun;
+typedef std::function<std::vector<NodePtr>(const NodePtr& node)> SampleFun;
 
 /** \brief A generic graph implementation. The structure is determined by the sample function that is passed in to get
  * the neighbors of a node.

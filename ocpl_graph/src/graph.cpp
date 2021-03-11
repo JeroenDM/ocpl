@@ -24,7 +24,7 @@ const std::vector<NodePtr>& Graph::getNeighbors(const NodePtr& node)
     // if (sample_locally_)
     // {
     // override previous samples for the sampled waypoint
-    nodes_.at(node->waypoint_index + 1) = sample_fun_(node, 300);
+    nodes_.at(node->waypoint_index + 1) = sample_fun_(node);
     // }
     return nodes_.at(node->waypoint_index + 1);
 }

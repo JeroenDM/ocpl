@@ -7,7 +7,86 @@
 namespace ocpl
 {
 /************************************************************************
- * GLOBAL SAMPLING
+ * Incremental and grid sampling functions
+ * **********************************************************************/
+std::vector<std::vector<JointPositions>> sampleGlobalGrid(std::vector<std::function<IKSolution()>> path_samplers)
+{
+    std::vector<std::vector<JointPositions>> graph_data;
+    graph_data.resize(path_samplers.size());
+
+    TSLogger logger;  // Thread save logging
+
+#pragma omp parallel
+#pragma omp for
+    for (std::size_t i = 0; i < path_samplers.size(); ++i)
+    {
+        graph_data[i] = path_samplers[i]();
+
+        logger.logWaypoint(i, graph_data[i].size());
+    }
+    return graph_data;
+}
+
+std::vector<std::vector<JointPositions>> sampleGlobalIncremental(std::vector<std::function<IKSolution()>> path_samplers,
+                                                                 const int min_valid_samples, const int max_iters)
+{
+    std::vector<std::vector<JointPositions>> graph_data;
+    graph_data.resize(path_samplers.size());
+
+    TSLogger logger;  // Thread save logging
+
+#pragma omp parallel
+#pragma omp for
+    for (std::size_t i = 0; i < path_samplers.size(); ++i)
+    {
+        int iters{ 0 };
+        std::vector<JointPositions> valid_samples;
+        while (iters < max_iters && valid_samples.size() < min_valid_samples)
+        {
+            auto s = path_samplers[i]();
+
+            // add the new joint positions to valid_samples (stl can be ugly...)
+            valid_samples.reserve(valid_samples.size() + std::distance(s.begin(), s.end()));
+            valid_samples.insert(valid_samples.end(), s.begin(), s.end());
+
+            iters++;
+        }
+        graph_data[i] = valid_samples;
+
+        logger.logWaypoint(i, valid_samples.size());
+
+        if (iters == max_iters)
+            logger.log("ocpl_planner: maximum number of iterations reached.\n");
+    }
+    return graph_data;
+}
+
+std::vector<JointPositions> sampleLocalIncremental(
+    const JointPositions& q_bias, std::function<IKSolution(const JointPositions&)> local_sampler,
+    const int min_valid_samples, const int max_iters)
+{
+    int iters{ 0 };
+    std::vector<JointPositions> valid_samples;
+    while (iters < max_iters && valid_samples.size() < min_valid_samples)
+    {
+        auto s = local_sampler(q_bias);
+
+        // add the new joint positions to valid_samples (stl can be ugly...)
+        valid_samples.reserve(valid_samples.size() + std::distance(s.begin(), s.end()));
+        valid_samples.insert(valid_samples.end(), s.begin(), s.end());
+
+        iters++;
+    }
+    if (iters == max_iters)
+    {
+        std::cout << "Sampler reached maximum number of iterations.\n";
+    }
+
+    return valid_samples;
+}
+
+/************************************************************************
+ * Implement global sampler
  * **********************************************************************/
 std::vector<std::function<IKSolution()>> UnifiedPlanner::createGlobalWaypointSamplers(
     const std::vector<TSR>& task_space_regions, const JointLimits& redundant_joint_limits)
@@ -61,61 +140,8 @@ std::vector<std::function<IKSolution()>> UnifiedPlanner::createGlobalWaypointSam
     return path_samplers;
 }
 
-std::vector<std::vector<JointPositions>>
-UnifiedPlanner::sampleGlobalIncremental(std::vector<std::function<IKSolution()>> path_samplers)
-{
-    std::vector<std::vector<JointPositions>> graph_data;
-    graph_data.resize(path_samplers.size());
-
-    TSLogger logger;  // Thread save logging
-
-#pragma omp parallel
-#pragma omp for
-    for (std::size_t i = 0; i < path_samplers.size(); ++i)
-    {
-        int iters{ 0 };
-        std::vector<JointPositions> valid_samples;
-        while (iters < settings_.max_iters && valid_samples.size() < settings_.min_valid_samples)
-        {
-            auto s = path_samplers[i]();
-
-            // add the new joint positions to valid_samples (stl can be ugly...)
-            valid_samples.reserve(valid_samples.size() + std::distance(s.begin(), s.end()));
-            valid_samples.insert(valid_samples.end(), s.begin(), s.end());
-
-            iters++;
-        }
-        graph_data[i] = valid_samples;
-
-        logger.logWaypoint(i, valid_samples.size());
-
-        if (iters == settings_.max_iters)
-            logger.log("ocpl_planner: maximum number of iterations reached.\n");
-    }
-    return graph_data;
-}
-
-std::vector<std::vector<JointPositions>>
-UnifiedPlanner::sampleGlobalGrid(std::vector<std::function<IKSolution()>> path_samplers)
-{
-    std::vector<std::vector<JointPositions>> graph_data;
-    graph_data.resize(path_samplers.size());
-
-    TSLogger logger;  // Thread save logging
-
-#pragma omp parallel
-#pragma omp for
-    for (std::size_t i = 0; i < path_samplers.size(); ++i)
-    {
-        graph_data[i] = path_samplers[i]();
-
-        logger.logWaypoint(i, graph_data[i].size());
-    }
-    return graph_data;
-}
-
 /************************************************************************
- * LOCAL SAMPLING
+ * Implement local sampler
  * **********************************************************************/
 std::vector<JointPositions> UnifiedPlanner::sample(size_t waypoint, const JointPositions& q_bias,
                                                    const std::vector<TSR>& task_space_regions)
@@ -195,28 +221,5 @@ std::vector<JointPositions> UnifiedPlanner::sample(size_t waypoint, const JointP
     }
     samples.shrink_to_fit();
     return samples;
-}  // namespace ocpl
-
-std::vector<JointPositions> UnifiedPlanner::sampleLocalIncremental(
-    const JointPositions& q_bias, std::function<IKSolution(const JointPositions&)> local_sampler)
-{
-    int iters{ 0 };
-    std::vector<JointPositions> valid_samples;
-    while (iters < settings_.max_iters && valid_samples.size() < settings_.min_valid_samples)
-    {
-        auto s = local_sampler(q_bias);
-
-        // add the new joint positions to valid_samples (stl can be ugly...)
-        valid_samples.reserve(valid_samples.size() + std::distance(s.begin(), s.end()));
-        valid_samples.insert(valid_samples.end(), s.begin(), s.end());
-
-        iters++;
-    }
-    if (iters == settings_.max_iters)
-    {
-        std::cout << "Sampler reached maximum number of iterations.\n";
-    }
-
-    return valid_samples;
 }
 }  // namespace ocpl

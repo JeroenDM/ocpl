@@ -25,7 +25,7 @@ std::vector<std::vector<ocpl_graph::NodePtr>> UnifiedPlanner::createGlobalRoadma
     else
     {
         auto start = std::chrono::steady_clock::now();
-        graph_data = sampleGlobalIncremental(path_samplers);
+        graph_data = sampleGlobalIncremental(path_samplers, settings_.min_valid_samples, settings_.max_iters);
         auto stop = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsed_seconds = stop - start;
         std::cout << "Sampling time: " << elapsed_seconds.count() << "\n";
@@ -80,7 +80,7 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
         auto nodes = createGlobalRoadmap(task_space_regions, redundant_joint_limits, state_cost_fun);
 
         // Wrap this nodes in a nearest getNeighbor function that the graph search needs
-        auto sample_f = [&nodes](const ocpl_graph::NodePtr& node, size_t /* num_samples */) {
+        auto sample_f = [&nodes](const ocpl_graph::NodePtr& node) {
             return nodes.at(node->waypoint_index + 1);
         };
 
@@ -109,9 +109,9 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
             });
         }
 
-        auto sample_f = [local_samplers, state_cost_fun, task_space_regions, this](const ocpl_graph::NodePtr& node,
-                                                                                   size_t /* num_samples */) {
-            auto q_samples = sampleLocalIncremental(node->data, local_samplers[node->waypoint_index + 1]);
+        auto sample_f = [local_samplers, state_cost_fun, task_space_regions, this](const ocpl_graph::NodePtr& node) {
+            auto q_samples = sampleLocalIncremental(node->data, local_samplers[node->waypoint_index + 1],
+                                                    settings_.min_valid_samples, settings_.max_iters);
             std::vector<ocpl_graph::NodePtr> nodes;
             for (const JointPositions& q : q_samples)
             {
@@ -127,17 +127,17 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
             return nodes;
         };
 
-        size_t old_mvs = settings_.min_valid_samples;
-        if (true)
-        {
-            settings_.min_valid_samples = settings_.min_shots;
-        }
+        // size_t old_mvs = settings_.min_valid_samples;
+        // if (true)
+        // {
+        //     settings_.min_valid_samples = settings_.min_shots;
+        // }
         std::vector<ocpl_graph::NodePtr> start_nodes =
             (createGlobalRoadmap({ task_space_regions.at(0) }, redundant_joint_limits, state_cost_fun)).at(0);
-        if (true)
-        {
-            settings_.min_valid_samples = old_mvs;
-        }
+        // if (true)
+        // {
+        //     settings_.min_valid_samples = old_mvs;
+        // }
 
         if (debug_)
         {
