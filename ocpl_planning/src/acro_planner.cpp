@@ -70,7 +70,9 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
     initializeTaskSpaceSamplers(task_space_regions.at(0).bounds.asVector());
 
     // convert the path cost function to something that can work with NodePtr instead of JointPositions
-    auto path_cost = [path_cost_fun](ocpl_graph::NodePtr n1, ocpl_graph::NodePtr n2) { return path_cost_fun(n1->data, n2->data); };
+    auto path_cost = [path_cost_fun](ocpl_graph::NodePtr n1, ocpl_graph::NodePtr n2) {
+        return path_cost_fun(n1->data, n2->data);
+    };
 
     std::vector<ocpl_graph::NodePtr> path_nodes;
     if (settings_.type == PlannerType::GLOBAL || settings_.type == PlannerType::GLOBAL_DFS)
@@ -113,7 +115,8 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
             std::vector<ocpl_graph::NodePtr> nodes;
             for (const JointPositions& q : q_samples)
             {
-                nodes.push_back(std::make_shared<ocpl_graph::Node>(q, state_cost_fun(task_space_regions[node->waypoint_index], q)));
+                nodes.push_back(
+                    std::make_shared<ocpl_graph::Node>(q, state_cost_fun(task_space_regions[node->waypoint_index], q)));
                 nodes.back()->waypoint_index = node->waypoint_index + 1;
             }
             if (debug_)
@@ -124,8 +127,17 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
             return nodes;
         };
 
+        size_t old_mvs = settings_.min_valid_samples;
+        if (true)
+        {
+            settings_.min_valid_samples = settings_.min_shots;
+        }
         std::vector<ocpl_graph::NodePtr> start_nodes =
             (createGlobalRoadmap({ task_space_regions.at(0) }, redundant_joint_limits, state_cost_fun)).at(0);
+        if (true)
+        {
+            settings_.min_valid_samples = old_mvs;
+        }
 
         if (debug_)
         {

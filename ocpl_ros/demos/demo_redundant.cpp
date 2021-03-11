@@ -49,6 +49,7 @@ int main(int argc, char** argv)
 
     //////////////////////////////////
     // Select the planning task
+    // And get the case specific parameters
     //////////////////////////////////
     int PLANNING_CASE{ 2 };
     if (argc > 1)
@@ -58,22 +59,26 @@ int main(int argc, char** argv)
     }
 
     std::vector<TSR> regions;
+    CaseSettings case_settings;
     switch (PLANNING_CASE)
     {
         case 1:
             // 2P 3R robot case
             regions = case1::waypoints();
+            case_settings = case1::settings();
             // alternative joint limits for this case for the 2p 3r robot
             // JointLimits joint_limits{ { 2.0, 3.0 }, { -2.0, 1.0 }, { -1.5, 1.5 }, { -1.5, 1.5 }, { -1.5, 1.5 } };
             break;
         case 2:
             // 6 dof small passage case
             regions = case2::waypoints(20);
+            case_settings = case2::settings();
             break;
 
         case 3:
             // 8 dof zig zag case
             regions = case3::waypoints();
+            case_settings = case3::settings();
             break;
 
         default:
@@ -107,79 +112,78 @@ int main(int argc, char** argv)
     // auto state_cost_fun = zeroStateCost;
 
     Robot bot{ robot.getNumDof(),
-               robot.getNumDof() - 3,
+               robot.getNumRedDof(),
                robot.getJointPositionLimits(),
                [&robot](const JointPositions& q) { return robot.fk(q); },
                ik_fun,
                is_valid_fun };
 
+    for (auto jl : robot.getJointPositionLimits())
+    {
+        std::cout << "Joint limit: " << jl.lower << ", " << jl.upper << "\n";
+    }
+
     auto ps = loadSettingsFromFile("local1.yaml");
+    ps.tsr_resolution = case_settings.tsr_resolution;
+    ps.redundant_joints_resolution = case_settings.redundant_joints_resolution;
+    // double max_l2_norm_diff = std::sqrt((double)robot.getNumDof() * ps.cspace_delta * ps.cspace_delta);
 
-    double max_l2_norm_diff = std::sqrt((double)robot.getNumDof() * ps.cspace_delta * ps.cspace_delta);
-
-    // auto f_path_cost = L2NormDiff2;
-    auto f_path_cost = [max_l2_norm_diff](const std::vector<double>& n1, const std::vector<double>& n2) {
-        assert(n1.size() == n2.size());
-        double cost{ 0.0 };
-        for (int i = 0; i < n1.size(); ++i)
-        {
-            double inc = std::abs(n1[i] - n2[i]);
-            if (inc > max_l2_norm_diff)
-                return std::nan("1");
-            cost += inc * inc;
-        }
-        return cost;
-    };
+    // // auto f_path_cost = L2NormDiff2;
+    // auto f_path_cost = [max_l2_norm_diff](const std::vector<double>& n1, const std::vector<double>& n2) {
+    //     assert(n1.size() == n2.size());
+    //     double cost{ 0.0 };
+    //     for (int i = 0; i < n1.size(); ++i)
+    //     {
+    //         double inc = std::abs(n1[i] - n2[i]);
+    //         if (inc > max_l2_norm_diff)
+    //             return std::nan("1");
+    //         cost += inc * inc;
+    //     }
+    //     return cost;
+    // };
 
     //////////////////////////////////
     // Solve the problem
     //////////////////////////////////
     UnifiedPlanner planner(bot, ps);
-    std::reverse(regions.begin(), regions.end());
+    // std::reverse(regions.begin(), regions.end());
     // Solution solution = planner.solve(regions, f_path_cost, state_cost_fun);
+    Solution solution = planner.solve(regions);
 
-    // if (solution.success)
-    // {
-    //     std::cout << "A solution is found with a cost of " << solution.cost << "\n";
-    // }
-    // else
-    // {
-    //     std::cout << "No complete solution was found.\n";
-    // }
+    if (solution.success)
+    {
+        std::cout << "A solution is found with a cost of " << solution.cost << "\n";
+    }
+    else
+    {
+        std::cout << "No complete solution was found.\n";
+    }
 
-    // robot.animatePath(rviz.visual_tools_, solution.path);
+    robot.animatePath(rviz.visual_tools_, solution.path);
 
     //////////////////////////////////
     // Benchmark
     //////////////////////////////////
+    // std::vector<std::string> file_names = readLinesFromFile("benchmark1_file_names.txt");
+    // std::vector<PlannerSettings> settings;
+    // ROS_INFO("Running benchmark for the settings files:");
+    // for (auto name : file_names)
+    // {
+    //     ROS_INFO_STREAM(name);
+    //     settings.push_back(loadSettingsFromFile(name));
 
-    PlannerSettings set1 = loadSettingsFromFile("global1.yaml");
-    set1.name = "set1";
-    set1.type = PlannerType::GLOBAL;
+    //     // change case and robot specific settings
+    //     settings.back().tsr_resolution = case_settings.tsr_resolution;
+    //     settings.back().redundant_joints_resolution = case_settings.redundant_joints_resolution;
+    // }
 
-    PlannerSettings set2 = loadSettingsFromFile("global1.yaml");
-    set2.name = "set2";
-    set2.type = PlannerType::GLOBAL_DFS;
+    // UnifiedPlanner planner(bot, settings.front());
+    // std::string outfilename{ "results/benchmark_1_case_" + std::to_string(PLANNING_CASE) + ".csv" };
+    // runBenchmark(outfilename, bot, regions, planner, settings, 5);
 
-    PlannerSettings set1b = loadSettingsFromFile("global1.yaml");
-    set1b.name = "set1b";
-    set1b.type = PlannerType::GLOBAL;
-    set1b.sampler_type = SamplerType::HALTON;
-
-    PlannerSettings set2b = loadSettingsFromFile("global1.yaml");
-    set2b.name = "set2b";
-    set2b.type = PlannerType::GLOBAL_DFS;
-    set2b.sampler_type = SamplerType::HALTON;
-
-    PlannerSettings set3 = loadSettingsFromFile("local1.yaml");
-    set3.name = "set3";
-    set3.type = PlannerType::LOCAL_DFS;
-
-    PlannerSettings set4 = loadSettingsFromFile("local1.yaml");
-    set4.name = "set4";
-    set4.type = PlannerType::LOCAL_BEST_FIRST_DFS;
-
-    runBenchmark("unified_planner", bot, regions, planner, {set1, set2, set1b, set2b, set3, set4}, 5);
+    // outfilename = "results/benchmark_1_case_" + std::to_string(PLANNING_CASE) + "_rev.csv";
+    // std::reverse(regions.begin(), regions.end());
+    // runBenchmark(outfilename, bot, regions, planner, settings, 5);
 
     return 0;
 }

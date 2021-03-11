@@ -57,7 +57,7 @@ int main(int argc, char** argv)
 
     // small passage case
     auto regions = case2::waypoints(20);
-    auto tsr_bounds = case2::tsrBounds();
+    auto tsr_bounds = regions.at(0).bounds.asVector();
 
     // 8 dof zig zag case
     // auto regions = case3::waypoints();

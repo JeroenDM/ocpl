@@ -25,6 +25,8 @@ std::pair<std::string, std::string> proccessLine(const std::string& line);
 
 SettingsMap readSettingsFile(const std::string& filename);
 
+std::vector<std::string> readLinesFromFile(const std::string& filename);
+
 template <typename Scalar>
 std::vector<Scalar> stringToVector(const std::string& s);
 

@@ -59,14 +59,11 @@ struct Robot
     }
 };
 
-struct Problem
+/** Settings that are specifc to a robot and task combination. **/
+struct CaseSettings
 {
-    JointLimits redundant_joint_limits;
-    std::function<Transform(const JointPositions&)> fk_fun;
-    std::function<IKSolution(const Transform&, const JointPositions&)> ik_fun;
-    std::function<bool(const JointPositions&)> is_valid_fun;
-    std::function<double(const JointPositions&, const JointPositions&)> path_cost_fun;
-    std::function<double(const TSR&, const JointPositions&)> state_cost_fun;
+    std::vector<int> tsr_resolution{};
+    std::vector<int> redundant_joints_resolution{};
 };
 
 struct Solution

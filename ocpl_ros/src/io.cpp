@@ -49,6 +49,30 @@ SettingsMap readSettingsFile(const std::string& filename)
     return result;
 }
 
+std::vector<std::string> readLinesFromFile(const std::string& filename)
+{
+    // Find the data folder in the current package where we expect the file to be located
+    std::string path = ros::package::getPath(impl::THIS_PACKAGE_NAME);
+    path.append(impl::REL_PATH_DATA);
+    path.append(filename);
+
+    std::ifstream file(path);
+
+    if (!file.is_open())
+    {
+        throw std::runtime_error({ "File [" + path + "] not found." });
+    }
+
+    std::string line;
+    std::vector<std::string> result;
+    while (std::getline(file, line))
+    {
+        result.emplace_back(line);
+    }
+
+    return result;
+}
+
 template <typename Scalar>
 std::vector<Scalar> stringToVector(const std::string& s)
 {
@@ -69,45 +93,32 @@ PlannerSettings loadSettingsFromFile(const std::string filename)
     auto map = readSettingsFile(filename);
 
     PlannerSettings s;
+    s.name = findOrDefault(map, "name", std::string{ "default_name" });
     s.is_redundant = findOrDefault(map, "is_redundant", s.is_redundant);
     s.t_space_batch_size = findOrDefault(map, "t_space_batch_size", s.t_space_batch_size);
     s.c_space_batch_size = findOrDefault(map, "c_space_batch_size", s.c_space_batch_size);
+    s.min_shots = findOrDefault(map, "min_shots", s.min_shots);
     s.max_iters = findOrDefault(map, "max_iters", s.max_iters);
     s.min_valid_samples = findOrDefault(map, "min_valid_samples", s.min_valid_samples);
     s.cspace_delta = findOrDefault(map, "cspace_delta", s.cspace_delta);
     s.state_cost_weight = findOrDefault(map, "state_cost_weight", s.state_cost_weight);
     s.debug = findOrDefault(map, "debug", s.debug);
 
+    // mapping from strings in settings file to planner types
+    static std::map<std::string, PlannerType> type_mapping{
+        { "local_dfs", PlannerType::LOCAL_DFS }, { "local_best_first_dfs", PlannerType::LOCAL_BEST_FIRST_DFS },
+        { "global", PlannerType::GLOBAL },       { "global_dfs", PlannerType::GLOBAL_DFS },
+        { "greedy", PlannerType::GREEDY },       { "bigreedy", PlannerType::BIGREEDY },
+        { "rrtlike", PlannerType::RRTLIKE },
+    };
+
     auto entry = map.find("planner_type");
     if (entry != map.end())
     {
-        if (entry->second == "local" || entry->second == "local_dfs")
+        auto type_pair = type_mapping.find(entry->second);
+        if (type_pair != type_mapping.end())
         {
-            s.type = PlannerType::LOCAL_DFS;
-        }
-        else if (entry->second == "local_best_first_dfs")
-        {
-            s.type = PlannerType::LOCAL_BEST_FIRST_DFS;
-        }
-        else if (entry->second == "global")
-        {
-            s.type = PlannerType::GLOBAL;
-        }
-        else if (entry->second == "global_dfs")
-        {
-            s.type = PlannerType::GLOBAL_DFS;
-        }
-        else if (entry->second == "greedy")
-        {
-            s.type = PlannerType::GREEDY;
-        }
-        else if (entry->second == "bigreedy")
-        {
-            s.type = PlannerType::BIGREEDY;
-        }
-        else if (entry->second == "rrtlike")
-        {
-            s.type = PlannerType::RRTLIKE;
+            s.type = type_pair->second;
         }
         else
         {
@@ -137,15 +148,15 @@ PlannerSettings loadSettingsFromFile(const std::string filename)
         s.redundant_joints_resolution = stringToVector<int>(map["redundant_joints_resolution"]);
         s.tsr_resolution = stringToVector<int>(map["tsr_resolution"]);
 
-        if (s.is_redundant && s.redundant_joints_resolution.empty())
-        {
-            throw std::runtime_error("A redundant robot + grid sampling needs a the redundant_joints_resolution "
-                                     "setting.");
-        }
-        if (s.tsr_resolution.size() != 6)
-        {
-            throw std::runtime_error("Grid sampling needs the tsr_resolution setting with 6 values");
-        }
+        // if (s.is_redundant && s.redundant_joints_resolution.empty())
+        // {
+        //     throw std::runtime_error("A redundant robot + grid sampling needs a the redundant_joints_resolution "
+        //                              "setting.");
+        // }
+        // if (s.tsr_resolution.size() != 6)
+        // {
+        //     throw std::runtime_error("Grid sampling needs the tsr_resolution setting with 6 values");
+        // }
     }
 
     return s;

@@ -43,6 +43,9 @@ struct PlannerSettings
      * **/
     int min_valid_samples{ 1 };
 
+    /** The minimum number of valid start states the greedy planner should use. **/
+    int min_shots{ 300 };
+
     /** How many iterations can we try to find valid samples before giving up. **/
     int max_iters{ 50 };
 
