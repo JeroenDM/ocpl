@@ -61,9 +61,15 @@ std::vector<std::vector<JointPositions>> sampleGlobalIncremental(std::vector<std
     return graph_data;
 }
 
-std::vector<JointPositions> sampleLocalIncremental(
-    const JointPositions& q_bias, std::function<IKSolution(const JointPositions&)> local_sampler,
-    const int min_valid_samples, const int max_iters)
+std::vector<JointPositions> sampleLocalGrid(const JointPositions& q_bias,
+                                            std::function<IKSolution(const JointPositions&)> local_sampler)
+{
+    return local_sampler(q_bias);
+}
+
+std::vector<JointPositions> sampleLocalIncremental(const JointPositions& q_bias,
+                                                   std::function<IKSolution(const JointPositions&)> local_sampler,
+                                                   const int min_valid_samples, const int max_iters)
 {
     int iters{ 0 };
     std::vector<JointPositions> valid_samples;

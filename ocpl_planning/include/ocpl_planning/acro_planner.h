@@ -17,6 +17,9 @@ std::vector<std::vector<JointPositions>> sampleGlobalGrid(std::vector<std::funct
 std::vector<std::vector<JointPositions>> sampleGlobalIncremental(std::vector<std::function<IKSolution()>> path_samplers,
                                                                  const int min_valid_samples, const int max_iters);
 
+std::vector<JointPositions> sampleLocalGrid(const JointPositions& q_bias,
+                                            std::function<IKSolution(const JointPositions&)> local_sampler);
+
 /** \brief Sample locally and incrementally, given a bias configuration. **/
 std::vector<JointPositions> sampleLocalIncremental(const JointPositions& q_bias,
                                                    std::function<IKSolution(const JointPositions&)> local_sampler,
