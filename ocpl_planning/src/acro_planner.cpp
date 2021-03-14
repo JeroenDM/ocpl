@@ -80,9 +80,7 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
         auto nodes = createGlobalRoadmap(task_space_regions, redundant_joint_limits, state_cost_fun);
 
         // Wrap this nodes in a nearest getNeighbor function that the graph search needs
-        auto sample_f = [&nodes](const ocpl_graph::NodePtr& node) {
-            return nodes.at(node->waypoint_index + 1);
-        };
+        auto sample_f = [&nodes](const ocpl_graph::NodePtr& node) { return nodes.at(node->waypoint_index + 1); };
 
         ocpl_graph::Graph graph(sample_f, nodes.size(), nodes.at(0));
 
@@ -127,17 +125,20 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
             return nodes;
         };
 
-        // size_t old_mvs = settings_.min_valid_samples;
-        // if (true)
-        // {
-        //     settings_.min_valid_samples = settings_.min_shots;
-        // }
+        // use a specified number of samples for the first waypoints
+        // this equals the number of restarts for the greedy search
+        if (settings_.type == PlannerType::GREEDY)
+        {
+            settings_.min_valid_samples = settings_.min_shots;
+        }
         std::vector<ocpl_graph::NodePtr> start_nodes =
             (createGlobalRoadmap({ task_space_regions.at(0) }, redundant_joint_limits, state_cost_fun)).at(0);
-        // if (true)
-        // {
-        //     settings_.min_valid_samples = old_mvs;
-        // }
+
+        // use a single sample for all the other waypoints in greedy search
+        if (settings_.type == PlannerType::GREEDY)
+        {
+            settings_.min_valid_samples = 1;
+        }
 
         if (debug_)
         {
