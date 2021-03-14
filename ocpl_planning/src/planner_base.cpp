@@ -9,7 +9,8 @@ namespace ocpl
 /************************************************************************
  * SAMPLER INITIALIZATION
  * **********************************************************************/
-Planner::Planner(const Robot& robot, const PlannerSettings& settings) : robot_(robot), settings_(settings), debug_(settings.debug)
+Planner::Planner(const Robot& robot, const PlannerSettings& settings)
+  : robot_(robot), settings_(settings), debug_(settings.debug)
 {
     // sampler to generate perturbations on redundant joints with max deviation d around zero
     q_red_local_sampler_ = createLocalSampler(robot.num_red_dof, settings_.cspace_delta, settings_.sampler_type,
@@ -136,19 +137,35 @@ JointPositions Planner::sample(const TSR& tsr, const JointPositions& q_bias)
 
     // // now comes a trickier part, get a biased sample for the end-effector pose
     std::vector<double> v_prev = tsr.poseToValues(robot_.fk(q_bias));
+
+    const auto tsr_bounds = tsr.bounds.asVector();
+    for (size_t dim{ 0 }; dim < v_prev.size(); ++dim)
+    {
+        if (tsr_bounds[dim].lower != tsr_bounds[dim].upper)
+        {
+            v_prev[dim] = clip(v_prev[dim], tsr_bounds[dim].lower, tsr_bounds[dim].upper);
+        }
+        else
+        {
+            v_prev[dim] = 0.0;
+        }
+    }
+
     std::vector<double> v_bias = tsr_local_sampler_->getSample();
 
     // assume the variable that changes between two poses has no tolerance
     // and then ignore the previous value for this variable (v_bias will be zero for that variable)
     // (in most cases this is the x position, as the x-axis is oriented tangent to the path)
     assert(v_prev.size() == v_bias.size());
-    const auto tsr_bounds = tsr.bounds.asVector();
     for (size_t dim{ 0 }; dim < v_prev.size(); ++dim)
     {
         if (tsr_bounds[dim].lower != tsr_bounds[dim].upper)
+        {
             v_bias[dim] += v_prev[dim];
+            v_bias[dim] = clip(v_bias[dim], tsr_bounds[dim].lower, tsr_bounds[dim].upper);
+        }
     }
     return biasedIK(tsr.valuesToPose(v_bias), q_red, q_bias);
-}
+}  // namespace ocpl
 
 }  // namespace ocpl
