@@ -155,19 +155,23 @@ std::vector<JointPositions> UnifiedPlanner::sample(size_t waypoint, const JointP
     assert(tsr_sampler_ != nullptr);
     assert(tsr_local_sampler_ != nullptr);
 
-    // Get a biased sample for the redundant joints
-    auto red_sample_perturbations = q_red_local_sampler_->getSamples(settings_.c_space_batch_size);
     std::vector<JointPositions> q_red_samples;
-    q_red_samples.reserve(settings_.c_space_batch_size);
-    for (auto dq : red_sample_perturbations)
+    if (settings_.is_redundant)
     {
-        JointPositions q_red(robot_.num_red_dof);
-        // make sure the sample stays inside the robot's joint limits
-        for (size_t i{ 0 }; i < robot_.num_red_dof; ++i)
+        // Get a biased sample for the redundant joints
+        auto red_sample_perturbations = q_red_local_sampler_->getSamples(settings_.c_space_batch_size);
+        std::vector<JointPositions> q_red_samples;
+        q_red_samples.reserve(settings_.c_space_batch_size);
+        for (auto dq : red_sample_perturbations)
         {
-            q_red[i] = clip(q_bias[i] + dq[i], robot_.joint_limits[i].lower, robot_.joint_limits[i].upper);
+            JointPositions q_red(robot_.num_red_dof);
+            // make sure the sample stays inside the robot's joint limits
+            for (size_t i{ 0 }; i < robot_.num_red_dof; ++i)
+            {
+                q_red[i] = clip(q_bias[i] + dq[i], robot_.joint_limits[i].lower, robot_.joint_limits[i].upper);
+            }
+            q_red_samples.push_back(q_red);
         }
-        q_red_samples.push_back(q_red);
     }
 
     // Get a biased sample for the end-effector pose.
@@ -196,6 +200,7 @@ std::vector<JointPositions> UnifiedPlanner::sample(size_t waypoint, const JointP
         {
             if (tsr_bounds[dim].lower != tsr_bounds[dim].upper)
             {
+                // v_bias[dim] = v_bias[dim] + v_prev[dim];
                 v_bias[dim] = clip(v_bias[dim] + v_prev[dim], tsr_bounds[dim].lower, tsr_bounds[dim].upper);
             }
         }
@@ -203,16 +208,38 @@ std::vector<JointPositions> UnifiedPlanner::sample(size_t waypoint, const JointP
         tf_samples.push_back(tf);
     }
 
-    // solve inverse kinematics te calculate base joints
     std::vector<JointPositions> samples;
-    samples.reserve(settings_.c_space_batch_size * settings_.t_space_batch_size);
-    // #pragma omp parallel
-    // #pragma omp for
-    for (auto tf : tf_samples)
+    if (settings_.is_redundant)
     {
-        for (auto q_red : q_red_samples)
+        samples.reserve(settings_.c_space_batch_size * settings_.t_space_batch_size);
+        // solve inverse kinematics te calculate base joints
+        // #pragma omp parallel
+        // #pragma omp for
+        for (auto tf : tf_samples)
         {
-            for (auto q_sol : robot_.ik(tf, q_red))
+            for (auto q_red : q_red_samples)
+            {
+                for (auto q_sol : robot_.ik(tf, q_red))
+                {
+                    if (normInfDiff(q_sol, q_bias) < settings_.cspace_delta)
+                    {
+                        // if (noColl(q_bias, q_sol))
+                        if (robot_.isValid(q_sol))
+                        {
+                            samples.push_back(q_sol);
+                        }
+                    }
+                }
+            }
+        }
+        samples.shrink_to_fit();
+    }
+    else
+    {
+        samples.reserve(settings_.t_space_batch_size);
+        for (auto tf : tf_samples)
+        {
+            for (auto q_sol : robot_.ik(tf, {}))
             {
                 if (normInfDiff(q_sol, q_bias) < settings_.cspace_delta)
                 {
@@ -224,8 +251,8 @@ std::vector<JointPositions> UnifiedPlanner::sample(size_t waypoint, const JointP
                 }
             }
         }
+        samples.shrink_to_fit();
     }
-    samples.shrink_to_fit();
     return samples;
 }
 }  // namespace ocpl
