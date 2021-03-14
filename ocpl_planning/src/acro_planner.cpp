@@ -90,12 +90,12 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
         {
             auto d_fun = [](const ocpl_graph::NodePtr& a, const ocpl_graph::NodePtr& b) { return b->dist < a->dist; };
             ocpl_graph::PriorityQueueContainer<ocpl_graph::NodePtr> container(graph.size(), d_fun);
-            path_nodes = shortest_path_dag(graph, path_cost, container);
+            path_nodes = shortest_path_dag(graph, path_cost, container, settings_.timeout);
         }
         else /* if (settings_.type == PlannerType::GLOBAL_DFS) */
         {
             ocpl_graph::StackContainer<ocpl_graph::NodePtr> container;
-            path_nodes = shortest_path_dag(graph, path_cost, container);
+            path_nodes = shortest_path_dag(graph, path_cost, container, settings_.timeout);
         }
     }
     else
@@ -148,14 +148,14 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
         {
             ocpl_graph::Graph graph(sample_f, task_space_regions.size(), start_nodes);
             ocpl_graph::StackContainer<ocpl_graph::NodePtr> container;
-            path_nodes = ocpl_graph::shortest_path_dag(graph, path_cost, container);
+            path_nodes = ocpl_graph::shortest_path_dag(graph, path_cost, container, settings_.timeout);
         }
         else /*if (settings_.type == PlannerType::LOCAL_BEST_FIRST_DFS) */
         {
             ocpl_graph::Graph graph(sample_f, task_space_regions.size(), start_nodes);
             auto d_fun = [](const ocpl_graph::NodePtr& a, const ocpl_graph::NodePtr& b) { return b->dist < a->dist; };
             ocpl_graph::PriorityStackContainer<ocpl_graph::NodePtr> container(graph.size(), d_fun);
-            path_nodes = ocpl_graph::shortest_path_dag(graph, path_cost, container);
+            path_nodes = ocpl_graph::shortest_path_dag(graph, path_cost, container, settings_.timeout);
         }
     }
 

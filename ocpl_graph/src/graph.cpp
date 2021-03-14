@@ -78,7 +78,7 @@ std::vector<NodePtr> Graph::extract_partial_solution() const
 /** Graph traversal algorithm **/
 
 std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const NodePtr, const NodePtr)> cost_function,
-                                       BaseContainer<NodePtr>& cont)
+                                       BaseContainer<NodePtr>& cont, int max_runtime_seconds)
 {
     const std::vector<NodePtr>& start_nodes = graph.getStartNodes();
 
@@ -95,7 +95,7 @@ std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const 
     bool goal_reached{ false };
 
     auto start = std::chrono::system_clock::now();
-    std::chrono::seconds timeout(20);
+    std::chrono::seconds timeout(max_runtime_seconds);
     while (!cont.empty())
     {
         auto current = std::chrono::system_clock::now();

@@ -64,7 +64,7 @@ class Graph
 
 /** \brief Find shortest path in a directed acyclic graph. **/
 std::vector<NodePtr> shortest_path_dag(Graph& graph, std::function<double(const NodePtr, const NodePtr)> cost_function,
-                                       BaseContainer<NodePtr>& cont);
+                                       BaseContainer<NodePtr>& cont, int max_runtime_seconds = 5);
 
 std::ostream& operator<<(std::ostream& os, const Node& node);
 
