@@ -44,6 +44,7 @@ std::vector<double> TSR::poseToValues(const Transform& tf) const
     // Eigen documentation:
     //    The returned angles are in the ranges [0:pi]x[-pi:pi]x[-pi:pi].
     Eigen::Vector3d angles = tf_diff.rotation().eulerAngles(0, 1, 2);
+    angles = minNormEquivalent(angles);
 
     std::vector<double> values{ pos.x(), pos.y(), pos.z(), angles.x(), angles.y(), angles.z() };
     return values;
