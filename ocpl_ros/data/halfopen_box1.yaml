@@ -1,11 +1,13 @@
 is_redundant: true
-sampler_type: random
-planner_type: local
+sampler_type: halton
+planner_type: global
 t_space_batch_size: 10
-c_space_batch_size: 100
-min_valid_samples: 5000
-max_iters: 5000
-cspace_delta: 0.1
+c_space_batch_size: 10
+min_valid_samples: 50000
+max_iters: 50000
+cspace_delta: 0.5
 state_cost_weight: 10.0
 tsr_resolution: 1 1 1 5 5 30
 redundant_joints_resolution: 30
+debug: 1
+timeout: 200

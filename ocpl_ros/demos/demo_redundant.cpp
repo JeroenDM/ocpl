@@ -123,9 +123,9 @@ int main(int argc, char** argv)
         std::cout << "Joint limit: " << jl.lower << ", " << jl.upper << "\n";
     }
 
-    auto ps = loadSettingsFromFile("local1.yaml");
-    ps.tsr_resolution = case_settings.tsr_resolution;
-    ps.redundant_joints_resolution = case_settings.redundant_joints_resolution;
+    // auto ps = loadSettingsFromFile("halton1.yaml");
+    // ps.tsr_resolution = case_settings.tsr_resolution;
+    // ps.redundant_joints_resolution = case_settings.redundant_joints_resolution;
     // double max_l2_norm_diff = std::sqrt((double)robot.getNumDof() * ps.cspace_delta * ps.cspace_delta);
 
     // // auto f_path_cost = L2NormDiff2;
@@ -145,21 +145,21 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Solve the problem
     //////////////////////////////////
-    UnifiedPlanner planner(bot, ps);
-    // std::reverse(regions.begin(), regions.end());
-    // Solution solution = planner.solve(regions, f_path_cost, state_cost_fun);
-    Solution solution = planner.solve(regions);
+    // UnifiedPlanner planner(bot, ps);
+    // // std::reverse(regions.begin(), regions.end());
+    // // Solution solution = planner.solve(regions, f_path_cost, state_cost_fun);
+    // Solution solution = planner.solve(regions);
 
-    if (solution.success)
-    {
-        std::cout << "A solution is found with a cost of " << solution.cost << "\n";
-    }
-    else
-    {
-        std::cout << "No complete solution was found.\n";
-    }
+    // if (solution.success)
+    // {
+    //     std::cout << "A solution is found with a cost of " << solution.cost << "\n";
+    // }
+    // else
+    // {
+    //     std::cout << "No complete solution was found.\n";
+    // }
 
-    robot.animatePath(rviz.visual_tools_, solution.path);
+    // robot.animatePath(rviz.visual_tools_, solution.path);
 
     //////////////////////////////////
     // Benchmark
@@ -184,6 +184,33 @@ int main(int argc, char** argv)
     // outfilename = "results/benchmark_1_case_" + std::to_string(PLANNING_CASE) + "_rev.csv";
     // std::reverse(regions.begin(), regions.end());
     // runBenchmark(outfilename, bot, regions, planner, settings, 5);
+
+    //////////////////////////////////
+    // Benchmark specific parameter
+    //////////////////////////////////
+    // base settings to create variations from
+    // auto ps = loadSettingsFromFile("halton1.yaml");
+    auto ps = loadSettingsFromFile("local1.yaml");
+    ps.tsr_resolution = case_settings.tsr_resolution;
+    ps.redundant_joints_resolution = case_settings.redundant_joints_resolution;
+
+    std::vector<int> min_sample_range{ 100, 300, 600, 900 };
+    std::vector<PlannerSettings> settings;
+    for (auto min_samples : min_sample_range)
+    {
+        PlannerSettings new_setting = ps;
+        new_setting.name = std::to_string(min_samples);
+        new_setting.min_valid_samples = min_samples;
+        new_setting.max_iters = 10 * min_samples;
+        settings.emplace_back(new_setting);
+    }
+
+    UnifiedPlanner planner(bot, ps);
+    // std::string outfilename{ "results/benchmark_halton_case_" };
+    std::string outfilename{ "results/benchmark_local_halton_case_" };
+    outfilename.append(std::to_string(PLANNING_CASE));
+    outfilename.append(".csv");
+    runBenchmark(outfilename, bot, regions, planner, settings, 5);
 
     return 0;
 }

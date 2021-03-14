@@ -30,13 +30,14 @@ int main(int argc, char** argv)
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
-    std::shared_ptr<MoveItRobot> robot = std::make_shared<PlanarRobotNR>();
+    // std::shared_ptr<MoveItRobot> robot = std::make_shared<PlanarRobotNR>();
+    std::shared_ptr<MoveItRobot> robot = std::make_shared<IndustrialRobot>();
     Rviz rviz;
     ros::Duration(0.2).sleep();
     rviz.clear();
     ros::Duration(0.2).sleep();
 
-    std::string filename {"latest_path.npy"};
+    std::string filename {"last_path.npy"};
 
     if (argc > 1)
     {

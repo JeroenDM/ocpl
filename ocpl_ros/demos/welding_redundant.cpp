@@ -15,6 +15,7 @@
 #include <ocpl_planning/oriolo.h>
 #include <ocpl_planning/factories.h>
 #include <ocpl_planning/cost_functions.h>
+#include <ocpl_planning/io.h>
 
 using namespace ocpl;
 
@@ -43,6 +44,7 @@ int main(int argc, char** argv)
     }
     // rviz.visual_tools_->publishPath(visual_path);
     // rviz.visual_tools_->trigger();
+    // ros::Duration(0.1).sleep();
 
     //////////////////////////////////
     // Simple interface solver
@@ -101,20 +103,32 @@ int main(int argc, char** argv)
     // solve it!
     //////////////////////////////////
     // auto orioli_ps = loadOrioloSettings("oriolo1.txt");
-    oriolo::OrioloPlanner planner(bot, ps);
-    // 
+    // oriolo::OrioloPlanner planner(bot, ps);
+    //
     // UnifiedPlanner planner(bot, ps);
-    Solution res = planner.solve(task, path_cost_fun, state_cost_fun);
-    if (res.success)
-    {
-        std::cout << "A solution is found with a cost of " << res.cost << "\n";
-    }
-    else
-    {
-        std::cout << "No complete solution was found.\n";
-    }
+    // std::reverse(task.begin(), task.end());
+    // // Solution res = planner.solve(task);
+    // Solution res = planner.solve(task, path_cost_fun, zeroStateCost);
+    // if (res.success)
+    // {
+    //     std::cout << "A solution is found with a cost of " << res.cost << "\n";
+    // }
+    // else
+    // {
+    //     std::cout << "No complete solution was found.\n";
+    // }
 
-    robot.animatePath(rviz.visual_tools_, res.path);
+    // savePath("last_path.npy", res.path);
+
+    // // analyse path
+    // for (size_t wp{0}; wp < res.path.size(); ++wp)
+    // {
+    //     auto tf_fk = robot.fk(res.path[wp]);
+    //     auto v = task[wp].poseToValues(tf_fk);
+    //     std::cout << "v: " << v << std::endl;
+    // }
+
+    // robot.animatePath(rviz.visual_tools_, res.path);
 
     return 0;
 }

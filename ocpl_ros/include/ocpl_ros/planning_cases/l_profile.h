@@ -22,7 +22,7 @@ std::vector<ocpl::TSR> waypoints(double x_offset = 0.98, bool extra_tolerance = 
     Eigen::Vector3d start(x_offset, -0.5, 0.02);
     Eigen::Vector3d stop(x_offset, 0.5, 0.02);
     const std::size_t num_points{ 30 };
-    const double total_distance = (stop - start).norm();
+    // const double total_distance = (stop - start).norm();
     return createLineTask(bounds, start, stop, ori, num_points);
 }
 }  // namespace l_profile

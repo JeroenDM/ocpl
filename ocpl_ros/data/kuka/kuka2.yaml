@@ -1,0 +1,11 @@
+name: LPQ
+is_redundant: false
+sampler_type: random
+planner_type: local_best_first_dfs
+t_space_batch_size: 10
+c_space_batch_size: 100
+min_valid_samples: 300
+max_iters: 2000
+cspace_delta: 0.2
+state_cost_weight: 10.0
+timeout: 5.0
