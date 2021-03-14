@@ -58,6 +58,7 @@ struct PlannerSettings
     PlannerType type{ PlannerType::GLOBAL };
 
     int debug{ 0 }; /** Simple debug flag for logging statements. **/
+    int timeout{ 5 };
 };
 
 class Planner

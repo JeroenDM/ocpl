@@ -103,6 +103,8 @@ PlannerSettings loadSettingsFromFile(const std::string filename)
     s.cspace_delta = findOrDefault(map, "cspace_delta", s.cspace_delta);
     s.state_cost_weight = findOrDefault(map, "state_cost_weight", s.state_cost_weight);
     s.debug = findOrDefault(map, "debug", s.debug);
+    s.timeout = findOrDefault(map, "timeout", s.timeout);
+
 
     // mapping from strings in settings file to planner types
     static std::map<std::string, PlannerType> type_mapping{
