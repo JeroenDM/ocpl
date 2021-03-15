@@ -96,7 +96,7 @@ int main(int argc, char** argv)
             for (auto tsr : task)
             {
                 rviz.plotPose(tsr.tf_nominal);
-                // ros::Duration(0.05).sleep();
+                ros::Duration(0.05).sleep();
             }
             ros::Duration(0.1).sleep();
             // optionally we can set a state cost for every point along the path
