@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     // ps.max_iters = 500;
 
     // default settings
-    std::string PLANNER_SETTINGS_FILE{ "kuka1.yaml" };
+    std::string PLANNER_SETTINGS_FILE{ "kuka/kuka1.yaml" };
     if (argc > 2)
     {
         PLANNER_SETTINGS_FILE = std::string(argv[2]);
