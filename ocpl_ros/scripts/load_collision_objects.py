@@ -52,14 +52,14 @@ def create_case_2_2018():
         position=Vector3(6, small_passage_width + 1, 0), orientation=Quaternion(w=1)
     )
 
-    pose_3 = PoseStamped()
-    pose_3.header.frame_id = "world"
-    pose_3.pose = Pose(
-        position=Vector3(2, -1, 0), orientation=Quaternion(w=1)
-    )
+    # pose_3 = PoseStamped()
+    # pose_3.header.frame_id = "world"
+    # pose_3.pose = Pose(
+    #     position=Vector3(2, -1, 0), orientation=Quaternion(w=1)
+    # )
 
-    # return ["box", "box"], [pose_1, pose_2], [(4, 2, 1), (4, 2, 1)]
-    return ["box", "box", "box"], [pose_1, pose_2, pose_3], [(4, 2, 1), (4, 2, 1), (1, 1, 1)]
+    return ["box", "box"], [pose_1, pose_2], [(4, 2, 1), (4, 2, 1)]
+    # return ["box", "box", "box"], [pose_1, pose_2, pose_3], [(4, 2, 1), (4, 2, 1), (1, 1, 1)]
 
 
 def create_case_3_2018():
