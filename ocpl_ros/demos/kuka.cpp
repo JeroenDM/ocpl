@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     // ps.max_iters = 500;
 
     // default settings
-    std::string PLANNER_SETTINGS_FILE{ "kuka/kuka1.yaml" };
+    std::string PLANNER_SETTINGS_FILE{ "kuka/kuka_gpq.yaml" };
     if (argc > 2)
     {
         PLANNER_SETTINGS_FILE = std::string(argv[2]);
@@ -99,20 +99,6 @@ int main(int argc, char** argv)
                 // ros::Duration(0.05).sleep();
             }
             ros::Duration(0.1).sleep();
-
-            path_cost_fun = [&ps](const std::vector<double>& n1, const std::vector<double>& n2) {
-                assert(n1.size() == n2.size());
-                double cost{ 0.0 };
-                for (int i = 0; i < n1.size(); ++i)
-                {
-                    double inc = std::abs(n1[i] - n2[i]);
-                    if (inc > ps.cspace_delta)
-                        return std::nan("1");
-                    cost += inc * inc;
-                }
-                return std::sqrt(cost);
-            };
-
             // optionally we can set a state cost for every point along the path
             // this one tries to keep the end-effector pose close the the nominal pose
             // defined in the task space region
@@ -223,7 +209,7 @@ int main(int argc, char** argv)
     // ps.tsr_resolution = { 1, 1, 1, 1, 1, 10 };
 
     // keep close to robot home pose
-    std::vector<double> q_home{ 0, -1.5708, 1.5708, 0, 0, 0 };
+    // std::vector<double> q_home{ 0, -1.5708, 1.5708, 0, 0, 0 };
     // robot.plot(rviz.visual_tools_, q_home, rviz_visual_tools::MAGENTA);
     // ros::Duration(0.5).sleep();
 
@@ -256,8 +242,8 @@ int main(int argc, char** argv)
     // }
 
     // UnifiedPlanner planner(bot, settings.front());
-    // std::string outfilename{ "results/benchmark_kuka_case_" + std::to_string(PLANNING_CASE) + ".csv" };
-    // runBenchmark(outfilename, bot, task, planner, settings, 5);
+    // std::string outfilename{ "results/kuka_l_profile" + std::to_string(PLANNING_CASE) + ".csv" };
+    // runBenchmark(outfilename, bot, task, planner, settings, 50);
 
     return 0;
 }

@@ -69,15 +69,22 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
 
     initializeTaskSpaceSamplers(task_space_regions.at(0).bounds.asVector());
 
-    // convert the path cost function to something that can work with NodePtr instead of JointPositions
-    auto path_cost = [path_cost_fun](ocpl_graph::NodePtr n1, ocpl_graph::NodePtr n2) {
-        return path_cost_fun(n1->data, n2->data);
-    };
-
     std::vector<ocpl_graph::NodePtr> path_nodes;
     if (settings_.type == PlannerType::GLOBAL || settings_.type == PlannerType::GLOBAL_DFS)
     {
         auto nodes = createGlobalRoadmap(task_space_regions, redundant_joint_limits, state_cost_fun);
+
+        // wrap path cost function to only allows joint steps of settings_.cspace_delta
+        // convert the path cost function to something that can work with NodePtr instead of JointPositions
+        auto path_cost = [path_cost_fun, this](ocpl_graph::NodePtr n1, ocpl_graph::NodePtr n2) {
+            for (int i = 0; i < n1->data.size(); ++i)
+            {
+                double inc = std::abs(n1->data[i] - n2->data[i]);
+                if (inc > settings_.cspace_delta)
+                    return std::nan("1");
+            }
+            return path_cost_fun(n1->data, n2->data);
+        };
 
         // Wrap this nodes in a nearest getNeighbor function that the graph search needs
         auto sample_f = [&nodes](const ocpl_graph::NodePtr& node) { return nodes.at(node->waypoint_index + 1); };
@@ -86,18 +93,31 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
 
         if (settings_.type == PlannerType::GLOBAL)
         {
+            if (debug_)
+            {
+                std::cout << "Global Dijkstra's algorithm\n";
+            }
             auto d_fun = [](const ocpl_graph::NodePtr& a, const ocpl_graph::NodePtr& b) { return b->dist < a->dist; };
             ocpl_graph::PriorityQueueContainer<ocpl_graph::NodePtr> container(graph.size(), d_fun);
             path_nodes = shortest_path_dag(graph, path_cost, container, settings_.timeout);
         }
         else /* if (settings_.type == PlannerType::GLOBAL_DFS) */
         {
+            if (debug_)
+            {
+                std::cout << "Global depth first search\n";
+            }
             ocpl_graph::StackContainer<ocpl_graph::NodePtr> container;
             path_nodes = shortest_path_dag(graph, path_cost, container, settings_.timeout);
         }
     }
     else
     {
+        // convert the path cost function to something that can work with NodePtr instead of JointPositions
+        auto path_cost = [path_cost_fun](ocpl_graph::NodePtr n1, ocpl_graph::NodePtr n2) {
+            return path_cost_fun(n1->data, n2->data);
+        };
+
         // create local biased samplers for all path points
         std::vector<std::function<IKSolution(const JointPositions&)>> local_samplers;
         for (size_t wp{ 0 }; wp < task_space_regions.size(); ++wp)
