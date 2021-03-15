@@ -1,4 +1,4 @@
-kuka/kuka1.yaml
-kuka/kuka2.yaml
-kuka/kuka3.yaml
-kuka/kuka4.yaml
+kuka/kuka_gs.yaml
+kuka/kuka_gpq.yaml
+kuka/kuka_ls.yaml
+kuka/kuka_lspq.yaml
