@@ -34,8 +34,8 @@ int main(int argc, char** argv)
     std::shared_ptr<MoveItRobot> robot = std::make_shared<IndustrialRobot>();
     Rviz rviz;
     ros::Duration(0.2).sleep();
-    rviz.clear();
-    ros::Duration(0.2).sleep();
+    // rviz.clear();
+    // ros::Duration(0.2).sleep();
 
     std::string filename {"last_path.npy"};
 
