@@ -27,6 +27,7 @@
   <depend>ocpl_tsr</depend>
   <depend>ocpl_planning</depend>
   <depend>ocpl_benchmark</depend>
+  <depend>simple_moveit_wrapper</depend>
 
   <export>
   </export>

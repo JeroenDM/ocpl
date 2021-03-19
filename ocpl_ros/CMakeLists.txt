@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
   ocpl_tsr
   ocpl_planning
   ocpl_benchmark
+  simple_moveit_wrapper
 )
 
 find_package(Eigen3 REQUIRED)
@@ -123,6 +124,18 @@ set_target_properties(${PROJECT_NAME}_welding_redundant
   PROPERTIES OUTPUT_NAME welding_redundant PREFIX ""
 )
 target_link_libraries(${PROJECT_NAME}_welding_redundant
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
+
+# welding demo with kuka kr5 on rail
+add_executable(${PROJECT_NAME}_rotation_table
+  demos/rotation_table.cpp
+)
+set_target_properties(${PROJECT_NAME}_rotation_table
+  PROPERTIES OUTPUT_NAME rotation_table PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_rotation_table
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
 )
