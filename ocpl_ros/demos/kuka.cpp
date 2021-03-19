@@ -2,7 +2,8 @@
 
 #include <algorithm>
 
-#include <ocpl_ros/moveit_robot_examples.h>
+#include <simple_moveit_wrapper/industrial_robot.h>
+
 #include <ocpl_ros/rviz.h>
 #include <ocpl_ros/io.h>
 
@@ -24,19 +25,6 @@
 
 using namespace ocpl;
 
-void showPath(const std::vector<JointPositions>& path, Rviz& rviz, MoveItRobot& robot, double dt = 0.5)
-{
-    for (JointPositions q : path)
-    {
-        if (robot.isInCollision(q))
-            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::RED);
-        else
-            // robot.plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
-            robot.plot(rviz.visual_tools_, q, rviz_visual_tools::DEFAULT);
-        ros::Duration(dt).sleep();
-    }
-}
-
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "ocpl_moveit_demo");
@@ -44,7 +32,7 @@ int main(int argc, char** argv)
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
-    IndustrialRobot robot("tool_tip");
+    simple_moveit_wrapper::IndustrialRobot robot("manipulator", "tool_tip");
     // IndustrialRobot robot("tool0");
     Rviz rviz("base_link");
     rviz.clear();
@@ -163,15 +151,23 @@ int main(int argc, char** argv)
     // Translate robot kinematics to solver interface
     //////////////////////////////////
     // function that tells you whether a state is valid (collision free)
-    auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
+    auto f_is_valid = [&robot](const JointPositions& q) { return !robot.isColliding(q); };
     // auto f_is_valid = [&robot](const JointPositions& q) { return true; };
 
     // function that returns analytical inverse kinematics solution for end-effector pose
     auto f_ik = [&robot](const Transform& tf, const JointPositions& /*q_fixed*/) { return robot.ik(tf); };
 
+    // covert simple_moveit_wrapper limits to ocpl limits
+    // (they are the exactly the same struct, but I'm not sure how to share the common data type)
+    JointLimits joint_limits;
+    for (auto bound : robot.getJointPositionLimits())
+    {
+        joint_limits.push_back(ocpl::Bounds{ bound.lower, bound.upper });
+    }
+
     Robot bot{ robot.getNumDof(),
                robot.getNumDof() - 3,
-               robot.getJointPositionLimits(),
+               joint_limits,
                [&robot](const JointPositions& q) { return robot.fk(q); },
                f_ik,
                f_is_valid };
