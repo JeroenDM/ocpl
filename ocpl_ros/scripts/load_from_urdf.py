@@ -9,6 +9,7 @@ from geometry_msgs.msg import Vector3, Quaternion, Pose, PoseStamped
 
 REL_WORK_PATH = "/urdf/work/"
 
+
 def numpy_to_pose(arr):
     """ Numpy 4x4 array to geometry_msg.Pose
     Code from: https://github.com/eric-wieser/ros_numpy
@@ -22,9 +23,11 @@ def numpy_to_pose(arr):
 
     return Pose(position=Vector3(*trans), orientation=Quaternion(*quat))
 
+
 def remove_all_objects(scene):
     for name in scene.get_known_object_names():
         scene.remove_world_object(name)
+
 
 def parse_urdf_file(package_name, work_name):
     """ Convert urdf file (xml) to python dict.
@@ -74,6 +77,9 @@ def parse_link(link, mesh_path):
     collision = link.collisions[0]
     if collision.geometry.box is not None:
         data = {"type": "box", "size": link.collisions[0].geometry.box.size}
+    elif collision.geometry.cylinder is not None:
+        data = {"type": "cylinder", "radius": link.collisions[0].geometry.cylinder.radius,
+                "length": link.collisions[0].geometry.cylinder.length}
     elif collision.geometry.mesh is not None:
         data = {
             "type": "mesh",
@@ -81,9 +87,10 @@ def parse_link(link, mesh_path):
             "scale": collision.geometry.mesh.scale
         }
     else:
-        raise Exception("No mesh of box collision geometry found.")
+        raise Exception("URDF link collision geometry is not a mesh, box or cylinder.")
 
     return data
+
 
 def publish_parsed_urdf(parsed_urdf, scene):
     """ Publish link geometry for every joint's child. """
@@ -98,6 +105,13 @@ def publish_parsed_urdf(parsed_urdf, scene):
                 joint["pose"],
                 link["size"]
             )
+        elif link["type"] == "cylinder":
+            scene.add_cylinder(
+                joint["child"],
+                joint["pose"],
+                link["length"],
+                link["radius"]
+            )
         else:
             scene.add_mesh(
                 joint["child"],
@@ -105,6 +119,7 @@ def publish_parsed_urdf(parsed_urdf, scene):
                 link["filename"],
                 link["scale"]
             )
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
@@ -124,6 +139,5 @@ if __name__ == "__main__":
 
     work = parse_urdf_file(package_name, work_name)
     publish_parsed_urdf(work, scene)
-
 
     print("Done!")
