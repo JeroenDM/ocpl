@@ -12,6 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_core
   moveit_ros_planning
   moveit_visual_tools
+  moveit_msgs
+  rospy
+  tf2
   eigen_conversions
   moveit_opw_kinematics_plugin
   roscpp
@@ -58,6 +61,17 @@ add_library(
 )
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
+)
+
+add_executable(${PROJECT_NAME}_planning_server
+  src/planning_server.cpp
+)
+set_target_properties(${PROJECT_NAME}_planning_server
+  PROPERTIES OUTPUT_NAME planning_server PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_planning_server
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
 )
 
 # add_executable(${PROJECT_NAME}_demo

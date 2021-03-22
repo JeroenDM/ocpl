@@ -28,6 +28,9 @@
   <depend>ocpl_planning</depend>
   <depend>ocpl_benchmark</depend>
   <depend>simple_moveit_wrapper</depend>
+  <depend>moveit_msgs</depend>
+  <depend>rospy</depend>
+  <depend>tf2</depend>
 
   <export>
   </export>
