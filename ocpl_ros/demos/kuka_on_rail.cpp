@@ -38,19 +38,75 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Create task
     //////////////////////////////////
-    // auto task = halfopen_box::waypoints();
-    auto task = text::waypoints(work_pose);
+    std::vector<TSR> task;
+    std::vector<std::vector<TSR>> multiple_tasks;
 
-    EigenSTL::vector_Vector3d visual_path;
-    for (TSR& tsr : task)
+    int PLANNING_CASE{ 1 };
+    if (argc > 1)
     {
-        // rviz.plotPose(tsr.tf_nominal);
-        // ros::Duration(0.05).sleep();
-        visual_path.push_back(tsr.tf_nominal.translation());
+        PLANNING_CASE = std::stoi(argv[1]);
     }
-    rviz.visual_tools_->publishPath(visual_path);
-    rviz.visual_tools_->trigger();
-    ros::Duration(0.2).sleep();
+    ROS_INFO_STREAM("Selected planning case " << PLANNING_CASE);
+
+    switch (PLANNING_CASE)
+    {
+        case 1: {
+            //////////////////////////////////
+            // halfopen box from header file
+            //////////////////////////////////
+            task = halfopen_box::waypoints();
+            for (auto& pt : task)
+            {
+                rviz.plotPose(pt.tf_nominal);
+            }
+            ros::Duration(0.1).sleep();
+            break;
+        }
+        case 2: {
+            ///////////////////////////////////////
+            // hello text imported with header file
+            ///////////////////////////////////////
+            task = text::waypoints(work_pose);
+            EigenSTL::vector_Vector3d path_positions;
+            for (auto& pt : task)
+            {
+                path_positions.push_back(pt.tf_nominal.translation());
+            }
+            rviz.visual_tools_->publishPath(path_positions);
+            rviz.visual_tools_->trigger();
+            ros::Duration(0.1).sleep();
+            break;
+        }
+        case 3: {
+            //////////////////////////////////
+            // from generic csv file
+            //////////////////////////////////
+
+            multiple_tasks = ocpl::readPathsFromCsvFile("halfopen_box.csv");
+            task = multiple_tasks.at(2);
+
+            ROS_INFO_STREAM("task length: " << task.size());
+
+            EigenSTL::vector_Vector3d path_positions;
+            for (auto& t : multiple_tasks)
+            {
+                path_positions.clear();
+                for (auto& pt : t)
+                {
+                    path_positions.push_back(pt.tf_nominal.translation());
+                }
+                rviz.visual_tools_->publishPath(path_positions);
+                rviz.visual_tools_->trigger();
+                ros::Duration(0.1).sleep();
+            }
+
+            break;
+        }
+        default: {
+            ROS_WARN("Unkown planning case id.");
+            return 0;
+        }
+    }
 
     //////////////////////////////////
     // Simple interface solver
@@ -74,7 +130,6 @@ int main(int argc, char** argv)
                [&robot](const JointPositions& q) { return robot.fk(q); },
                ik_fun,
                is_valid_fun };
-
 
     PlannerSettings ps = loadSettingsFromFile("halfopen_box1.yaml");
 
@@ -122,17 +177,26 @@ int main(int argc, char** argv)
     UnifiedPlanner planner(bot, ps);
     // std::reverse(task.begin(), task.end());
     // Solution res = planner.solve(task);
-    Solution res = planner.solve(task, path_cost_fun, zeroStateCost);
-    if (res.success)
+
+    Solution res = planner.solve(task, path_cost_fun, state_cost_fun);
+
+    if (!multiple_tasks.empty())
     {
-        std::cout << "A solution is found with a cost of " << res.cost << "\n";
+        for (auto current_task : multiple_tasks)
+        {
+            // // solve it!
+            Solution solution = planner.solve(current_task, path_cost_fun, state_cost_fun);
+
+            robot.animatePath(rviz.visual_tools_, solution.path);
+        }
     }
     else
     {
-        std::cout << "No complete solution was found.\n";
-    }
+        // // solve it!
+        Solution solution = planner.solve(task, path_cost_fun, state_cost_fun);
 
-    robot.animatePath(rviz.visual_tools_, res.path);
+        robot.animatePath(rviz.visual_tools_, solution.path);
+    }
 
     savePath("last_path.npy", res.path);
 

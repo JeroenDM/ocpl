@@ -71,7 +71,7 @@ static EigenSTL::vector_Isometry3d readPathFromFile(const std::string& filename)
 std::vector<ocpl::TSR> waypoints(const Eigen::Isometry3d& offset)
 {
     ocpl::TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
-    auto task_tfs = impl::readPathFromFile(ros::package::getPath("ocpl_ros") + "/data/text.csv");
+    auto task_tfs = impl::readPathFromFile(ros::package::getPath("ocpl_ros") + "/data/hello.csv");
 
     Eigen::AngleAxisd rotation(-M_PI_2, Eigen::Vector3d::UnitZ());
     Eigen::Translation3d translation(0.5, 2.0, 0.15);
