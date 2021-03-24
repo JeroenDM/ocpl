@@ -3,6 +3,7 @@
 #include <Eigen/Core>
 
 #include <moveit_msgs/GetCartesianPath.h>
+#include <trajectory_msgs/JointTrajectoryPoint.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
 #include <simple_moveit_wrapper/industrial_robot.h>
 
@@ -85,6 +86,18 @@ class PlanningServer
         auto solution = planner_->solve(task, ocpl::L2NormDiff2, ocpl::zeroStateCost);
 
         robot_->animatePath(visual_tools_, solution.path);
+
+        res.fraction = (double) solution.path.size() / (double) task.size();
+        res.solution.joint_trajectory.points.clear();
+        double time{0.0}, time_step{0.1};
+        for (auto qi : solution.path)
+        {
+            trajectory_msgs::JointTrajectoryPoint pt;
+            pt.positions = qi;
+            pt.time_from_start = ros::Duration(time);
+            time += time_step;
+            res.solution.joint_trajectory.points.push_back(pt);
+        }
 
         return true;
     }
