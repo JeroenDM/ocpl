@@ -24,6 +24,8 @@ find_package(catkin REQUIRED COMPONENTS
   ocpl_planning
   ocpl_benchmark
   simple_moveit_wrapper
+  trajectory_msgs
+  moveit_ros_planning_interface
 )
 
 find_package(Eigen3 REQUIRED)
