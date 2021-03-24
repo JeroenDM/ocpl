@@ -105,7 +105,6 @@ PlannerSettings loadSettingsFromFile(const std::string filename)
     s.debug = findOrDefault(map, "debug", s.debug);
     s.timeout = findOrDefault(map, "timeout", s.timeout);
 
-
     // mapping from strings in settings file to planner types
     static std::map<std::string, PlannerType> type_mapping{
         { "local_dfs", PlannerType::LOCAL_DFS }, { "local_best_first_dfs", PlannerType::LOCAL_BEST_FIRST_DFS },
@@ -162,6 +161,90 @@ PlannerSettings loadSettingsFromFile(const std::string filename)
     }
 
     return s;
+}
+
+std::vector<std::vector<TSR>> readPathsFromCsvFile(const std::string& filename)
+{
+    std::ifstream file(ros::package::getPath("ocpl_ros") + "/data/" + filename);
+
+    if (!file.is_open())
+    {
+        std::runtime_error("Failed to read file " + filename);
+    }
+
+    std::vector<TaskData> tasks;
+    EigenSTL::vector_Isometry3d waypoints;
+    std::vector<std::array<Bounds, 6>> wp_bounds;
+    std::string line;
+    while (std::getline(file, line))
+    {
+        if (line == "")
+        {
+            if (!waypoints.empty())
+            {
+                tasks.push_back({ waypoints, wp_bounds });
+                waypoints.clear();
+                wp_bounds.clear();
+            }
+        }
+        else
+        {
+            std::stringstream stream(line);
+            std::string number;
+            std::array<double, 21> v;
+            std::size_t i{ 0 };
+            while (std::getline(stream, number, ','))
+            {
+                v.at(i) = std::stod(number);
+                i++;
+            }
+            Eigen::Vector3d pos, x_axis, y_axis, z_axis;
+            pos << v[0], v[1], v[2];
+            z_axis << v[3], v[4], v[5];  // normal vector
+            x_axis << v[6], v[7], v[8];  // tangent vector along the path
+
+            x_axis = x_axis.normalized();
+            y_axis = z_axis.cross(x_axis).normalized();
+            z_axis = z_axis.normalized();
+
+            Eigen::Isometry3d pose;
+            pose.matrix().col(0).head<3>() = x_axis;
+            pose.matrix().col(1).head<3>() = y_axis;
+            pose.matrix().col(2).head<3>() = z_axis;
+            pose.matrix().col(3).head<3>() = pos;
+
+            std::array<Bounds, 6> bounds;
+            for (std::size_t i = 0; i < 6; ++i)
+            {
+                bounds.at(i) = { v[9 + i], v[9 + 6 + i] };
+            }
+
+            waypoints.push_back(pose);
+            wp_bounds.push_back(bounds);
+        }
+    }
+    if (!waypoints.empty())
+    {
+        tasks.push_back({ waypoints, wp_bounds });
+    }
+
+    std::vector<std::vector<TSR>> paths;
+    for (auto task_data : tasks)
+    {
+        std::vector<TSR> current_task;
+        for (auto waypoint : task_data.waypoints)
+        {
+            current_task.push_back(TSR{ waypoint, TSRBounds{} });
+        }
+        for (std::size_t wp{ 0 }; wp < current_task.size(); ++wp)
+        {
+            std::vector<Bounds> temp(task_data.waypoint_bounds.at(wp).begin(), task_data.waypoint_bounds.at(wp).end());
+            current_task[wp].bounds.fromVector(temp);
+        }
+        paths.push_back(current_task);
+    }
+
+    return paths;
 }
 
 }  // namespace ocpl

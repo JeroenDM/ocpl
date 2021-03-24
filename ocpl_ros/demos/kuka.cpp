@@ -74,6 +74,7 @@ int main(int argc, char** argv)
     ROS_INFO_STREAM("Selected planning case " << PLANNING_CASE);
 
     std::vector<TSR> task;
+    std::vector<std::vector<TSR>> multiple_tasks;
     switch (PLANNING_CASE)
     {
         case 1: {
@@ -137,6 +138,31 @@ int main(int argc, char** argv)
 
             rviz.visual_tools_->publishPath(path_positions);
             ros::Duration(1.0).sleep();
+            break;
+        }
+        case 4: {
+            //////////////////////////////////
+            // from generic csv file
+            //////////////////////////////////
+
+            multiple_tasks = ocpl::readPathsFromCsvFile("kingpin2.csv");
+            task = multiple_tasks.at(2);
+
+            ROS_INFO_STREAM("task length: " << task.size());
+
+            EigenSTL::vector_Vector3d path_positions;
+            for (auto& t : multiple_tasks)
+            {
+                path_positions.clear();
+                for (auto& pt : t)
+                {
+                    path_positions.push_back(pt.tf_nominal.translation());
+                }
+                rviz.visual_tools_->publishPath(path_positions);
+                rviz.visual_tools_->trigger();
+                ros::Duration(0.1).sleep();
+            }
+
             break;
         }
 
@@ -216,10 +242,23 @@ int main(int argc, char** argv)
     //////////////////////////////////
     UnifiedPlanner planner(bot, ps);
 
-    // // solve it!
-    auto solution = planner.solve(task, path_cost_fun, state_cost_fun);
+    if (!multiple_tasks.empty())
+    {
+        for (auto current_task : multiple_tasks)
+        {
+            // // solve it!
+            auto solution = planner.solve(current_task, path_cost_fun, state_cost_fun);
 
-    robot.animatePath(rviz.visual_tools_, solution.path);
+            robot.animatePath(rviz.visual_tools_, solution.path);
+        }
+    }
+    else
+    {
+        // // solve it!
+        auto solution = planner.solve(task, path_cost_fun, state_cost_fun);
+
+        robot.animatePath(rviz.visual_tools_, solution.path);
+    }
 
     //////////////////////////////////
     // Benchmark

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <ros/package.h>
+#include <eigen_stl_containers/eigen_stl_vector_container.h>
 
 #include <ocpl_planning/planner_base.h>
 
@@ -96,5 +97,31 @@ std::ostream& operator<<(std::ostream& os, const JointPositions& q)
 }
 
 PlannerSettings loadSettingsFromFile(const std::string filename);
+
+/** Simple struct to put waypoint data without parsing converting it to specific objects used by planing algorithms.**/
+struct TaskData
+{
+    EigenSTL::vector_Isometry3d waypoints;
+    std::vector<std::array<Bounds, 6>> waypoint_bounds;
+};
+
+/** Read and under-constrained end-effector path from a list of waypoints in a csv file.
+ *
+ * A line in a file constains the a bunch of numbers, represented as named vectors below
+ *     p, n, t, lower, upper
+ * p: 3 numbers, position
+ * n: 3 numbers, z-axis, normal along which an axis pointing out of the robot tool should lie
+ * t: 3 numbers, x_axis, tangent vector along the path
+ * lower: 6 numbers, lower tolerance bound for position and orientation
+ * upper: 6 numbers, upper tolerance bound for position and orientation
+ *
+ *
+ * In total, every line contains 21 numbers separated by ','.
+ *
+ * The lower and upper bound for orientation tolerance can be for any 3-parameter representation
+ * and is expressed relative to the nominal pose of the waypoint.
+ *
+ * */
+std::vector<std::vector<TSR>> readPathsFromCsvFile(const std::string& filename);
 
 }  // namespace ocpl
