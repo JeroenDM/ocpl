@@ -158,6 +158,8 @@ int main(int argc, char** argv)
         ros::Duration(0.1).sleep();
     }
 
+    savePath("last_path.npy", res.path);
+
     // for (auto qi : table_path)
     // {
     //     std::cout << qi[0] << ", ";
