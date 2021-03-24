@@ -74,6 +74,17 @@ target_link_libraries(${PROJECT_NAME}_planning_server
   ${PROJECT_NAME}
 )
 
+add_executable(${PROJECT_NAME}_show_task
+  src/show_task.cpp
+)
+set_target_properties(${PROJECT_NAME}_show_task
+  PROPERTIES OUTPUT_NAME show_task PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_show_task
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
+
 # add_executable(${PROJECT_NAME}_demo
 #   demos/demo.cpp
 # )
