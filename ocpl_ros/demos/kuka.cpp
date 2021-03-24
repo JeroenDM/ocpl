@@ -230,12 +230,19 @@ int main(int argc, char** argv)
     // ps.sampler_type = SamplerType::GRID;
     // ps.tsr_resolution = { 1, 1, 1, 1, 1, 10 };
 
+    // welding specific state cost function
+    // state_cost_fun = [&robot, &ps](const TSR& tsr, const JointPositions& q) {
+    //     Eigen::VectorXd dv = poseDistance(tsr.tf_nominal, robot.fk(q));
+    //     // only penalize the x and y rotation
+    //     return ps.state_cost_weight * std::sqrt(dv[3] * dv[3] + dv[4] * dv[4]);
+    // };
+
     // keep close to robot home pose
-    // std::vector<double> q_home{ 0, -1.5708, 1.5708, 0, 0, 0 };
+    std::vector<double> q_home{ 0, -1.5708, 1.5708, 0, 0, 0 };
     // robot.plot(rviz.visual_tools_, q_home, rviz_visual_tools::MAGENTA);
     // ros::Duration(0.5).sleep();
 
-    // auto f_state_cost_fun = [q_home](const TSR& tsr, const JointPositions& q) { return L2NormDiff2(q, q_home); };
+    state_cost_fun = [q_home](const TSR& tsr, const JointPositions& q) { return L2NormDiff2(q, q_home); };
 
     //////////////////////////////////
     // Solve it
