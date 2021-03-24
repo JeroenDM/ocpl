@@ -7,6 +7,10 @@ import moveit_commander
 
 from geometry_msgs.msg import Vector3, Quaternion, Pose, PoseStamped
 
+from moveit_msgs.msg import PlanningScene, CollisionObject, AttachedCollisionObject
+from shape_msgs.msg import SolidPrimitive
+from rosgraph.names import ns_join
+
 REL_WORK_PATH = "/urdf/work/"
 
 
@@ -25,6 +29,9 @@ def numpy_to_pose(arr):
 
 
 def remove_all_objects(scene):
+    for aco in scene.get_attached_objects():
+        scene.remove_attached_object(aco)
+        scene.remove_world_object(aco)
     for name in scene.get_known_object_names():
         scene.remove_world_object(name)
 
@@ -87,12 +94,26 @@ def parse_link(link, mesh_path):
             "scale": collision.geometry.mesh.scale
         }
     else:
-        raise Exception("URDF link collision geometry is not a mesh, box or cylinder.")
+        raise Exception(
+            "URDF link collision geometry is not a mesh, box or cylinder.")
 
     return data
 
 
-def publish_parsed_urdf(parsed_urdf, scene):
+def make_cylinder(name, pose, height, radius):
+    co = CollisionObject()
+    co.operation = CollisionObject.ADD
+    co.id = name
+    co.header = pose.header
+    cylinder = SolidPrimitive()
+    cylinder.type = SolidPrimitive.CYLINDER
+    cylinder.dimensions = [height, radius]
+    co.primitives = [cylinder]
+    co.primitive_poses = [pose.pose]
+    return co
+
+
+def publish_parsed_urdf(parsed_urdf, scene, ap, attach=False):
     """ Publish link geometry for every joint's child. """
     for name, joint in parsed_urdf["joints"].items():
         # get the child link data
@@ -100,18 +121,34 @@ def publish_parsed_urdf(parsed_urdf, scene):
 
         # publish the child links collision geometry
         if link["type"] == "box":
-            scene.add_box(
-                joint["child"],
-                joint["pose"],
-                link["size"]
-            )
+            if attach:
+                scene.attach_box(
+                    "table", joint["child"], joint["pose"], link["size"], ["table"])
+            else:
+                scene.add_box(
+                    joint["child"],
+                    joint["pose"],
+                    link["size"]
+                )
         elif link["type"] == "cylinder":
-            scene.add_cylinder(
-                joint["child"],
-                joint["pose"],
-                link["length"],
-                link["radius"]
-            )
+            if attach:
+                aco = AttachedCollisionObject()
+                aco.touch_links = ["table"]
+                aco.object = make_cylinder(joint["child"],
+                                           joint["pose"],
+                                           link["length"],
+                                           link["radius"])
+                aco.link_name = "table"
+                print(aco.object)
+                ap.publish(aco)
+            else:
+                scene.add_cylinder(
+                    joint["child"],
+                    joint["pose"],
+                    link["length"],
+                    link["radius"]
+                )
+
         else:
             scene.add_mesh(
                 joint["child"],
@@ -120,6 +157,19 @@ def publish_parsed_urdf(parsed_urdf, scene):
                 link["scale"]
             )
 
+
+# def attach_box(self, link, name, pose=None, size=(1, 1, 1), touch_links=[]):
+#     aco = AttachedCollisionObject()
+#     if pose is not None:
+#         aco.object = self.__make_box(name, pose, size)
+#     else:
+#         aco.object = self.__make_existing(name)
+#     aco.link_name = link
+#     if len(touch_links) > 0:
+#         aco.touch_links = touch_links
+#     else:
+#         aco.touch_links = [link]
+#     self.__submit(aco, attach=True)
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
@@ -131,6 +181,8 @@ if __name__ == "__main__":
         work_name = sys.argv[2]
 
     rospy.init_node("publish_work")
+    aco_pub = rospy.Publisher(ns_join(
+        '', 'attached_collision_object'), AttachedCollisionObject, queue_size=100)
 
     scene = moveit_commander.PlanningSceneInterface()
     rospy.sleep(1.0)  # wait for the above things to setup
@@ -138,6 +190,6 @@ if __name__ == "__main__":
     remove_all_objects(scene)
 
     work = parse_urdf_file(package_name, work_name)
-    publish_parsed_urdf(work, scene)
+    publish_parsed_urdf(work, scene, aco_pub, attach=False)
 
     print("Done!")
