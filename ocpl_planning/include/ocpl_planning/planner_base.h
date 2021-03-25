@@ -112,10 +112,7 @@ class Planner
   public:
     Planner(const Robot& robot, const PlannerSettings& settings);
 
-    virtual void changeSettings(const PlannerSettings& new_settings)
-    {
-        settings_ = new_settings;
-    }
+    virtual void changeSettings(const PlannerSettings& new_settings);
 
     virtual Solution solve(const std::vector<TSR>& task) = 0;
 

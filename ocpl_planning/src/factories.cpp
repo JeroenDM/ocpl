@@ -1,5 +1,7 @@
 #include <ocpl_planning/factories.h>
 
+#include <cassert>
+
 #include <ocpl_tsr/task_space_regions.h>
 #include <ocpl_sampling/sampler.h>
 #include <ocpl_sampling/grid_sampler.h>
@@ -76,6 +78,7 @@ ocpl::SamplerPtr createLocalSampler(size_t dimensions, double max_deviation, Sam
 ocpl::SamplerPtr createLocalSampler(size_t dimensions, double max_deviation, SamplerType type,
                                     const std::vector<int>& num_samples)
 {
+    assert(dimensions == num_samples.size());
     std::vector<Bounds> bounds;
     for (size_t i{ 0 }; i < dimensions; ++i)
     {
