@@ -14,4 +14,8 @@ namespace ocpl
  * **/
 void runBenchmark(const std::string& name, const Robot& robot, const std::vector<TSR>& task, Planner& planner,
                   const std::vector<PlannerSettings>& settings, int num_repeats);
+
+/** \brief Solve multiple tasks on the same robot. **/
+void runBenchmark(const std::string& name, const Robot& robot, const std::vector<std::vector<TSR>>& tasks,
+                  Planner& planner, const std::vector<PlannerSettings>& settings, int num_repeats);
 }  // namespace ocpl
