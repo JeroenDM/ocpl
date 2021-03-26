@@ -1,4 +1,3 @@
-kuka/kuka_gs.yaml
-kuka/kuka_gpq.yaml
-kuka/kuka_ls.yaml
-kuka/kuka_lspq.yaml
+kuka/grid.yaml
+kuka/halton.yaml
+kuka/random.yaml

@@ -192,7 +192,7 @@ int main(int argc, char** argv)
     }
 
     Robot bot{ robot.getNumDof(),
-               robot.getNumDof() - 3,
+               robot.getNumRedDof(),
                joint_limits,
                [&robot](const JointPositions& q) { return robot.fk(q); },
                f_ik,
@@ -247,25 +247,25 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Solve it
     //////////////////////////////////
-    UnifiedPlanner planner(bot, ps);
+    // UnifiedPlanner planner(bot, ps);
 
-    if (!multiple_tasks.empty())
-    {
-        for (auto current_task : multiple_tasks)
-        {
-            // // solve it!
-            auto solution = planner.solve(current_task, path_cost_fun, state_cost_fun);
+    // if (!multiple_tasks.empty())
+    // {
+    //     for (auto current_task : multiple_tasks)
+    //     {
+    //         // // solve it!
+    //         auto solution = planner.solve(current_task, path_cost_fun, state_cost_fun);
 
-            robot.animatePath(rviz.visual_tools_, solution.path);
-        }
-    }
-    else
-    {
-        // // solve it!
-        auto solution = planner.solve(task, path_cost_fun, state_cost_fun);
+    //         robot.animatePath(rviz.visual_tools_, solution.path);
+    //     }
+    // }
+    // else
+    // {
+    //     // // solve it!
+    //     auto solution = planner.solve(task, path_cost_fun, state_cost_fun);
 
-        robot.animatePath(rviz.visual_tools_, solution.path);
-    }
+    //     robot.animatePath(rviz.visual_tools_, solution.path);
+    // }
 
     //////////////////////////////////
     // Benchmark
@@ -283,9 +283,41 @@ int main(int argc, char** argv)
     //     // settings.back().redundant_joints_resolution = case_settings.redundant_joints_resolution;
     // }
 
-    // UnifiedPlanner planner(bot, settings.front());
-    // std::string outfilename{ "results/kuka_l_profile" + std::to_string(PLANNING_CASE) + ".csv" };
-    // runBenchmark(outfilename, bot, task, planner, settings, 50);
+    // read the base settings for the three sample methods from files
+    auto grid = loadSettingsFromFile("kuka/grid.yaml");
+    auto halton = loadSettingsFromFile("kuka/halton.yaml");
+    auto random = loadSettingsFromFile("kuka/random.yaml");
+
+    // no create variations with differt grid resolutions
+    std::vector<PlannerSettings> settings;
+    // std::vector<std::array<int, 2>> grid_res{ { 3, 10 }, { 5, 30 }, { 10, 60 }, {10, 100} };
+    // for (auto res : grid_res)
+    // {
+    //     PlannerSettings new_settings = grid;
+    //     new_settings.name = grid.name + "_" + std::to_string(res[0] * res[1]);
+    //     new_settings.tsr_resolution = { 1, 1, 1, 1, res[0], res[1] };
+    //     settings.push_back(new_settings);
+    // }
+    std::vector<int> batch_sizes {30, 150, 600, 1000};
+    for (auto bs : batch_sizes)
+    {
+        PlannerSettings new_h = halton;
+        new_h.name = halton.name + "_" + std::to_string(bs);
+        new_h.t_space_batch_size = bs;
+        settings.push_back(new_h);
+
+        PlannerSettings new_r = random;
+        new_r.name = random.name + "_" + std::to_string(bs);
+        new_r.t_space_batch_size = bs;
+        settings.push_back(new_r);
+    }
+
+    UnifiedPlanner planner(bot, grid);
+    auto solution = planner.solve(task);
+    robot.animatePath(rviz.visual_tools_, solution.path);
+
+    std::string outfilename{ "results/kingpin_fixed" + std::to_string(PLANNING_CASE) + ".csv" };
+    runBenchmark(outfilename, bot, multiple_tasks, planner, settings, 20);
 
     return 0;
 }
