@@ -4,7 +4,8 @@
 #include <limits>
 #include <chrono>
 
-#include <ocpl_ros/moveit_robot_examples.h>
+#include <simple_moveit_wrapper/planar_robot.h>
+
 #include <ocpl_ros/rviz.h>
 #include <ocpl_ros/io.h>
 #include <ocpl_ros/planning_cases/case1.h>
@@ -45,7 +46,7 @@ int main(int argc, char** argv)
 
     // Select the correct type of robot
     // All robots in this script are assumed to be planar
-    PlanarRobotNR robot;
+    simple_moveit_wrapper::PlanarRobot robot("manipulator", "tool_tip");
 
     //////////////////////////////////
     // Select the planning task
@@ -98,7 +99,7 @@ int main(int argc, char** argv)
     // Setup the planner settings
     //////////////////////////////////
     // function that tells you whether a state is valid (collision free)
-    auto is_valid_fun = [&robot](const JointPositions& q) { return !robot.isInCollision(q); };
+    auto is_valid_fun = [&robot](const JointPositions& q) { return !robot.isColliding(q); };
 
     // function that returns analytical inverse kinematics solution for end-effector pose
     auto ik_fun = [&robot](const Transform& tf, const JointPositions& q_fixed) { return robot.ik(tf, q_fixed); };
@@ -110,10 +111,14 @@ int main(int argc, char** argv)
         return poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
     };
     // auto state_cost_fun = zeroStateCost;
-
+    JointLimits jl;
+    for (auto limit : robot.getJointPositionLimits())
+    {
+        jl.push_back(Bounds{ limit.lower, limit.upper });
+    }
     Robot bot{ robot.getNumDof(),
                robot.getNumRedDof(),
-               robot.getJointPositionLimits(),
+               jl,
                [&robot](const JointPositions& q) { return robot.fk(q); },
                ik_fun,
                is_valid_fun };

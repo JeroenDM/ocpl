@@ -6,7 +6,6 @@
 
 #include <simple_moveit_wrapper/industrial_robot.h>
 
-#include <ocpl_ros/moveit_robot_examples.h>
 #include <ocpl_ros/rviz.h>
 
 #include <ocpl_planning/io.h>
@@ -41,17 +40,6 @@ trajectory_msgs::JointTrajectory convertPath(std::vector<JointPositions> path,
     return traj;
 }
 
-void showPath(const std::vector<JointPositions>& path, Rviz& rviz, std::shared_ptr<MoveItRobot> robot)
-{
-    for (JointPositions q : path)
-    {
-        if (robot->isInCollision(q))
-            robot->plot(rviz.visual_tools_, q, rviz_visual_tools::RED);
-        else
-            robot->plot(rviz.visual_tools_, q, rviz_visual_tools::GREEN);
-        ros::Duration(0.1).sleep();
-    }
-}
 
 int main(int argc, char** argv)
 {

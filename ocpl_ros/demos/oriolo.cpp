@@ -4,7 +4,8 @@
 #include <limits>
 #include <chrono>
 
-#include <ocpl_ros/moveit_robot_examples.h>
+#include <simple_moveit_wrapper/planar_robot.h>
+
 #include <ocpl_ros/rviz.h>
 #include <ocpl_ros/io.h>
 #include <ocpl_ros/planning_cases/case1.h>
@@ -38,9 +39,7 @@ int main(int argc, char** argv)
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
-    std::shared_ptr<MoveItRobot> robot = std::make_shared<PlanarRobotNR>();
-    // std::shared_ptr<MoveItRobot> robot = std::make_shared<IndustrialRobot>();
-
+    auto robot = std::make_shared<simple_moveit_wrapper::PlanarRobot>("manipulator", "tool_tip");
     Rviz rviz;
     ros::Duration(0.2).sleep();
     rviz.clear();
@@ -77,15 +76,22 @@ int main(int argc, char** argv)
     // rviz.visual_tools_->publishPath(path_pos, rviz_visual_tools::RED, 0.1);
     // ros::Duration(0.1).sleep();
 
+    // convert joint limits to ocpl format from the simple_moveit_wrapper format
+    JointLimits jl;
+    for (auto limit : robot->getJointPositionLimits())
+    {
+        jl.push_back(Bounds{ limit.lower, limit.upper });
+    }
+
     //////////////////////////////////
     // Describe the robot
     //////////////////////////////////
     Robot bot{ robot->getNumDof(),
                robot->getNumDof() - 3,
-               robot->getJointPositionLimits(),
+               jl,
                [&robot](const JointPositions& q) { return robot->fk(q); },
                [&robot](const ocpl::Transform& tf, const JointPositions& q_red) { return robot->ik(tf, q_red); },
-               [&robot](const JointPositions& q) { return !robot->isInCollision(q); } };
+               [&robot](const JointPositions& q) { return !robot->isColliding(q); } };
 
     for (auto jl : robot->getJointPositionLimits())
     {
