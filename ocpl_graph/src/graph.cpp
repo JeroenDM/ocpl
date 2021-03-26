@@ -60,9 +60,13 @@ std::vector<NodePtr> Graph::extract_solution(const NodePtr& goal) const
 
 std::vector<NodePtr> Graph::extract_partial_solution() const
 {
-    for (std::size_t pi{ nodes_.size() - 1 }; pi >= 0; --pi)
+    // reverse iteration with a bare for loop is tricky and introduced bugs caused by unsigned int overflow
+    // that's why I reverse a copied version of nodes
+    auto nodes_copy = nodes_;
+    std::reverse(nodes_copy.begin(), nodes_copy.end());
+    std::size_t pi{ nodes_copy.size() };
+    for (auto pt_nodes : nodes_copy)
     {
-        auto pt_nodes = nodes_[pi];
         auto node_iter = std::min_element(pt_nodes.begin(), pt_nodes.end(),
                                           [](const NodePtr& a, const NodePtr& b) { return a->dist < b->dist; });
         if (node_iter != pt_nodes.end() && (*node_iter)->parent != nullptr)
@@ -70,6 +74,7 @@ std::vector<NodePtr> Graph::extract_partial_solution() const
             std::cout << "Found partial path up until pt index: " << pi << ".\n";
             return extract_solution(*node_iter);
         }
+        pi--;
     }
     std::cout << "Also could not extract partial solution.\n";
     return {};
