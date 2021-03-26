@@ -75,6 +75,7 @@ class Planner
 
     int debug_{ 0 };
 
+    void initializeJointSpaceSamplers();
     void initializeTaskSpaceSamplers(const std::vector<Bounds> tsr_bounds);
 
     /******************************

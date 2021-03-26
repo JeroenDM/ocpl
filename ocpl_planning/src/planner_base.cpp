@@ -12,10 +12,21 @@ namespace ocpl
 Planner::Planner(const Robot& robot, const PlannerSettings& settings)
   : robot_(robot), settings_(settings), debug_(settings.debug)
 {
+    initializeJointSpaceSamplers();
+}
+
+void Planner::changeSettings(const PlannerSettings& new_settings)
+{
+    settings_ = new_settings;
+    initializeJointSpaceSamplers();
+}
+
+void Planner::initializeJointSpaceSamplers()
+{
     if (settings_.is_redundant)
     {
         // sampler to generate perturbations on redundant joints with max deviation d around zero
-        q_red_local_sampler_ = createLocalSampler(robot.num_red_dof, settings_.cspace_delta, settings_.sampler_type,
+        q_red_local_sampler_ = createLocalSampler(robot_.num_red_dof, settings_.cspace_delta, settings_.sampler_type,
                                                   settings_.redundant_joints_resolution);
 
         // sampler to generate completely random robot configurations inside the limits
@@ -26,32 +37,19 @@ Planner::Planner(const Robot& robot, const PlannerSettings& settings)
         if (!settings_.redundant_joints_resolution.empty())
         {
             all_joints_resolution = settings_.redundant_joints_resolution;
-            all_joints_resolution.resize(robot.num_dof);
-            std::fill(all_joints_resolution.begin() + robot.num_red_dof, all_joints_resolution.end(),
+            all_joints_resolution.resize(robot_.num_dof);
+            std::fill(all_joints_resolution.begin() + robot_.num_red_dof, all_joints_resolution.end(),
                       settings_.redundant_joints_resolution.back());
         }
-        q_sampler_ = createSampler(robot.joint_limits, settings_.sampler_type, all_joints_resolution);
+        q_sampler_ = createSampler(robot_.joint_limits, settings_.sampler_type, all_joints_resolution);
     }
     else
     {
         q_red_local_sampler_ = createLocalSampler(0, 0, settings_.sampler_type, {});
 
         // hard coded resolution for non-redundant local sampling of all the joints of the robot
-        std::vector<int> all_joints_resolution(robot.num_dof, 3);
-        q_sampler_ = createSampler(robot.joint_limits, settings_.sampler_type, all_joints_resolution);
-
-    }
-}
-
-void Planner::changeSettings(const PlannerSettings& new_settings)
-{
-    if (settings_.is_redundant != new_settings.is_redundant)
-    {
-        std::runtime_error("The setting 'is_redundant' cannot be changed after the planner is created.");
-    }
-    else
-    {
-        settings_ = new_settings;
+        std::vector<int> all_joints_resolution(robot_.num_dof, 3);
+        q_sampler_ = createSampler(robot_.joint_limits, settings_.sampler_type, all_joints_resolution);
     }
 }
 

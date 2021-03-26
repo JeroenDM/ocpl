@@ -149,15 +149,15 @@ PlannerSettings loadSettingsFromFile(const std::string filename)
         s.redundant_joints_resolution = stringToVector<int>(map["redundant_joints_resolution"]);
         s.tsr_resolution = stringToVector<int>(map["tsr_resolution"]);
 
-        // if (s.is_redundant && s.redundant_joints_resolution.empty())
-        // {
-        //     throw std::runtime_error("A redundant robot + grid sampling needs a the redundant_joints_resolution "
-        //                              "setting.");
-        // }
-        // if (s.tsr_resolution.size() != 6)
-        // {
-        //     throw std::runtime_error("Grid sampling needs the tsr_resolution setting with 6 values");
-        // }
+        if (s.is_redundant && s.redundant_joints_resolution.empty())
+        {
+            throw std::runtime_error("A redundant robot + grid sampling needs a the redundant_joints_resolution "
+                                     "setting.");
+        }
+        if (s.tsr_resolution.size() != 6)
+        {
+            throw std::runtime_error("Grid sampling needs the tsr_resolution setting with 6 values");
+        }
     }
 
     return s;
