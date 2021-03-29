@@ -174,6 +174,8 @@ int main(int argc, char** argv)
     // auto orioli_ps = loadOrioloSettings("oriolo1.txt");
     // oriolo::OrioloPlanner planner(bot, ps);
 
+    //ps = loadSettingsFromFile("kuka_on_rail/grid.yaml");
+
     UnifiedPlanner planner(bot, ps);
     // std::reverse(task.begin(), task.end());
     // Solution res = planner.solve(task);

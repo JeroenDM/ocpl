@@ -116,12 +116,7 @@ int main(int argc, char** argv)
     {
         jl.push_back(Bounds{ limit.lower, limit.upper });
     }
-    Robot bot{ robot.getNumDof(),
-               robot.getNumRedDof(),
-               jl,
-               [&robot](const JointPositions& q) { return robot.fk(q); },
-               ik_fun,
-               is_valid_fun };
+    Robot bot{ robot.getNumDof(), 3, jl, [&robot](const JointPositions& q) { return robot.fk(q); }, ik_fun, is_valid_fun };
 
     for (auto jl : robot.getJointPositionLimits())
     {
@@ -150,21 +145,22 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Solve the problem
     //////////////////////////////////
-    // UnifiedPlanner planner(bot, ps);
-    // // std::reverse(regions.begin(), regions.end());
-    // // Solution solution = planner.solve(regions, f_path_cost, state_cost_fun);
-    // Solution solution = planner.solve(regions);
+    auto ps = loadSettingsFromFile("sp/halton_fixed.yaml");
+    UnifiedPlanner planner(bot, ps);
+    // std::reverse(regions.begin(), regions.end());
+    // Solution solution = planner.solve(regions, f_path_cost, state_cost_fun);
+    Solution solution = planner.solve(regions);
 
-    // if (solution.success)
-    // {
-    //     std::cout << "A solution is found with a cost of " << solution.cost << "\n";
-    // }
-    // else
-    // {
-    //     std::cout << "No complete solution was found.\n";
-    // }
+    if (solution.success)
+    {
+        std::cout << "A solution is found with a cost of " << solution.cost << "\n";
+    }
+    else
+    {
+        std::cout << "No complete solution was found.\n";
+    }
 
-    // robot.animatePath(rviz.visual_tools_, solution.path);
+    robot.animatePath(rviz.visual_tools_, solution.path);
 
     //////////////////////////////////
     // Benchmark
@@ -193,29 +189,43 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Benchmark specific parameter
     //////////////////////////////////
-    // base settings to create variations from
-    // auto ps = loadSettingsFromFile("halton1.yaml");
-    auto ps = loadSettingsFromFile("local1.yaml");
-    ps.tsr_resolution = case_settings.tsr_resolution;
-    ps.redundant_joints_resolution = case_settings.redundant_joints_resolution;
+    // std::vector<std::string> file_names = readLinesFromFile("sp/names.txt");
+    // std::vector<PlannerSettings> base_settings;
+    // ROS_INFO("Running benchmark for the settings files:");
+    // for (auto name : file_names)
+    // {
+    //     ROS_INFO_STREAM(name);
+    //     base_settings.push_back(loadSettingsFromFile(name));
+    // }
 
-    std::vector<int> min_sample_range{ 100, 300, 600, 900 };
-    std::vector<PlannerSettings> settings;
-    for (auto min_samples : min_sample_range)
-    {
-        PlannerSettings new_setting = ps;
-        new_setting.name = std::to_string(min_samples);
-        new_setting.min_valid_samples = min_samples;
-        new_setting.max_iters = 10 * min_samples;
-        settings.emplace_back(new_setting);
-    }
+    // std::vector<PlannerSettings> settings;
+    // for (auto setting : base_settings)
+    // {
+    //     std::vector<int> min_sample_range{ 10, 20, 30, 40, 50, 60, 70 };
+    //     for (auto min_samples : min_sample_range)
+    //     {
+    //         PlannerSettings new_setting = setting;
+    //         new_setting.name = setting.name + "_" + std::to_string(min_samples);
+    //         if (setting.max_iters == 1)
+    //         {
+    //             new_setting.t_space_batch_size = min_samples;
+    //             new_setting.c_space_batch_size = min_samples;
+    //         }
+    //         else
+    //         {
+    //             new_setting.min_valid_samples = min_samples * min_samples;
+    //             new_setting.max_iters = 10 * new_setting.min_valid_samples;
+    //         }
+    //         settings.emplace_back(new_setting);
+    //     }
+    // }
 
-    UnifiedPlanner planner(bot, ps);
-    // std::string outfilename{ "results/benchmark_halton_case_" };
-    std::string outfilename{ "results/benchmark_local_halton_case_" };
-    outfilename.append(std::to_string(PLANNING_CASE));
-    outfilename.append(".csv");
-    runBenchmark(outfilename, bot, regions, planner, settings, 5);
+    // UnifiedPlanner planner(bot, base_settings.back());
+    // // std::string outfilename{ "results/benchmark_halton_case_" };
+    // std::string outfilename{ "results/fixed_vs_incremental_case_" };
+    // outfilename.append(std::to_string(PLANNING_CASE));
+    // outfilename.append(".csv");
+    // runBenchmark(outfilename, bot, regions, planner, settings, 5);
 
     return 0;
 }
