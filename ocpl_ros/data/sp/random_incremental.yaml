@@ -7,5 +7,5 @@ min_valid_samples: 300
 max_iters: 1000
 planner_type: global
 cspace_delta: 0.3
-timeout: 5.0
+timeout: 20.0
 debug: 0

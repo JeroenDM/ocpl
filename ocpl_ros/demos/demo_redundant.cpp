@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <limits>
 #include <chrono>
+#include <cmath>
 
 #include <simple_moveit_wrapper/planar_robot.h>
 
@@ -145,22 +146,22 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Solve the problem
     //////////////////////////////////
-    auto ps = loadSettingsFromFile("sp/halton_fixed.yaml");
-    UnifiedPlanner planner(bot, ps);
-    // std::reverse(regions.begin(), regions.end());
-    // Solution solution = planner.solve(regions, f_path_cost, state_cost_fun);
-    Solution solution = planner.solve(regions);
+    // auto ps = loadSettingsFromFile("sp/halton_fixed.yaml");
+    // UnifiedPlanner planner(bot, ps);
+    // // std::reverse(regions.begin(), regions.end());
+    // // Solution solution = planner.solve(regions, f_path_cost, state_cost_fun);
+    // Solution solution = planner.solve(regions);
 
-    if (solution.success)
-    {
-        std::cout << "A solution is found with a cost of " << solution.cost << "\n";
-    }
-    else
-    {
-        std::cout << "No complete solution was found.\n";
-    }
+    // if (solution.success)
+    // {
+    //     std::cout << "A solution is found with a cost of " << solution.cost << "\n";
+    // }
+    // else
+    // {
+    //     std::cout << "No complete solution was found.\n";
+    // }
 
-    robot.animatePath(rviz.visual_tools_, solution.path);
+    // robot.animatePath(rviz.visual_tools_, solution.path);
 
     //////////////////////////////////
     // Benchmark
@@ -189,43 +190,64 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Benchmark specific parameter
     //////////////////////////////////
-    // std::vector<std::string> file_names = readLinesFromFile("sp/names.txt");
-    // std::vector<PlannerSettings> base_settings;
-    // ROS_INFO("Running benchmark for the settings files:");
-    // for (auto name : file_names)
-    // {
-    //     ROS_INFO_STREAM(name);
-    //     base_settings.push_back(loadSettingsFromFile(name));
-    // }
+    std::vector<std::string> file_names = readLinesFromFile("sp/names.txt");
+    std::vector<PlannerSettings> base_settings;
+    ROS_INFO("Running benchmark for the settings files:");
+    for (auto name : file_names)
+    {
+        ROS_INFO_STREAM(name);
+        base_settings.push_back(loadSettingsFromFile(name));
+    }
 
-    // std::vector<PlannerSettings> settings;
-    // for (auto setting : base_settings)
-    // {
-    //     std::vector<int> min_sample_range{ 10, 20, 30, 40, 50, 60, 70 };
-    //     for (auto min_samples : min_sample_range)
-    //     {
-    //         PlannerSettings new_setting = setting;
-    //         new_setting.name = setting.name + "_" + std::to_string(min_samples);
-    //         if (setting.max_iters == 1)
-    //         {
-    //             new_setting.t_space_batch_size = min_samples;
-    //             new_setting.c_space_batch_size = min_samples;
-    //         }
-    //         else
-    //         {
-    //             new_setting.min_valid_samples = min_samples * min_samples;
-    //             new_setting.max_iters = 10 * new_setting.min_valid_samples;
-    //         }
-    //         settings.emplace_back(new_setting);
-    //     }
-    // }
+    std::vector<PlannerSettings> settings;
+    for (auto setting : base_settings)
+    {
+        // the minimum number of valid samples for the incremental methods
+        std::vector<int> min_sample_range;
+        // the grid size for fixed resolution methods
+        // this is experimentally determined to a get similar number of valid samples / waypoint
+        std::vector<int> grid_size{};
+        for (auto s : readLinesFromFile("sp/sample_settings.txt"))
+        {
+            if (s != "")
+            {
+                min_sample_range.push_back(std::stoi(s));
+                grid_size.push_back(25 * min_sample_range.back());
+            }
+        }
+        for (std::size_t i{0}; i < grid_size.size(); ++i)
+        {
+            PlannerSettings new_setting = setting;
+            if (setting.max_iters == 1)
+            {
+                int ns = (int) std::round(std::pow((float) grid_size[i], 0.5));
+                new_setting.name = setting.name + "_" + std::to_string(ns * ns);
+                new_setting.t_space_batch_size = ns;
+                new_setting.c_space_batch_size = ns;
+            }
+            else if (setting.sampler_type == SamplerType::GRID)
+            {
+                int ns = (int) std::round(std::pow((float) grid_size[i], 0.25));
+                new_setting.name = setting.name + "_" + std::to_string((int) std::pow(ns, 4));
+                new_setting.tsr_resolution = {1, 1, 1, 1, 1, ns};
+                new_setting.redundant_joints_resolution = {ns, ns, ns};
+            }
+            else
+            {
+                new_setting.name = setting.name + "_" + std::to_string(min_sample_range[i]);
+                new_setting.min_valid_samples = min_sample_range[i];
+                new_setting.max_iters = 10 * new_setting.min_valid_samples;
+            }
+            settings.emplace_back(new_setting);
+        }
+    }
 
-    // UnifiedPlanner planner(bot, base_settings.back());
-    // // std::string outfilename{ "results/benchmark_halton_case_" };
-    // std::string outfilename{ "results/fixed_vs_incremental_case_" };
-    // outfilename.append(std::to_string(PLANNING_CASE));
-    // outfilename.append(".csv");
-    // runBenchmark(outfilename, bot, regions, planner, settings, 5);
+    UnifiedPlanner planner(bot, base_settings.back());
+    // std::string outfilename{ "results/benchmark_halton_case_" };
+    std::string outfilename{ "results/fixed_vs_incremental_case_" };
+    outfilename.append(std::to_string(PLANNING_CASE));
+    outfilename.append("_3.csv");
+    runBenchmark(outfilename, bot, regions, planner, settings, 5);
 
     return 0;
 }

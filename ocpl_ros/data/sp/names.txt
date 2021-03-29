@@ -1,3 +1,4 @@
+sp/grid1.yaml
 sp/halton_fixed.yaml
 sp/halton_incremental.yaml
 sp/random_fixed.yaml

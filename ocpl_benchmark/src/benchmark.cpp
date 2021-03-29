@@ -55,7 +55,12 @@ void runBenchmark(const std::string& name, const Robot& robot, const std::vector
 
         for (std::size_t task_index{ 0 }; task_index < tasks.size(); ++task_index)
         {
-            for (int run{ 0 }; run < num_repeats; ++run)
+            int num_runs = 1;
+            if (ps.sampler_type == SamplerType::RANDOM)
+            {
+                num_runs = num_repeats;
+            }
+            for (int run{ 0 }; run < num_runs; ++run)
             {
                 std::cout << "--- task " << task_index << ", run " << run << " ---\n";
 

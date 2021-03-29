@@ -1,4 +1,4 @@
-name: global
+name: grid
 is_redundant: true
 sampler_type: grid
 t_space_batch_size: 10
