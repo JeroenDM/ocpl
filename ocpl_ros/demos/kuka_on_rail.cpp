@@ -233,23 +233,25 @@ int main(int argc, char** argv)
                 grid_size.push_back(2 * min_sample_range.back());
             }
         }
-        for (std::size_t i{0}; i < grid_size.size(); ++i)
+        for (std::size_t i{ 0 }; i < grid_size.size(); ++i)
         {
             PlannerSettings new_setting = setting;
             if (setting.max_iters == 1)
             {
-                int ns = (int) std::round(std::pow((float) grid_size[i], 0.5));
+                int ns = (int)std::round(std::pow((float)grid_size[i], 0.5));
                 new_setting.name = setting.name + "_" + std::to_string(ns * ns);
                 new_setting.t_space_batch_size = ns;
                 new_setting.c_space_batch_size = ns;
             }
-            // else if (setting.sampler_type == SamplerType::GRID)
-            // {
-            //     int ns = (int) std::round(std::pow((float) grid_size[i], 0.25));
-            //     new_setting.name = setting.name + "_" + std::to_string((int) std::pow(ns, 4));
-            //     new_setting.tsr_resolution = {1, 1, 1, 1, 1, ns};
-            //     new_setting.redundant_joints_resolution = {ns, ns, ns};
-            // }
+            else if (setting.sampler_type == SamplerType::GRID)
+            {
+                int ns = (int)std::round(std::pow((float)grid_size[i], 0.5));
+                new_setting.name = setting.name + "_" + std::to_string((int)std::pow(ns, 4));
+                // new_setting.tsr_resolution = {1, 1, 1, 1, 1, ns};
+                // new_setting.redundant_joints_resolution = {ns, ns, ns};
+                new_setting.tsr_resolution = { 1, 1, 1, 1, 1, ns };
+                new_setting.redundant_joints_resolution = { ns };
+            }
             else
             {
                 new_setting.name = setting.name + "_" + std::to_string(min_sample_range[i]);
@@ -262,9 +264,10 @@ int main(int argc, char** argv)
 
     UnifiedPlanner planner(bot, base_settings.back());
     // std::string outfilename{ "results/benchmark_halton_case_" };
-    std::string outfilename{ "results/fixed_vs_incremental_box_" };
+    // std::string outfilename{ "results/fixed_vs_incremental_box_" };
+    std::string outfilename{ "results/fixed_vs_incremental_hello_" };
     outfilename.append(std::to_string(PLANNING_CASE));
-    outfilename.append("_2.csv");
+    outfilename.append("_1.csv");
     runBenchmark(outfilename, bot, task, planner, settings, 5);
 
     return 0;
