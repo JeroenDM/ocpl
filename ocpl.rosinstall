@@ -1,0 +1,12 @@
+- git:
+    local-name: simple_moveit_wrapper
+    uri: https://github.com/JeroenDM/simple_moveit_wrapper.git
+    version: melodic-devel
+- git:
+    local-name: planar_demo_robots
+    uri: https://github.com/JeroenDM/planar_demo_robots.git
+    version: main
+- git:
+    local-name: benchmark_planning_setups
+    uri: https://github.com/JeroenDM/benchmark_planning_setups.git
+    version: update-for-use-in-ocpl
