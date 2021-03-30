@@ -16,7 +16,6 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   tf2
   eigen_conversions
-  moveit_opw_kinematics_plugin
   roscpp
   ocpl_sampling
   ocpl_graph
