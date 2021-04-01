@@ -165,8 +165,14 @@ int main(int argc, char** argv)
     // optionally we can set a state cost for every point along the path
     // this one tries to keep the end-effector pose close the the nominal pose
     // defined in the task space region
+    // auto state_cost_fun = [&robot](const TSR& tsr, const JointPositions& q) {
+    //     return poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
+    // };
+
     auto state_cost_fun = [&robot](const TSR& tsr, const JointPositions& q) {
-        return poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
+        // penalize deviation for x and y rotation
+        auto v = tsr.poseToValues(robot.fk(q));
+        return std::sqrt(v[3] * v[3] + v[4] * v[4]);
     };
     // auto state_cost_fun = zeroStateCost;
 
@@ -230,7 +236,10 @@ int main(int argc, char** argv)
             if (s != "")
             {
                 min_sample_range.push_back(std::stoi(s));
-                grid_size.push_back(2 * min_sample_range.back());
+                // grid_size.push_back(2 * min_sample_range.back());
+
+                // halfopen box
+                grid_size.push_back(25 * min_sample_range.back());
             }
         }
         for (std::size_t i{ 0 }; i < grid_size.size(); ++i)
@@ -245,12 +254,26 @@ int main(int argc, char** argv)
             }
             else if (setting.sampler_type == SamplerType::GRID)
             {
-                int ns = (int)std::round(std::pow((float)grid_size[i], 0.5));
-                new_setting.name = setting.name + "_" + std::to_string((int)std::pow(ns, 4));
-                // new_setting.tsr_resolution = {1, 1, 1, 1, 1, ns};
-                // new_setting.redundant_joints_resolution = {ns, ns, ns};
-                new_setting.tsr_resolution = { 1, 1, 1, 1, 1, ns };
-                new_setting.redundant_joints_resolution = { ns };
+                // int ns = (int)std::round(std::pow((float)grid_size[i], 0.5));
+                // new_setting.name = setting.name + "_" + std::to_string((int)std::pow(ns, 4));
+                // // new_setting.tsr_resolution = {1, 1, 1, 1, 1, ns};
+                // // new_setting.redundant_joints_resolution = {ns, ns, ns};
+                // new_setting.tsr_resolution = { 1, 1, 1, 1, 1, ns };
+                // new_setting.redundant_joints_resolution = { ns };
+
+                // halfopen box
+                int ns = (int)std::round(std::pow((float)grid_size[i], 0.25));
+                // calculate 2 different resolutions
+                // one for the 30 deg range, one for the 360 deg range and for the 4m rail
+                int ns_small = std::max(3, ns / 3);
+                int ns_large = ns * 3;
+                int ns_total = ns_small * ns_small * ns_large * ns_large;
+                std::cout << grid_size[i] << ", " <<  ns << "\n";
+                std::cout << ns_small << ", " << ns_large << "\n";
+                std::cout << "Total: " << ns_total << "\n";
+                new_setting.name = setting.name + "_" + std::to_string(ns_total);
+                new_setting.tsr_resolution = { 1, 1, 1, ns_small, ns_small, ns_large};
+                new_setting.redundant_joints_resolution = { ns_large };
             }
             else
             {
@@ -264,10 +287,10 @@ int main(int argc, char** argv)
 
     UnifiedPlanner planner(bot, base_settings.back());
     // std::string outfilename{ "results/benchmark_halton_case_" };
-    // std::string outfilename{ "results/fixed_vs_incremental_box_" };
-    std::string outfilename{ "results/fixed_vs_incremental_hello_" };
+    std::string outfilename{ "results/fixed_vs_incremental_box_" };
+    // std::string outfilename{ "results/fixed_vs_incremental_hello_" };
     outfilename.append(std::to_string(PLANNING_CASE));
-    outfilename.append("_1.csv");
+    outfilename.append("_3.csv");
     runBenchmark(outfilename, bot, task, planner, settings, 5);
 
     return 0;

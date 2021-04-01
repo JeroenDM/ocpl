@@ -23,7 +23,13 @@ void runBenchmark(const std::string& name, const Robot& robot, const std::vector
         std::cout << "--- planner " << ps.name << " ---\n";
         planner.changeSettings(ps);
 
-        for (int run{ 0 }; run < num_repeats; ++run)
+        int num_runs = 1;
+        if (ps.sampler_type == SamplerType::RANDOM)
+        {
+            num_runs = num_repeats;
+        }
+
+        for (int run{ 0 }; run < num_runs; ++run)
         {
             std::cout << "--- run " << run << " ---\n";
 
