@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     // Benchmark specific parameter
     //////////////////////////////////
     // read the base settings from a file, to be modified later to execute parameter sweeps
-    std::vector<std::string> file_names = readLinesFromFile("benchmark2/names.txt");
+    std::vector<std::string> file_names = readLinesFromFile("benchmark3/names.txt");
     std::vector<PlannerSettings> base_settings;
     ROS_INFO("Running benchmark for the settings files:");
     for (auto name : file_names)
