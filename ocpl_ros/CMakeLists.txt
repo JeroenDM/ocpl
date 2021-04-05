@@ -164,16 +164,16 @@ target_link_libraries(${PROJECT_NAME}_rotation_table
 )
 
 
-# add_executable(${PROJECT_NAME}_benchmark1
-#   benchmarks/benchmark1.cpp
-# )
-# set_target_properties(${PROJECT_NAME}_benchmark1
-#   PROPERTIES OUTPUT_NAME benchmark1 PREFIX ""
-# )
-# target_link_libraries(${PROJECT_NAME}_benchmark1
-#   ${catkin_LIBRARIES}
-#   ${PROJECT_NAME}
-# )
+add_executable(${PROJECT_NAME}_benchmark1
+  benchmarks/benchmark1.cpp
+)
+set_target_properties(${PROJECT_NAME}_benchmark1
+  PROPERTIES OUTPUT_NAME benchmark1 PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_benchmark1
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
 
 #############
 ## Install ##

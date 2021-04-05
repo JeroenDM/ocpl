@@ -107,7 +107,11 @@ Solution UnifiedPlanner::_solve(const std::vector<TSR>& task_space_regions, cons
             {
                 std::cout << "Global depth first search\n";
             }
-            ocpl_graph::StackContainer<ocpl_graph::NodePtr> container;
+            // ocpl_graph::StackContainer<ocpl_graph::NodePtr> container;
+
+            auto d_fun = [](const ocpl_graph::NodePtr& a, const ocpl_graph::NodePtr& b) { return b->dist < a->dist; };
+            ocpl_graph::PriorityStackContainer<ocpl_graph::NodePtr> container(graph.size(), d_fun);
+
             path_nodes = shortest_path_dag(graph, path_cost, container, settings_.timeout);
         }
     }

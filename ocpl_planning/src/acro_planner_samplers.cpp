@@ -22,7 +22,7 @@ std::vector<std::vector<JointPositions>> sampleGlobalGrid(std::vector<std::funct
     {
         graph_data[i] = path_samplers[i]();
 
-        logger.logWaypoint(i, graph_data[i].size());
+        logger.logWaypoint(i, graph_data[i].size(), 1);
     }
     return graph_data;
 }
@@ -53,7 +53,7 @@ std::vector<std::vector<JointPositions>> sampleGlobalIncremental(std::vector<std
         }
         graph_data[i] = valid_samples;
 
-        logger.logWaypoint(i, valid_samples.size());
+        logger.logWaypoint(i, valid_samples.size(), iters);
 
         if (iters == max_iters)
             logger.log("ocpl_planner: maximum number of iterations reached.\n");

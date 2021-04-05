@@ -55,5 +55,13 @@ class TSLogger
         std::cout << "ocpl_planning: processing path point " << waypoint;
         std::cout << " found " << num_samples << " samples\n";
     }
+
+    void logWaypoint(size_t waypoint, size_t num_samples, size_t iters)
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        std::cout << "ocpl_planning: processing path point " << waypoint;
+        std::cout << " found " << num_samples << " samples ";
+        std::cout << iters << " iters\n";
+    }
 };
 }  // namespace ocpl
