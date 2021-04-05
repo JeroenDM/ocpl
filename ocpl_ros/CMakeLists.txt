@@ -186,6 +186,17 @@ target_link_libraries(${PROJECT_NAME}_benchmark2
   ${PROJECT_NAME}
 )
 
+add_executable(${PROJECT_NAME}_benchmark3
+  benchmarks/benchmark3.cpp
+)
+set_target_properties(${PROJECT_NAME}_benchmark3
+  PROPERTIES OUTPUT_NAME benchmark3 PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_benchmark3
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
+
 #############
 ## Install ##
 #############
