@@ -237,12 +237,16 @@ int main(int argc, char** argv)
     //     return ps.state_cost_weight * std::sqrt(dv[3] * dv[3] + dv[4] * dv[4]);
     // };
 
+    state_cost_fun = [&robot](const TSR& tsr, const JointPositions& q) {
+        return poseDistance(tsr.tf_nominal, robot.fk(q)).norm();
+    };
+
     // keep close to robot home pose
-    std::vector<double> q_home{ 0, -1.5708, 1.5708, 0, 0, 0 };
+    // std::vector<double> q_home{ 0, -1.5708, 1.5708, 0, 0, 0 };
     // robot.plot(rviz.visual_tools_, q_home, rviz_visual_tools::MAGENTA);
     // ros::Duration(0.5).sleep();
 
-    state_cost_fun = [q_home](const TSR& tsr, const JointPositions& q) { return L2NormDiff2(q, q_home); };
+    // state_cost_fun = [q_home](const TSR& tsr, const JointPositions& q) { return L2NormDiff2(q, q_home); };
 
     //////////////////////////////////
     // Solve it
@@ -286,7 +290,9 @@ int main(int argc, char** argv)
     // read the base settings for the three sample methods from files
     auto grid = loadSettingsFromFile("kuka/grid.yaml");
     auto halton = loadSettingsFromFile("kuka/halton.yaml");
+    auto halton_i = loadSettingsFromFile("kuka/halton_incremental.yaml");
     auto random = loadSettingsFromFile("kuka/random.yaml");
+    auto random_i = loadSettingsFromFile("kuka/random_incremental.yaml");
 
     // no create variations with differt grid resolutions
     std::vector<PlannerSettings> settings;
@@ -306,18 +312,30 @@ int main(int argc, char** argv)
         new_h.t_space_batch_size = bs;
         settings.push_back(new_h);
 
+        PlannerSettings new_h_i = halton_i;
+        new_h_i.name = halton_i.name + "_" + std::to_string(bs);
+        new_h_i.min_valid_samples = bs;
+        new_h_i.max_iters = 10 * bs;
+        settings.push_back(new_h_i);
+
         PlannerSettings new_r = random;
         new_r.name = random.name + "_" + std::to_string(bs);
         new_r.t_space_batch_size = bs;
         settings.push_back(new_r);
+
+        PlannerSettings new_r_i = random_i;
+        new_r_i.name = random_i.name + "_" + std::to_string(bs);
+        new_r_i.min_valid_samples = bs;
+        new_r_i.max_iters = 10 * bs;
+        settings.push_back(new_r_i);
     }
 
-    UnifiedPlanner planner(bot, grid);
+    UnifiedPlanner planner(bot, halton);
     auto solution = planner.solve(task);
     robot.animatePath(rviz.visual_tools_, solution.path);
 
-    std::string outfilename{ "results/kingpin_fixed" + std::to_string(PLANNING_CASE) + ".csv" };
-    runBenchmark(outfilename, bot, multiple_tasks, planner, settings, 20);
+    std::string outfilename{ "results/teapot" + std::to_string(PLANNING_CASE) + ".csv" };
+    runBenchmark(outfilename, bot, task, planner, settings, 5);
 
     return 0;
 }

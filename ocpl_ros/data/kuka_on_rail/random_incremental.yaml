@@ -5,7 +5,7 @@ t_space_batch_size: 10
 c_space_batch_size: 10
 min_valid_samples: 300
 max_iters: 1000
-planner_type: global
+planner_type: global_dfs
 cspace_delta: 0.5
 timeout: 1000.0
 debug: 0

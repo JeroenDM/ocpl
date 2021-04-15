@@ -144,7 +144,7 @@ int main(int argc, char** argv)
     // std::string outfilename{ "results/benchmark_halton_case_" };
     std::string outfilename{ "results/fixed_vs_incremental_case_" };
     outfilename.append("box_");    // planning case 2
-    outfilename.append("sr.csv");  // sr = success rate results
+    outfilename.append("sr_global.csv");  // sr = success rate results
     runBenchmark(outfilename, bot, task, planner, settings, 5);
 
     return 0;
