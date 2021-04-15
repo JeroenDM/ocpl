@@ -208,6 +208,17 @@ target_link_libraries(${PROJECT_NAME}_benchmark4
   ${PROJECT_NAME}
 )
 
+add_executable(${PROJECT_NAME}_benchmark5
+  benchmarks/benchmark5.cpp
+)
+set_target_properties(${PROJECT_NAME}_benchmark5
+  PROPERTIES OUTPUT_NAME benchmark5 PREFIX ""
+)
+target_link_libraries(${PROJECT_NAME}_benchmark5
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME}
+)
+
 #############
 ## Install ##
 #############
