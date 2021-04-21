@@ -23,7 +23,7 @@ std::pair<std::string, std::string> proccessLine(const std::string& line)
 }
 }  // namespace impl
 
-SettingsMap readSettingsFile(const std::string& filename)
+SettingsMap readSettingsFile(const std::string& filename, const std::string& package_name)
 {
     // Find the data folder in the current package where we expect the file to be located
     std::string path = ros::package::getPath(impl::THIS_PACKAGE_NAME);
@@ -88,9 +88,9 @@ std::vector<Scalar> stringToVector(const std::string& s)
 
 template std::vector<int> stringToVector(const std::string& s);
 
-PlannerSettings loadSettingsFromFile(const std::string filename)
+PlannerSettings loadSettingsFromFile(const std::string filename, const std::string& package_name)
 {
-    auto map = readSettingsFile(filename);
+    auto map = readSettingsFile(filename, package_name);
 
     PlannerSettings s;
     s.name = findOrDefault(map, "name", std::string{ "default_name" });

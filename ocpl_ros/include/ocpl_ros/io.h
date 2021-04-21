@@ -24,7 +24,7 @@ const std::string LINE_SPLIT_STR{ ": " };
 std::pair<std::string, std::string> proccessLine(const std::string& line);
 }  // namespace impl
 
-SettingsMap readSettingsFile(const std::string& filename);
+SettingsMap readSettingsFile(const std::string& filename, const std::string& package_name = impl::THIS_PACKAGE_NAME);
 
 std::vector<std::string> readLinesFromFile(const std::string& filename);
 
@@ -96,7 +96,7 @@ std::ostream& operator<<(std::ostream& os, const JointPositions& q)
     return os;
 }
 
-PlannerSettings loadSettingsFromFile(const std::string filename);
+PlannerSettings loadSettingsFromFile(const std::string filename, const std::string& package_name = impl::THIS_PACKAGE_NAME);
 
 /** Simple struct to put waypoint data without parsing converting it to specific objects used by planing algorithms.**/
 struct TaskData
