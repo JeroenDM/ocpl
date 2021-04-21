@@ -25,7 +25,7 @@ int main(int argc, char** argv)
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
-    simple_moveit_wrapper::IndustrialRobot robot("manipulator", "tool_tip");
+    simple_moveit_wrapper::IndustrialRobot robot("manipulator", "tool0");
 
     //////////////////////////////////
     // Create task

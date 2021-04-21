@@ -47,7 +47,7 @@ int main(int argc, char** argv)
 
     // Select the correct type of robot
     // All robots in this script are assumed to be planar
-    simple_moveit_wrapper::PlanarRobot robot("manipulator", "tool_tip");
+    simple_moveit_wrapper::PlanarRobot robot("manipulator", "tool0");
 
     //////////////////////////////////
     // Select the planning task
@@ -146,7 +146,13 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Solve the problem
     //////////////////////////////////
-    auto ps = loadSettingsFromFile("sp/halton_fixed.yaml");
+    std::string PLANNER_SETTINGS_FILE{ "sp/halton_fixed.yaml" };
+    if (argc > 2)
+    {
+        PLANNER_SETTINGS_FILE = std::string(argv[2]);
+    }
+    ROS_INFO_STREAM("Using planner settings file: " << PLANNER_SETTINGS_FILE);
+    auto ps = loadSettingsFromFile(PLANNER_SETTINGS_FILE);
     UnifiedPlanner planner(bot, ps);
     // std::reverse(regions.begin(), regions.end());
     // Solution solution = planner.solve(regions, f_path_cost, state_cost_fun);
