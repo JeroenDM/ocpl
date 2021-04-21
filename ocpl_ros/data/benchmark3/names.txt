@@ -1,3 +1,0 @@
-benchmark3/grid.yaml
-benchmark3/halton_incremental.yaml
-benchmark3/random_incremental.yaml

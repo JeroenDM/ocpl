@@ -9,6 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  roslib
   moveit_core
   moveit_ros_planning
   moveit_visual_tools
@@ -37,10 +38,10 @@ endif()
 ## catkin specific configuration ##
 ###################################
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES ocpl_ros
-#  CATKIN_DEPENDS moveit_core moveit_ros_planning moveit_visual_tools roscpp
-#  DEPENDS system_lib
+  INCLUDE_DIRS include
+  LIBRARIES ${PROJECT_NAME}
+  CATKIN_DEPENDS roscpp roslib
+  #DEPENDS Eigen3
 )
 
 ###########
@@ -159,62 +160,6 @@ set_target_properties(${PROJECT_NAME}_rotation_table
   PROPERTIES OUTPUT_NAME rotation_table PREFIX ""
 )
 target_link_libraries(${PROJECT_NAME}_rotation_table
-  ${catkin_LIBRARIES}
-  ${PROJECT_NAME}
-)
-
-
-add_executable(${PROJECT_NAME}_benchmark1
-  benchmarks/benchmark1.cpp
-)
-set_target_properties(${PROJECT_NAME}_benchmark1
-  PROPERTIES OUTPUT_NAME benchmark1 PREFIX ""
-)
-target_link_libraries(${PROJECT_NAME}_benchmark1
-  ${catkin_LIBRARIES}
-  ${PROJECT_NAME}
-)
-
-add_executable(${PROJECT_NAME}_benchmark2
-  benchmarks/benchmark2.cpp
-)
-set_target_properties(${PROJECT_NAME}_benchmark2
-  PROPERTIES OUTPUT_NAME benchmark2 PREFIX ""
-)
-target_link_libraries(${PROJECT_NAME}_benchmark2
-  ${catkin_LIBRARIES}
-  ${PROJECT_NAME}
-)
-
-add_executable(${PROJECT_NAME}_benchmark3
-  benchmarks/benchmark3.cpp
-)
-set_target_properties(${PROJECT_NAME}_benchmark3
-  PROPERTIES OUTPUT_NAME benchmark3 PREFIX ""
-)
-target_link_libraries(${PROJECT_NAME}_benchmark3
-  ${catkin_LIBRARIES}
-  ${PROJECT_NAME}
-)
-
-add_executable(${PROJECT_NAME}_benchmark4
-  benchmarks/benchmark4.cpp
-)
-set_target_properties(${PROJECT_NAME}_benchmark4
-  PROPERTIES OUTPUT_NAME benchmark4 PREFIX ""
-)
-target_link_libraries(${PROJECT_NAME}_benchmark4
-  ${catkin_LIBRARIES}
-  ${PROJECT_NAME}
-)
-
-add_executable(${PROJECT_NAME}_benchmark5
-  benchmarks/benchmark5.cpp
-)
-set_target_properties(${PROJECT_NAME}_benchmark5
-  PROPERTIES OUTPUT_NAME benchmark5 PREFIX ""
-)
-target_link_libraries(${PROJECT_NAME}_benchmark5
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
 )

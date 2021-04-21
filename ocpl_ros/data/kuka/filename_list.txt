@@ -1,3 +1,0 @@
-kuka/grid.yaml
-kuka/halton.yaml
-kuka/random.yaml
