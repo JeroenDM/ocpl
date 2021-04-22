@@ -39,12 +39,12 @@ int main(int argc, char** argv)
     for (TSR& tsr : task)
     {
         rviz.plotPose(tsr.tf_nominal);
-        ros::Duration(0.05).sleep();
+        // ros::Duration(0.05).sleep();
         visual_path.push_back(tsr.tf_nominal.translation());
     }
     // rviz.visual_tools_->publishPath(visual_path);
     // rviz.visual_tools_->trigger();
-    // ros::Duration(0.1).sleep();
+    ros::Duration(0.1).sleep();
 
     //////////////////////////////////
     // Simple interface solver
@@ -102,21 +102,22 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // solve it!
     //////////////////////////////////
-    // auto orioli_ps = loadOrioloSettings("oriolo1.txt");
-    // oriolo::OrioloPlanner planner(bot, ps);
-    //
-    // UnifiedPlanner planner(bot, ps);
+    // auto orioli_ps = loadSettingsFromFile("oriolo1.txt");
+    // oriolo::OrioloPlanner planner(bot, orioli_ps);
+    
+    UnifiedPlanner planner(bot, ps);
     // std::reverse(task.begin(), task.end());
     // // Solution res = planner.solve(task);
-    // Solution res = planner.solve(task, path_cost_fun, zeroStateCost);
-    // if (res.success)
-    // {
-    //     std::cout << "A solution is found with a cost of " << res.cost << "\n";
-    // }
-    // else
-    // {
-    //     std::cout << "No complete solution was found.\n";
-    // }
+    Solution res = planner.solve(task, path_cost_fun, zeroStateCost);
+    if (res.success)
+    {
+        std::cout << "A solution is found with a cost of " << res.cost << "\n";
+        robot.animatePath(rviz.visual_tools_, res.path);
+    }
+    else
+    {
+        std::cout << "No complete solution was found.\n";
+    }
 
     // savePath("last_path.npy", res.path);
 
