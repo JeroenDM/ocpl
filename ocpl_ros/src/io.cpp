@@ -49,10 +49,10 @@ SettingsMap readSettingsFile(const std::string& filename, const std::string& pac
     return result;
 }
 
-std::vector<std::string> readLinesFromFile(const std::string& filename)
+std::vector<std::string> readLinesFromFile(const std::string& filename, const std::string& package_name)
 {
     // Find the data folder in the current package where we expect the file to be located
-    std::string path = ros::package::getPath(impl::THIS_PACKAGE_NAME);
+    std::string path = ros::package::getPath(package_name);
     path.append(impl::REL_PATH_DATA);
     path.append(filename);
 
