@@ -153,12 +153,9 @@ std::vector<JointPositions> UnifiedPlanner::sample(size_t waypoint, const JointP
                                                    const std::vector<TSR>& task_space_regions)
 {
     auto q_sample = Planner::sample(task_space_regions[waypoint], q_bias);
-    if (!q_sample.empty())
+    if (!q_sample.empty() && robot_.isValid(q_sample))
     {
-        if (robot_.isValid(q_sample))
-        {
-            return { q_sample };
-        }
+        return { q_sample };
     }
     else
     {
