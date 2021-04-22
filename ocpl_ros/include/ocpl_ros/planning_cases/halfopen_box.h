@@ -9,7 +9,7 @@ using Eigen::Vector3d;
 using Eigen::Isometry3d;
 std::vector<ocpl::TSR> waypoints()
 {
-    double da = deg2rad(20);
+    double da = deg2rad(10);
     ocpl::TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { -da, da }, { -da, da }, { -M_PI, M_PI } };
     // ocpl::TSRBounds bounds{ { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { -M_PI, M_PI } };
     Vector3d work(2, 0.3, 0.9027);
