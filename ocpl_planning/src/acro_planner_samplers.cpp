@@ -152,107 +152,120 @@ std::vector<std::function<IKSolution()>> UnifiedPlanner::createGlobalWaypointSam
 std::vector<JointPositions> UnifiedPlanner::sample(size_t waypoint, const JointPositions& q_bias,
                                                    const std::vector<TSR>& task_space_regions)
 {
-    assert(tsr_sampler_ != nullptr);
-    assert(tsr_local_sampler_ != nullptr);
-
-    std::vector<JointPositions> q_red_samples;
-    if (settings_.is_redundant)
+    JointPositions q_sample = Planner::sample(task_space_regions[waypoint], q_bias);
+    if (!q_sample.empty() && robot_.isValid(q_sample))
     {
-        // Get a biased sample for the redundant joints
-        auto red_sample_perturbations = q_red_local_sampler_->getSamples(settings_.c_space_batch_size);
-        std::vector<JointPositions> q_red_samples;
-        q_red_samples.reserve(settings_.c_space_batch_size);
-        for (auto dq : red_sample_perturbations)
-        {
-            JointPositions q_red(robot_.num_red_dof);
-            // make sure the sample stays inside the robot's joint limits
-            for (size_t i{ 0 }; i < robot_.num_red_dof; ++i)
-            {
-                q_red[i] = clip(q_bias[i] + dq[i], robot_.joint_limits[i].lower, robot_.joint_limits[i].upper);
-            }
-            q_red_samples.push_back(q_red);
-        }
-    }
-
-    // Get a biased sample for the end-effector pose.
-    // First we get the deviation of the nominal pose for the biased sample of the previous waypoint.
-    std::vector<double> v_prev;
-    if (waypoint > 0)
-    {
-        v_prev = task_space_regions[waypoint - 1].poseToValues(robot_.fk(q_bias));
-    }
-    else  // special case, biased sampling for the first waypoint
-    {
-        v_prev = task_space_regions[0].poseToValues(robot_.fk(q_bias));
-    }
-
-    // Now we add a perturbation on v_prev using the local tsr sampler.
-    // This sample is then converted to a 3D Transform used later to solve the inverse kinematics.
-    auto tsr_samples = tsr_local_sampler_->getSamples(settings_.t_space_batch_size);
-    std::vector<Transform> tf_samples;
-    tf_samples.reserve(settings_.t_space_batch_size);
-    for (auto tsr_sample : tsr_samples)
-    {
-        std::vector<double> v_bias = tsr_sample;
-        std::vector<Bounds> tsr_bounds = task_space_regions[waypoint].bounds.asVector();
-        // assume the variable that changes between two poses has no tolerance
-        for (size_t dim{ 0 }; dim < v_bias.size(); ++dim)
-        {
-            if (tsr_bounds[dim].lower != tsr_bounds[dim].upper)
-            {
-                // v_bias[dim] = v_bias[dim] + v_prev[dim];
-                v_bias[dim] = clip(v_bias[dim] + v_prev[dim], tsr_bounds[dim].lower, tsr_bounds[dim].upper);
-            }
-        }
-        Transform tf = task_space_regions[waypoint].valuesToPose(v_bias);
-        tf_samples.push_back(tf);
-    }
-
-    std::vector<JointPositions> samples;
-    if (settings_.is_redundant)
-    {
-        samples.reserve(settings_.c_space_batch_size * settings_.t_space_batch_size);
-        // solve inverse kinematics te calculate base joints
-        // #pragma omp parallel
-        // #pragma omp for
-        for (auto tf : tf_samples)
-        {
-            for (auto q_red : q_red_samples)
-            {
-                for (auto q_sol : robot_.ik(tf, q_red))
-                {
-                    if (normInfDiff(q_sol, q_bias) < settings_.cspace_delta)
-                    {
-                        // if (noColl(q_bias, q_sol))
-                        if (robot_.isValid(q_sol))
-                        {
-                            samples.push_back(q_sol);
-                        }
-                    }
-                }
-            }
-        }
-        samples.shrink_to_fit();
+        return { q_sample };
     }
     else
     {
-        samples.reserve(settings_.t_space_batch_size);
-        for (auto tf : tf_samples)
-        {
-            for (auto q_sol : robot_.ik(tf, {}))
-            {
-                if (normInfDiff(q_sol, q_bias) < settings_.cspace_delta)
-                {
-                    // if (noColl(q_bias, q_sol))
-                    if (robot_.isValid(q_sol))
-                    {
-                        samples.push_back(q_sol);
-                    }
-                }
-            }
-        }
-        samples.shrink_to_fit();
+        return {};
     }
-    return samples;
 }
+// std::vector<JointPositions> UnifiedPlanner::sample(size_t waypoint, const JointPositions& q_bias,
+//                                                    const std::vector<TSR>& task_space_regions)
+// {
+//     assert(tsr_sampler_ != nullptr);
+//     assert(tsr_local_sampler_ != nullptr);
+
+//     std::vector<JointPositions> q_red_samples;
+//     if (settings_.is_redundant)
+//     {
+//         // Get a biased sample for the redundant joints
+//         auto red_sample_perturbations = q_red_local_sampler_->getSamples(settings_.c_space_batch_size);
+//         std::vector<JointPositions> q_red_samples;
+//         q_red_samples.reserve(settings_.c_space_batch_size);
+//         for (auto dq : red_sample_perturbations)
+//         {
+//             JointPositions q_red(robot_.num_red_dof);
+//             // make sure the sample stays inside the robot's joint limits
+//             for (size_t i{ 0 }; i < robot_.num_red_dof; ++i)
+//             {
+//                 q_red[i] = clip(q_bias[i] + dq[i], robot_.joint_limits[i].lower, robot_.joint_limits[i].upper);
+//             }
+//             q_red_samples.push_back(q_red);
+//         }
+//     }
+
+//     // Get a biased sample for the end-effector pose.
+//     // First we get the deviation of the nominal pose for the biased sample of the previous waypoint.
+//     std::vector<double> v_prev;
+//     if (waypoint > 0)
+//     {
+//         v_prev = task_space_regions[waypoint - 1].poseToValues(robot_.fk(q_bias));
+//     }
+//     else  // special case, biased sampling for the first waypoint
+//     {
+//         v_prev = task_space_regions[0].poseToValues(robot_.fk(q_bias));
+//     }
+
+//     // Now we add a perturbation on v_prev using the local tsr sampler.
+//     // This sample is then converted to a 3D Transform used later to solve the inverse kinematics.
+//     auto tsr_samples = tsr_local_sampler_->getSamples(settings_.t_space_batch_size);
+//     std::vector<Transform> tf_samples;
+//     tf_samples.reserve(settings_.t_space_batch_size);
+//     for (auto tsr_sample : tsr_samples)
+//     {
+//         std::vector<double> v_bias = tsr_sample;
+//         std::vector<Bounds> tsr_bounds = task_space_regions[waypoint].bounds.asVector();
+//         // assume the variable that changes between two poses has no tolerance
+//         for (size_t dim{ 0 }; dim < v_bias.size(); ++dim)
+//         {
+//             if (tsr_bounds[dim].lower != tsr_bounds[dim].upper)
+//             {
+//                 // v_bias[dim] = v_bias[dim] + v_prev[dim];
+//                 v_bias[dim] = clip(v_bias[dim] + v_prev[dim], tsr_bounds[dim].lower, tsr_bounds[dim].upper);
+//             }
+//         }
+//         Transform tf = task_space_regions[waypoint].valuesToPose(v_bias);
+//         tf_samples.push_back(tf);
+//     }
+
+//     std::vector<JointPositions> samples;
+//     if (settings_.is_redundant)
+//     {
+//         samples.reserve(settings_.c_space_batch_size * settings_.t_space_batch_size);
+//         // solve inverse kinematics te calculate base joints
+//         // #pragma omp parallel
+//         // #pragma omp for
+//         for (auto tf : tf_samples)
+//         {
+//             for (auto q_red : q_red_samples)
+//             {
+//                 for (auto q_sol : robot_.ik(tf, q_red))
+//                 {
+//                     if (normInfDiff(q_sol, q_bias) < settings_.cspace_delta)
+//                     {
+//                         // if (noColl(q_bias, q_sol))
+//                         if (robot_.isValid(q_sol))
+//                         {
+//                             samples.push_back(q_sol);
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//         samples.shrink_to_fit();
+//     }
+//     else
+//     {
+//         samples.reserve(settings_.t_space_batch_size);
+//         for (auto tf : tf_samples)
+//         {
+//             for (auto q_sol : robot_.ik(tf, {}))
+//             {
+//                 if (normInfDiff(q_sol, q_bias) < settings_.cspace_delta)
+//                 {
+//                     // if (noColl(q_bias, q_sol))
+//                     if (robot_.isValid(q_sol))
+//                     {
+//                         samples.push_back(q_sol);
+//                     }
+//                 }
+//             }
+//         }
+//         samples.shrink_to_fit();
+//     }
+//     return samples;
+// }
 }  // namespace ocpl
