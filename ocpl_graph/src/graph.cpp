@@ -162,7 +162,8 @@ std::ostream& operator<<(std::ostream& os, const Node& node)
     {
         os << value << ", ";
     }
-    os << ")";
+    os << ") ind: ";
+    os << node.waypoint_index << " dist: " << node.dist;
     return os;
 }
 }  // namespace ocpl_graph

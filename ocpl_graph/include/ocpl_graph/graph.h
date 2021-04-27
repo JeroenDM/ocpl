@@ -26,6 +26,13 @@ struct Node
     explicit Node(std::vector<double> d, double c) : data(std::move(d)), cost(c)
     {
     }
+
+    void reset()
+    {
+      dist = std::numeric_limits<double>::max();
+      parent = nullptr;
+      visited = false;
+    }
 };
 typedef std::shared_ptr<Node> NodePtr;
 
