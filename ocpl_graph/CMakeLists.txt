@@ -48,9 +48,16 @@ install(TARGETS ${PROJECT_NAME}
 
 if(CATKIN_ENABLE_TESTING)
 
-  catkin_add_gtest(${PROJECT_NAME}_test test/test_graph.cpp)
+  catkin_add_gtest(${PROJECT_NAME}_test_containers test/test_containers.cpp)
 
-  target_link_libraries(${PROJECT_NAME}_test
+  target_link_libraries(${PROJECT_NAME}_test_containers
+    ${PROJECT_NAME}
+    ${catkin_LIBRARIES}
+  )
+
+  catkin_add_gtest(${PROJECT_NAME}_test_graph_search test/test_graph_search.cpp)
+
+  target_link_libraries(${PROJECT_NAME}_test_graph_search
     ${PROJECT_NAME}
     ${catkin_LIBRARIES}
   )
