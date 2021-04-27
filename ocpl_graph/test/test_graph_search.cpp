@@ -21,6 +21,48 @@ inline double norm1Diff(const std::vector<double>& n1, const std::vector<double>
 using namespace ocpl_graph;
 using Data = std::vector<double>;
 
+TEST(TestMiniGraph, BreathVsDepth)
+{
+    // [ 0 0 ]  [ n1 n2 ]
+    // [ 0 x ]  [ n3 n4 ]
+
+    std::vector<double> dummy_data;
+
+    NodePtr n1 = std::make_shared<Node>(dummy_data, 0.0);
+    NodePtr n2 = std::make_shared<Node>(dummy_data, 0.0);
+    NodePtr n3 = std::make_shared<Node>(dummy_data, 0.0);
+    NodePtr n4 = std::make_shared<Node>(dummy_data, 0.0);
+
+    n3->waypoint_index = 1;
+    n4->waypoint_index = 1;
+
+    std::vector<std::vector<NodePtr>> nodes{ { n1, n2 }, { n3, n4 } };
+
+    auto d_fun = [](const NodePtr& /*a*/, const NodePtr& /*b*/) { return 1.0; };
+    auto nb_fun = [&nodes](const NodePtr& /*n*/) { return std::vector<NodePtr>{ nodes.at(1).at(0) }; };
+
+    QueueContainer<NodePtr> queue;
+    Graph graph1(nb_fun, 2, { n1, n2 });
+    auto path_q = shortest_path_dag(graph1, d_fun, queue);
+
+    ASSERT_EQ(path_q.size(), 2);
+    EXPECT_EQ(path_q[0], n1);
+    EXPECT_EQ(path_q[1], n3);
+
+    n1->reset();
+    n2->reset();
+    n3->reset();
+    n4->reset();
+
+    StackContainer<NodePtr> stack;
+    Graph graph2(nb_fun, 2, { n1, n2 });
+    auto path_s = shortest_path_dag(graph2, d_fun, stack);
+
+    ASSERT_EQ(path_s.size(), 2);
+    EXPECT_EQ(path_s[0], n2);
+    EXPECT_EQ(path_s[1], n3);
+}
+
 TEST(TestGraph, TestBreathFirst)
 {
     // create some artificial graph data
