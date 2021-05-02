@@ -35,9 +35,8 @@ JointPositions OrioloPlanner::sampleIK(const TSR& tsr, const JointPositions& q_r
             v_bias[dim] += v_prev[dim];
     }
 
-    return biasedIK(tsr.valuesToPose(v_bias), q_red, q_bias);
+    return robot_.biasedIK(tsr.valuesToPose(v_bias), q_red, q_bias, settings_.cspace_delta);
 }
-
 
 std::vector<JointPositions> OrioloPlanner::step(size_t start_index, size_t stop_index, const JointPositions& q_start,
                                                 const std::vector<TSR>& task)
@@ -62,7 +61,7 @@ std::vector<JointPositions> OrioloPlanner::step(size_t start_index, size_t stop_
         {
             // q_new = randConf(task.at(j + 1), q_current);
             q_new = sample(task[j + 1], q_current);
-            if (!q_new.empty() && isPathValid(q_current, q_new))
+            if (!q_new.empty() && robot_.isPathValid(q_current, q_new, settings_.cspace_delta))
             {
                 path.push_back(q_new);
                 success = true;
@@ -173,7 +172,7 @@ std::pair<bool, graph::NodeData> OrioloPlanner::extend(const std::vector<ocpl::T
     size_t next_waypoint = n_near->data.waypoint + 1;
     auto q_new = sampleIK(task[next_waypoint], q_ext_red, n_near->data.q);
 
-    if (!q_new.empty() && isPathValid(n_near->data.q, q_new))
+    if (!q_new.empty() && robot_.isPathValid(n_near->data.q, q_new, settings_.cspace_delta))
     {
         graph::NodePtr new_node = std::make_shared<graph::Node>(graph::NodeData{ q_new, next_waypoint });
         new_node->parent = n_near;

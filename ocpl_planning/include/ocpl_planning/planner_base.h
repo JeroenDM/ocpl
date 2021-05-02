@@ -91,15 +91,6 @@ class Planner
      * **/
     JointPositions sampleRedJoints(const JointPositions& q_bias);
 
-    /** \brief Solve inverse kinematics and only return solutions close to a bias config.
-     *
-     * Meaning non of the joints deviate more than `settings_.cspace_delta`.
-     * **/
-    JointPositions biasedIK(const Transform& tf, const JointPositions& q_red, const JointPositions& q_bias);
-
-    /** \brief Collision checking along linear interpolated path between 2 configs. **/
-    bool isPathValid(const JointPositions& q_from, const JointPositions& q_to);
-
     /** \brief Get a (random) robot configurations for a given waypoint along the path. **/
     JointPositions sample(const TSR& tsr);
 

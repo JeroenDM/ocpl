@@ -94,37 +94,6 @@ JointPositions Planner::sampleRedJoints()
     return JointPositions(q.begin(), q.begin() + robot_.num_red_dof);
 };
 
-JointPositions Planner::biasedIK(const Transform& tf, const JointPositions& q_red, const JointPositions& q_bias)
-{
-    IKSolution sol = robot_.ik(tf, q_red);
-    for (auto q_sol : sol)
-    {
-        if (LInfNormDiff2(q_sol, q_bias) < settings_.cspace_delta)
-        {
-            return q_sol;
-        }
-    }
-    return {};
-}
-
-bool Planner::isPathValid(const JointPositions& q_from, const JointPositions& q_to)
-{
-    if (!robot_.isValid(q_from))
-        return false;
-    // TODO figure out what they do mean in the paper
-    // now fix the number of steps
-    const int steps{ 3 };
-    for (int step = 1; step < steps; ++step)
-    {
-        auto q_step = interpolate(q_from, q_to, static_cast<double>(step) / (steps - 1));
-        if (!robot_.isValid(q_step))
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
 JointPositions Planner::sample(const TSR& tsr)
 {
     assert(tsr_sampler_ != nullptr);
@@ -187,7 +156,7 @@ JointPositions Planner::sample(const TSR& tsr, const JointPositions& q_bias)
             v_bias[dim] = clip(v_bias[dim], tsr_bounds[dim].lower, tsr_bounds[dim].upper);
         }
     }
-    return biasedIK(tsr.valuesToPose(v_bias), q_red, q_bias);
+    return robot_.biasedIK(tsr.valuesToPose(v_bias), q_red, q_bias, settings_.cspace_delta);
 }  // namespace ocpl
 
 }  // namespace ocpl

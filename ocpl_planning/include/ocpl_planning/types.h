@@ -8,6 +8,7 @@
 
 #include <ocpl_sampling/sampler.h>
 #include <ocpl_tsr/task_space_regions.h>  // Bounds, Transform typedef, TSR
+#include <ocpl_planning/math.h>
 
 namespace ocpl
 {
@@ -35,6 +36,46 @@ struct Robot
      * Note that you can still assing nullptrs to functions.
      * */
     Robot() = delete;
+
+    /** \brief Solve inverse kinematics and only return solutions close to a bias config.
+     *
+     * Meaning non of the joints deviate more than `delta_q_max`.
+     * **/
+    JointPositions biasedIK(const Transform& tf, const JointPositions& q_red, const JointPositions& q_bias,
+                            double delta_q_max) const
+    {
+        IKSolution sol = ik(tf, q_red);
+        for (auto q_sol : sol)
+        {
+            if (normInfDiff(q_sol, q_bias) < delta_q_max)
+            {
+                return q_sol;
+            }
+        }
+        return {};
+    }
+
+    /** Path validation using discrete linear interpolation.
+     *
+     * TODO: calculate resolution based on `delta_q_max`.
+     * **/
+    bool isPathValid(const JointPositions& q_from, const JointPositions& q_to, double /* delta_q_max */) const
+    {
+        if (!isValid(q_from))
+            return false;
+        // TODO figure out what they do mean in the paper
+        // now fix the number of steps
+        const int steps{ 3 };
+        for (int step = 1; step < steps; ++step)
+        {
+            auto q_step = interpolate(q_from, q_to, static_cast<double>(step) / (steps - 1));
+            if (!isValid(q_step))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 
     bool ok() const
     {
