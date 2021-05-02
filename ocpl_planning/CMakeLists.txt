@@ -41,6 +41,7 @@ add_library(
   src/planner_base.cpp
   src/acro_planner_samplers.cpp
   src/acro_planner.cpp
+  src/sample_space.cpp
   src/factories.cpp
   src/io.cpp
   src/oriolo.cpp
