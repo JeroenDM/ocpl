@@ -70,16 +70,16 @@ install(TARGETS ${PROJECT_NAME}
 
 if(CATKIN_ENABLE_TESTING)
 
-  catkin_add_gtest(${PROJECT_NAME}_test_oriolo test/test_oriolo.cpp)
+  # catkin_add_gtest(${PROJECT_NAME}_test_oriolo test/test_oriolo.cpp)
 
-  target_link_libraries(${PROJECT_NAME}_test_oriolo
-    ${PROJECT_NAME}
-    ${catkin_LIBRARIES}
-  )
+  # target_link_libraries(${PROJECT_NAME}_test_oriolo
+  #   ${PROJECT_NAME}
+  #   ${catkin_LIBRARIES}
+  # )
 
-  catkin_add_gtest(${PROJECT_NAME}_test_generic_planner test/test_generic_planner.cpp)
+  catkin_add_gtest(${PROJECT_NAME}_test_planner_base test/test_planner_base.cpp)
 
-  target_link_libraries(${PROJECT_NAME}_test_generic_planner
+  target_link_libraries(${PROJECT_NAME}_test_planner_base
     ${PROJECT_NAME}
     ${catkin_LIBRARIES}
   )

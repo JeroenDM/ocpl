@@ -21,26 +21,6 @@ typedef std::function<Transform(const JointPositions&)> FKFun;
 typedef std::function<std::vector<JointPositions>(const Transform&, const JointPositions&)> IKFun;
 typedef std::function<bool(const JointPositions&)> IsValidFun;
 
-struct Vertice
-{
-    JointPositions q;
-    size_t waypoint;
-    double distance{ 0.0 };
-    bool visited{ false };
-    Vertice(const JointPositions& qi, size_t waypointi, double distancei)
-      : q(qi), waypoint(waypointi), distance(distancei)
-    {
-    }
-};
-typedef std::shared_ptr<Vertice> VerticePtr;
-
-inline const std::vector<VerticePtr>& getNeighbors(const std::vector<std::vector<VerticePtr>>& graph,
-                                                   const VerticePtr& vertice)
-{
-    assert(vertice->waypoint + 1 < graph.size());
-    return graph[vertice->waypoint + 1];
-}
-
 /** Kinematics, state validation and joint limits for a robot. **/
 struct Robot
 {

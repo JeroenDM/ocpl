@@ -70,15 +70,15 @@ TEST_F(TestPlanner, TestInvKin)
     JointPositions q_bias{ 1.0, -0.5, 0.2, 0.01, 0.01, 0.01 };
 
     Robot bot{num_dof_, num_red_dof_, joint_limits_, fk_, ik_, isValid_};
-    OrioloSpecificSettings set;
-    OrioloPlanner p("oriolo", bot, set);
+    PlannerSettings set;
+    OrioloPlanner p(bot, set);
     TSR tsr = getTSR();
     p.initializeTaskSpaceSamplers(tsr.bounds.asVector());
 
     compareVectors(p.invKin(tsr, q_red, q_bias), { 1.0, -0.5, 0.2, 0.0, 0.0, 0.0 }, "invKind()");
 
     // the ik solution is too far off from the biased solution
-    JointPositions q_bias2{ 1.0, -0.5, 0.2, 0.01, 0.01, 0.01 + set.D };
+    JointPositions q_bias2{ 1.0, -0.5, 0.2, 0.01, 0.01, 0.01 + set.cspace_delta };
     ASSERT_TRUE(p.invKin(tsr, q_red, q_bias2).empty());
 
     ASSERT_TRUE(true);
@@ -104,17 +104,17 @@ TEST_F(TestPlanner, TestRandConf)
     };
 
     Robot bot{num_dof_, num_red_dof_, joint_limits_, fk_, ik_fun, isValid_};
-    OrioloSpecificSettings set;
+    PlannerSettings set;
     OrioloPlanner p("oriolo", bot, set);
     ocpl::TSR tsr = getTSR();
     p.initializeTaskSpaceSamplers(tsr.bounds.asVector());
-
+ 
     auto q0 = p.randRed(q_red_bias);
     ASSERT_EQ(q0.size(), num_red_dof_);
     for (size_t i = 0; i < num_red_dof_; ++i)
     {
-        ASSERT_LE(q0[i], q_red_bias[i] + set.D);
-        ASSERT_GE(q0[i], q_red_bias[i] - set.D);
+        ASSERT_LE(q0[i], q_red_bias[i] + set.cspace_delta);
+        ASSERT_GE(q0[i], q_red_bias[i] - set.cspace_delta);
     }
 
     auto q1 = p.randConf();
@@ -139,7 +139,7 @@ TEST_F(TestPlanner, TestRandConf)
     // joint should not deviate too much from bias
     for (size_t i = 0; i < num_dof_; ++i)
     {
-        ASSERT_NEAR(q4[i], q_bias[i], set.D);
+        ASSERT_NEAR(q4[i], q_bias[i], set.cspace_delta);
     }
     // base joints are deterministic
     for (size_t i = 3; i < num_dof_; ++i)
