@@ -146,7 +146,7 @@ int main(int argc, char** argv)
     //////////////////////////////////
     // Solve the problem
     //////////////////////////////////
-    std::string PLANNER_SETTINGS_FILE{ "sp/halton_fixed.yaml" };
+    std::string PLANNER_SETTINGS_FILE{ "halton1.yaml" };
     if (argc > 2)
     {
         PLANNER_SETTINGS_FILE = std::string(argv[2]);
