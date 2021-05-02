@@ -18,7 +18,7 @@ typedef std::vector<std::vector<JointPositions>> GraphData;
 typedef std::vector<Bounds> JointLimits;
 
 typedef std::function<Transform(const JointPositions&)> FKFun;
-typedef std::function<std::vector<JointPositions>(const Transform&, const JointPositions&)> IKFun;
+typedef std::function<IKSolution(const Transform&, const JointPositions&)> IKFun;
 typedef std::function<bool(const JointPositions&)> IsValidFun;
 
 /** Kinematics, state validation and joint limits for a robot. **/
@@ -27,10 +27,13 @@ struct Robot
     size_t num_dof;
     size_t num_red_dof;
     JointLimits joint_limits;
-    std::function<Transform(const JointPositions&)> fk;
-    std::function<IKSolution(const Transform&, const JointPositions&)> ik;
-    std::function<bool(const JointPositions&)> isValid;
+    FKFun fk;
+    IKFun ik;
+    IsValidFun isValid;
 
+    /** Force users to initialize everyting explicitly.
+     * Note that you can still assing nullptrs to functions.
+     * */
     Robot() = delete;
 
     bool ok() const
